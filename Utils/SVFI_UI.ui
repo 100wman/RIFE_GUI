@@ -117,7 +117,7 @@
                        </sizepolicy>
                       </property>
                       <property name="toolTip">
-                       <string>强制使用检测到的A卡或核显</string>
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;强制使用检测到的A卡或核显进行补帧任务&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="text">
                        <string>使用A卡或核显</string>
@@ -149,7 +149,7 @@
                        </sizepolicy>
                       </property>
                       <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;输出为图片序列&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;命名格式:0&amp;gt;8d,如 00000008.png&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;输出图片序列，输出格式支持png、tiff等&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;命名格式:0&amp;gt;8d,如 00000008.png&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="text">
                        <string>输出图片序列</string>
@@ -170,7 +170,7 @@
                          </sizepolicy>
                         </property>
                         <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/p&gt;&lt;p&gt;mov兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;mkv兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;mp4支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                         </property>
                         <property name="text">
                          <string>输出文件格式</string>
@@ -272,6 +272,9 @@
                         <horstretch>0</horstretch>
                         <verstretch>0</verstretch>
                        </sizepolicy>
+                      </property>
+                      <property name="toolTip">
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在输出图片序列时，将按照此处设置的补帧倍率对图片序列补帧并输出&lt;/p&gt;&lt;p&gt;输入为图片序列且输出为视频时，软件将按照补帧倍率倍帧后进行补帧，并按照右侧的输出帧率输出视频&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <item>
                        <property name="text">
@@ -409,6 +412,9 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;“-”号为删除当前任务条目（Remove）&lt;/p&gt;&lt;p&gt;“+”号为以当前任务条目为基础复制生成相同任务（Duplicate）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="tabKeyNavigation">
                   <bool>true</bool>
                  </property>
@@ -419,10 +425,10 @@
                   <bool>true</bool>
                  </property>
                  <property name="dragDropMode">
-                  <enum>QAbstractItemView::NoDragDrop</enum>
+                  <enum>QAbstractItemView::DragDrop</enum>
                  </property>
                  <property name="alternatingRowColors">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="viewMode">
                   <enum>QListView::ListMode</enum>
@@ -436,6 +442,9 @@
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
+                 </property>
+                 <property name="dragEnabled">
+                  <bool>true</bool>
                  </property>
                  <property name="placeholderText">
                   <string>拖入补帧项目输出的文件夹路径（剩余磁盘空间建议20G+）</string>
@@ -453,7 +462,7 @@
                     </sizepolicy>
                    </property>
                    <property name="text">
-                    <string>输入文件或文件夹：</string>
+                    <string>输入文件或文件夹，请切换条目以保存设置，任务启动前请务必检查所有条目的设置</string>
                    </property>
                   </widget>
                  </item>
@@ -636,7 +645,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>5</number>
+                      <number>4</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -831,7 +840,7 @@
                                </size>
                               </property>
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;根据已经生成的视频块信息进行推算，可能存在重复补帧的情况，但不影响最终结果&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;根据已经生成的视频块信息进行推算，可能存在重复补帧的情况，但不影响最终结果。&lt;/p&gt;&lt;p&gt;对于队列输入（输入数&amp;gt;1），请确保每个任务条目正确设置工作恢复参数（都点一下自动设置的按钮），否则软件将自动识别工作进度并进行补帧&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>自动设置</string>
@@ -1014,7 +1023,7 @@
                                  <double>99.000000000000000</double>
                                 </property>
                                 <property name="value">
-                                 <double>10.000000000000000</double>
+                                 <double>2.000000000000000</double>
                                 </property>
                                </widget>
                               </item>
@@ -1079,7 +1088,7 @@
                             <item row="2" column="0">
                              <widget class="QLabel" name="DupRmLabel">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;N+2种模式，&lt;span style=&quot; font-weight:600;&quot;&gt;建议仅用于2D输入。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;去除一拍二~一拍N模式（仅为内测/订阅会员开放）：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;如果你不确定你的动漫是一拍几，选&lt;span style=&quot; font-weight:600;&quot;&gt;一拍三~一拍七即可&lt;/span&gt;&lt;/p&gt;&lt;p&gt;N越高，计算量越大，补帧速度可能越慢&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;单一识别模式：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;轻度流畅优化：&lt;span style=&quot; font-weight:600;&quot;&gt;0.1~1.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;中度流畅优化：&lt;span style=&quot; font-weight:600;&quot;&gt;1.0~2.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;重度优化（会破坏运动节奏，并导致人物嘴部动画鬼畜，但很流畅）：&lt;span style=&quot; font-weight:600;&quot;&gt;2.0及以上&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;去除一拍N模式下的画面比单一识别模式显著流畅，同时没有单一模式的问题（鬼畜等）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;N+2种模式，&lt;span style=&quot; font-weight:600;&quot;&gt;建议仅用于2D输入。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;去除一拍二~一拍N模式（仅为内测/订阅会员开放）：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;如果你不确定你的动漫是一拍几，选&lt;span style=&quot; font-weight:600;&quot;&gt;一拍三~一拍七即可&lt;/span&gt;&lt;/p&gt;&lt;p&gt;N越高，计算量越大，补帧速度可能越慢&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;单一识别模式：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;轻度流畅优化：&lt;span style=&quot; font-weight:600;&quot;&gt;0.1~1.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;中度流畅优化：&lt;span style=&quot; font-weight:600;&quot;&gt;1.0~2.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;重度优化（会破坏运动节奏，并导致人物嘴部动画鬼畜，但很流畅）：&lt;span style=&quot; font-weight:600;&quot;&gt;2.0及以上&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;去除一拍N模式使用自研算法，生成的画面比单一识别模式显著流畅，同时没有单一模式的问题（鬼畜等）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>重复帧去除</string>
@@ -1242,10 +1251,10 @@
                              <bool>false</bool>
                             </property>
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;cunet模型用于动漫超分&lt;/p&gt;&lt;p&gt;photo模型用于实拍&lt;/p&gt;&lt;p&gt;style anime用于老动漫&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;带jpg的是用来处理jpg输入的&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;cunet模型用于动漫超分&lt;/p&gt;&lt;p&gt;photo模型用于实拍&lt;/p&gt;&lt;p&gt;style anime用于老动漫&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;“-jpg”用于处理jpg输入&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>超分模型（模型区别请看悬浮说明）</string>
+                             <string>超分模型（模型区别请看鼠标悬浮说明）</string>
                             </property>
                             <property name="scaledContents">
                              <bool>false</bool>
@@ -1406,7 +1415,7 @@
                           <item row="0" column="0">
                            <widget class="QComboBox" name="ResizeTemplate">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;画面分辨率预设&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;画面分辨率预设&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <item>
                              <property name="text">
@@ -1466,7 +1475,7 @@
                        <item row="1" column="0">
                         <widget class="QCheckBox" name="UseAiSR">
                          <property name="toolTip">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;NCNN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用基于NCNN架构的超分算法对输入进行补帧&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                          </property>
                          <property name="text">
                           <string>使用AI超分</string>
@@ -1619,7 +1628,7 @@
                             <item row="3" column="0">
                              <widget class="QCheckBox" name="MBufferChecker">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;防止爆内存，一般不用勾选。&lt;span style=&quot; font-weight:600;&quot;&gt;专业人士自用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用指定的内存量进行补帧任务，避免内存不足，一般不需勾选。&lt;span style=&quot; font-weight:600;&quot;&gt;专业人士自用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>手动指定缓冲区内存大小</string>
@@ -1804,7 +1813,7 @@
                           <item row="3" column="0">
                            <widget class="QLabel" name="EncoderReminder">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;HEVC&lt;/span&gt;：高效视频压制格式，用更低的码率获得更优的画面质量。对于配置较低的电脑，解码可能会有困难。4K、HDR、用于收藏的蓝光原盘等内容只推荐使用此编码&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;H264&lt;/span&gt;：非常通用的压制编码，不推荐用于超高清内容&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;ProRes: &lt;/span&gt;剪辑中间格式专用，如果你希望码率越大越好，选这个就完事了&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;8bit，10bit的区别：&lt;/span&gt;自行百度，10bit可以有效除去画面色带&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;带透明通道的输出：&lt;/span&gt;使用ProRes的yuv444p10le编码&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;HEVC&lt;/span&gt;：高效视频压制格式，用更低的码率获得更优的画面质量。对于配置较低的电脑，解码HEVC编码的视频可能会有困难。4K、HDR、用于收藏的蓝光原盘等内容只推荐使用此编码&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;H264&lt;/span&gt;：非常通用的压制编码，不推荐用于超高清内容（&amp;gt;4K）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;ProRes: &lt;/span&gt;剪辑中间格式专用，如果你希望码率越大越好，选这个就完事了&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;8bit，10bit的区别：&lt;/span&gt;自行百度，10bit可以有效除去画面色带&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;带透明通道的输出：&lt;/span&gt;使用ProRes的yuv444p10le编码&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>选择压制编码： </string>
@@ -1817,7 +1826,7 @@
                           <item row="4" column="0">
                            <widget class="QLabel" name="PresetReminder">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;slow或veryslow的压制质量一般是好的，速度慢&lt;/span&gt;&lt;/p&gt;&lt;p&gt;ll是硬件编码专用预设，代表low latency，低延迟，速度快，质量不高&lt;/p&gt;&lt;p&gt;hq是硬件编码专用预设，代表high quality，相对高质量，但不会比slow高&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;其他都是字面意思&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;slow或veryslow的压制质量已足够好，但速度慢&lt;/span&gt;&lt;/p&gt;&lt;p&gt;ll是NVIDIA硬件编码专用预设，代表low latency，低延迟，速度快，质量不高&lt;/p&gt;&lt;p&gt;hq是NVIDIA硬件编码和ProRes专用预设，代表high quality，相对高质量，但不会比slow高&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;其他都是字面意思&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>选择压制预设：</string>
@@ -1830,7 +1839,7 @@
                           <item row="2" column="0">
                            <widget class="QLabel" name="label_25">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CPU:&lt;/span&gt; 不使用硬件编码&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NVENC: &lt;/span&gt;使用NVIDIA显卡进行硬件编码，速度快，质量高&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;QSV: &lt;/span&gt;使用Intel集显进行硬件编码，编码质量看情况而定。没有Intel集显不要使用此项。&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;如果在输出窗口遇到&lt;span style=&quot; font-weight:600;&quot;&gt;Broken Pipe&lt;/span&gt;错误，请尝试勾选None以取消使用硬件编码&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CPU:&lt;/span&gt; 不使用硬件编码&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NVENC: &lt;/span&gt;使用NVIDIA显卡进行硬件编码，速度快，质量高&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;QSV: &lt;/span&gt;使用Intel集显进行硬件编码，编码质量看情况而定。没有Intel集显不要使用此项。&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;如果在输出窗口遇到&lt;span style=&quot; font-weight:600;&quot;&gt;Broken Pipe&lt;/span&gt;错误，请选择CPU以取消使用硬件编码&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>编码器</string>
@@ -1840,7 +1849,7 @@
                           <item row="8" column="0">
                            <widget class="QCheckBox" name="DeinterlaceChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用ffmpeg的YADIF滤镜&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用ffmpeg的YADIF滤镜对输入进行反交错&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>开启反交错（仅支持视频输入）</string>
@@ -1881,7 +1890,7 @@
                           <item row="6" column="0">
                            <widget class="QCheckBox" name="QuickExtractChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用ffmpeg内置视频导出图片算法，速度稍快，但可能出现颜色偏差&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;推荐开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;使用ffmpeg内置视频导出图片算法，速度快，但可能出现颜色偏差&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>快速拆帧</string>
@@ -1914,6 +1923,9 @@
                            <layout class="QHBoxLayout" name="horizontalLayout_15">
                             <item>
                              <widget class="QCheckBox" name="UseEncodeThread">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用N个线程（ffmpeg）进行渲染&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
                               <property name="text">
                                <string>指定编码线程数</string>
                               </property>
@@ -2013,12 +2025,45 @@
                        <string>补帧设置</string>
                       </attribute>
                       <layout class="QGridLayout" name="gridLayout_30">
+                       <item row="1" column="0">
+                        <spacer name="verticalSpacer_2">
+                         <property name="orientation">
+                          <enum>Qt::Vertical</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>20</width>
+                           <height>40</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
                        <item row="0" column="0">
                         <widget class="QGroupBox" name="groupBox_6">
                          <property name="title">
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_31">
+                          <item row="4" column="0">
+                           <widget class="QCheckBox" name="TtaModeChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;试验性选项：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;极大地降低补帧速度&lt;/p&gt;&lt;p&gt;画面质量会有些许提升&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>TTA模式（N卡A卡通用）</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="5" column="0">
+                           <widget class="QCheckBox" name="UseMultiCardsChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用所有能检测到的显卡进行补帧&lt;/p&gt;&lt;p&gt;使用A卡模式（左侧“使用A卡或核显”）将同时调用能识别到的A卡和N卡&lt;/p&gt;&lt;p&gt;不适用A卡模式则只能使用检测到的N卡&lt;/p&gt;&lt;p&gt;速度较单卡慢&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>使用多卡（有多少用多少）</string>
+                            </property>
+                           </widget>
+                          </item>
                           <item row="0" column="0">
                            <layout class="QGridLayout" name="gridLayout_5">
                             <item row="2" column="1">
@@ -2146,13 +2191,6 @@
                             </item>
                            </layout>
                           </item>
-                          <item row="1" column="0">
-                           <widget class="Line" name="line_6">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                           </widget>
-                          </item>
                           <item row="3" column="0">
                            <layout class="QGridLayout" name="gridLayout_11">
                             <item row="0" column="1">
@@ -2185,7 +2223,7 @@
                              </widget>
                             </item>
                             <item row="1" column="0">
-                             <widget class="QLabel" name="label_35">
+                             <widget class="QLabel" name="SelectedGpuLabel">
                               <property name="sizePolicy">
                                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
                                 <horstretch>0</horstretch>
@@ -2215,6 +2253,13 @@
                             </item>
                            </layout>
                           </item>
+                          <item row="1" column="0">
+                           <widget class="Line" name="line_6">
+                            <property name="orientation">
+                             <enum>Qt::Horizontal</enum>
+                            </property>
+                           </widget>
+                          </item>
                           <item row="2" column="0">
                            <widget class="QLabel" name="AMDSettingsLabel">
                             <property name="text">
@@ -2222,31 +2267,15 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="4" column="0">
-                           <widget class="QCheckBox" name="TtaModeChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;试验性选项：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;极大地降低补帧速度&lt;/p&gt;&lt;p&gt;画面质量会有些许提升&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
+                          <item row="6" column="0">
+                           <widget class="QLabel" name="label_2">
                             <property name="text">
-                             <string>TTA模式</string>
+                             <string>输出文件名将带有反映上述设置的缩写</string>
                             </property>
                            </widget>
                           </item>
                          </layout>
                         </widget>
-                       </item>
-                       <item row="1" column="0">
-                        <spacer name="verticalSpacer_2">
-                         <property name="orientation">
-                          <enum>Qt::Vertical</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>20</width>
-                           <height>40</height>
-                          </size>
-                         </property>
-                        </spacer>
                        </item>
                       </layout>
                      </widget>
@@ -2254,7 +2283,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-37</y>
                         <width>522</width>
                         <height>458</height>
                        </rect>
@@ -2468,6 +2497,9 @@
                          <layout class="QGridLayout" name="gridLayout_23">
                           <item row="0" column="0">
                            <widget class="QPushButton" name="StartExtractButton">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;请先在左侧基础设置栏勾选“输出图片序列”并选择要导出的文件格式（如png）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
                             <property name="text">
                              <string>开拆</string>
                             </property>
@@ -2479,7 +2511,7 @@
                        <item row="3" column="0">
                         <widget class="QLabel" name="ExtractLabel">
                          <property name="text">
-                          <string>拆帧选中输入到输出文件夹（可用于GIF拆帧）</string>
+                          <string>拆帧选中输入到输出文件夹（可用于GIF拆帧）（请先勾选“输出图片序列”）</string>
                          </property>
                         </widget>
                        </item>
@@ -2624,7 +2656,7 @@ p, li { white-space: pre-wrap; }
                   </sizepolicy>
                  </property>
                  <property name="text">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并向开发人员提交settings和error.log文件，群号264023742&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;如果程序无法结束（按下方的强制结束按钮无效），请直接右上角关闭软件，重来！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并向开发人员提交settings和error.log文件，群号264023742&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>

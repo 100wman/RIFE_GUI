@@ -10,6 +10,9 @@ from Utils.utils import ArgumentManager
 warnings.filterwarnings("ignore")
 
 
+# Utils = Utils()
+
+
 class RifeInterpolation:
     def __init__(self, __args: ArgumentManager):
         self.initiated = False
@@ -17,6 +20,7 @@ class RifeInterpolation:
 
         self.auto_scale = self.ARGS.use_rife_auto_scale
         self.device = None
+        self.device_count = torch.cuda.device_count()
         self.model = None
         self.model_path = ""
         self.model_version = 0
@@ -33,7 +37,7 @@ class RifeInterpolation:
             self.ARGS.use_rife_fp16 = False
             print("INFO - use cpu to interpolate")
         else:
-            self.device = torch.device("cuda")
+            self.device = torch.device(f"cuda")
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
 
@@ -52,30 +56,22 @@ class RifeInterpolation:
             self.model_path = self.ARGS.rife_model
 
         try:
-            try:
-                from model.RIFE_HDv2 import Model
-                model = Model()
-                model.load_model(self.model_path, -1)
-                self.model_version = 2
-                print("INFO - Loaded v2.x HD model.")
-            except:
-                from model.RIFE_HDv3 import Model
-                model = Model(forward_ensemble=self.ARGS.use_rife_forward_ensemble)
-                model.load_model(self.model_path, -1)
-                self.model_version = 3
-                print("INFO - Loaded v3.x HD model.")
+            from model.RIFE_HDv2 import Model
+            model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards)
+            model.load_model(self.model_path, -1 if not self.ARGS.use_rife_multi_cards else 0)
+            self.model_version = 2
+            print("INFO - Loaded v2.x HD model.")
         except:
-            from model.RIFE_HD import Model
-            model = Model()
+            from model.RIFE_HDv3 import Model
+            model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
+                          forward_ensemble=self.ARGS.use_rife_forward_ensemble)
             model.load_model(self.model_path, -1)
-            self.model_version = 1
-            print("INFO - Loaded v1.x HD model")
+            self.model_version = 3
+            print("INFO - Loaded v3.x HD model.")
 
         self.model = model
-
         self.model.eval()
         self.model.device()
-        # print(f"INFO - Load model at {self.model_path}")
         self.initiated = True
 
     def __inference(self, i1, i2, scale):
@@ -128,6 +124,12 @@ class RifeInterpolation:
         try:
             img_torch = torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(
                 0).float() / 255.
+            if self.ARGS.use_rife_multi_cards and self.device_count > 1 :
+                if self.device_count % 2 == 0:
+                    batch = 2
+                else:
+                    batch = 3
+                img_torch = torch.cat([img_torch for i in range(batch)], dim=0)
             return self.pad_image(img_torch, padding)
         except Exception as e:
             print(img)

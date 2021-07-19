@@ -342,11 +342,15 @@ class Tools:
 
 class ImgSeqIO:
     def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
-                 output_ext=".png", **kwargs):
+                 output_ext=".png", exp=2, **kwargs):
         if logger is None:
             self.logger = Tools.get_logger(name="ImgIO", log_path=folder)
         else:
             self.logger = logger
+
+        if output_ext[0] != ".":
+            output_ext = "." + output_ext
+        self.output_ext = output_ext
 
         if folder is None or os.path.isfile(folder):
             self.logger.error(f"Invalid ImgSeq Folder: {folder}")
@@ -355,10 +359,11 @@ class ImgSeqIO:
         if not os.path.exists(self.seq_folder):
             os.mkdir(self.seq_folder)
             start_frame = 0
-        elif start_frame == -1:
+        elif start_frame == -1 and not is_read:
             start_frame = self.get_start_frame()
-            # read: start_frame = last img, no read; write: start writing at the end of sequence
-        self.star_frame = start_frame
+            # write: start writing at the end of sequence
+
+        self.start_frame = start_frame
         self.frame_cnt = 0
         self.img_list = list()
 
@@ -370,14 +375,7 @@ class ImgSeqIO:
         self.resize = (0, 0)
         self.resize_flag = False
 
-        if output_ext[0] != ".":
-            output_ext = "." + output_ext
-        self.output_ext = output_ext
-
-        if "exp" in kwargs:
-            self.exp = kwargs["exp"]
-        else:
-            self.exp = 0
+        self.exp = exp
         if "resize" in kwargs and len(kwargs["resize"]):
             self.resize = list(map(lambda x: int(x), kwargs["resize"].split("x")))
             self.resize_flag = True
@@ -669,10 +667,12 @@ class ArgumentManager:
         self.rife_model = args.get("rife_model", "")
         self.rife_model_name = args.get("rife_model_name", "")
         self.rife_exp = args.get("rife_exp", 1.0)
+        self.rife_cuda_cnt = args.get("rife_cuda_cnt", 0)
         self.is_rife_reverse = args.get("is_rife_reverse", False)
         self.use_specific_gpu = args.get("use_specific_gpu", 0)  # !
         self.use_rife_auto_scale = args.get("use_rife_auto_scale", False)
         self.use_rife_forward_ensemble = args.get("use_rife_forward_ensemble", False)
+        self.use_rife_multi_cards = args.get("use_rife_multi_cards", False)
 
         self.debug = args.get("debug", False)
         self.multi_task_rest = args.get("multi_task_rest", False)

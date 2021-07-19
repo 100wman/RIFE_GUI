@@ -9,12 +9,11 @@ from skvideo.io import FFmpegWriter, FFmpegReader
 
 from Utils.utils import *
 
-print("INFO - ONE LINE SHOT ARGS 6.8.2 2021/7/16")
+print("INFO - ONE LINE SHOT ARGS 6.8.4 2021/7/19")
 """
-Update Log at 6.8.2
-1. Greatly Optimize Tasks Pipe
-2. Optimize SVFI GUI toolbox utility(multi thread)
-3. Fix pretty much bugs on work flow
+Update Log at 6.8.4
+1. Fix GUI Configuration Error
+2. Add Multi Cards Support
 """
 
 """设置环境路径"""
@@ -47,7 +46,10 @@ ARGS = ArgumentManager(args)
 
 """设置可见的gpu"""
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-if int(ARGS.use_specific_gpu) != -1:
+if int(ARGS.rife_cuda_cnt) != 0 and ARGS.use_rife_multi_cards:
+    cuda_devices = [str(i) for i in range(ARGS.rife_cuda_cnt)]
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(cuda_devices)}"
+else:
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{ARGS.use_specific_gpu}"
 
 """强制使用CPU"""
@@ -241,7 +243,7 @@ class InterpWorkFlow:
         if self.ARGS.is_img_input:
             img_io = ImgSeqIO(folder=self.input, is_read=True,
                               start_frame=self.ARGS.interp_start, logger=self.logger,
-                              output_ext=self.ARGS.output_ext, )
+                              output_ext=self.ARGS.output_ext, exp=self.ARGS.rife_exp)
             self.all_frames_cnt = img_io.get_frames_cnt()
             self.logger.info(f"Img Input, update frames count to {self.all_frames_cnt}")
             return img_io
@@ -283,6 +285,7 @@ class InterpWorkFlow:
             vf_args += f",yadif=parity=auto"
         vf_args += f",minterpolate=fps={self.target_fps}:mi_mode=dup"
         if start_frame not in [-1, 0]:
+            # not start from the beginning
             input_dict.update({"-ss": f"{start_frame / self.target_fps:.3f}"})
 
         """Quick Extraction"""
@@ -556,13 +559,11 @@ class InterpWorkFlow:
 
         last_frame = chunk_info["last_frame"]
 
-        """Manually Prioritized"""
-        if self.ARGS.interp_start not in [-1, ] or self.ARGS.output_chunk_cnt not in [-1, 0]:
+        """Not start from the beginning"""
+        if self.ARGS.interp_start not in [-1, ] or self.ARGS.output_chunk_cnt not in [-1, ]:
             if chunk_cnt + 1 != self.ARGS.output_chunk_cnt or last_frame + 1 != self.ARGS.interp_start:
-                try:
-                    os.remove(chunk_info_path)
-                except FileNotFoundError:
-                    pass
+                """人工输入优先，删除进度信息从头开始"""
+                os.remove(chunk_info_path)
             return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
         return chunk_cnt + 1, last_frame + 1
 
@@ -994,7 +995,10 @@ class InterpWorkFlow:
         img1 = self.crop_read_img(Tools.gen_next(videogen_check))
         now_frame_key = start_frame
         if img1 is None:
-            raise OSError(f"Input file not valid: {self.input}, img_input: {self.ARGS.is_img_input}")
+            self.main_error = OSError(f"Input file not valid: {self.input}, img_input: {self.ARGS.is_img_input},"
+                                      f"Please Check Your Input Settings(Start Point, Start Frame)")
+            self.rife_work_event.set()
+            raise self.main_error
 
         is_end = False
 
@@ -1100,7 +1104,10 @@ class InterpWorkFlow:
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         now_frame = start_frame
         if img1 is None:
-            raise OSError(f"Input file not valid: {self.input}")
+            self.main_error = OSError(f"Input file not valid: {self.input}, img_input: {self.ARGS.is_img_input},"
+                                      f"Please Check Your Input Settings(Start Point, Start Frame)")
+            self.rife_work_event.set()
+            raise self.main_error
 
         is_end = False
 
@@ -1265,7 +1272,12 @@ class InterpWorkFlow:
             now_frame = start_frame
             PURE_SCENE_THRESHOLD = 30
 
-            self.rife_work_event.wait()
+            self.rife_work_event.wait()  # 等待补帧线程启动（等待读取验证啥的）
+            if self.main_error:
+                self.logger.error("Threads outside RUN encounters error,")
+                self.feed_to_render([None], is_end=True)
+                raise self.main_error
+
             pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
             pbar.update(n=start_frame)
             pbar.unpause()
@@ -1298,6 +1310,7 @@ class InterpWorkFlow:
                 if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0:
                     """先超后补"""
                     img0, img1 = self.sr_module.svfi_process(img0), self.sr_module.svfi_process(img1)
+
                 frames_list = [img0]
                 if self.ARGS.is_scdet_mix and add_scene:
                     mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
