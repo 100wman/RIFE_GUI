@@ -1,5 +1,6 @@
 import os
 import warnings
+import random
 
 from Utils.utils import ArgumentManager
 from ncnn.rife import rife_ncnn_vulkan
@@ -8,15 +9,22 @@ warnings.filterwarnings("ignore")
 raw = rife_ncnn_vulkan.raw
 
 
-class RifeInterpolation(rife_ncnn_vulkan.RIFE):
+class RifeInterpolation:
     def __init__(self, __args: ArgumentManager):
         self.ARGS = __args
         uhd_mode = True if self.ARGS.rife_exp < 1 else False
-        super().__init__(self.ARGS.ncnn_gpu, os.path.basename(self.ARGS.rife_model),
-                         uhd_mode=uhd_mode, num_threads=self.ARGS.ncnn_thread)
         self.initiated = False
-
-        self.device = None
+        self.use_multi_cards = self.ARGS.use_rife_multi_cards
+        self.device = []
+        if self.use_multi_cards:
+            for nvidia_card_id in range(self.ARGS.ncnn_gpu):
+                self.device.append(rife_ncnn_vulkan.RIFE(
+                    nvidia_card_id, os.path.basename(self.ARGS.rife_model),
+                    uhd_mode=uhd_mode, num_threads=self.ARGS.ncnn_thread))
+        else:
+            self.device.append(rife_ncnn_vulkan.RIFE(
+                self.ARGS.ncnn_gpu, os.path.basename(self.ARGS.rife_model),
+                uhd_mode=uhd_mode, num_threads=self.ARGS.ncnn_thread))
         self.model = None
         self.tta_mode = self.ARGS.use_rife_tta_mode
         self.model_path = ""
@@ -34,10 +42,11 @@ class RifeInterpolation(rife_ncnn_vulkan.RIFE):
         return img
 
     def __inference(self, i1, i2):
+        rife_instance = self.device[random.randrange(0, len(self.device))]
         if self.ARGS.is_rife_reverse:
-            mid = self.process(i1, i2)[0]
+            mid = rife_instance.process(i1, i2)[0]
         else:
-            mid = self.process(i2, i1)[0]
+            mid = rife_instance.process(i2, i1)[0]
         return mid
 
     def __make_n_inference(self, i1, i2, scale, n):

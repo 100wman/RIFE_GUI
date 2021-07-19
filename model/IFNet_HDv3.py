@@ -82,10 +82,9 @@ class IFNet(nn.Module):
         # self.unet = Unet()
 
     def forward(self, x, scale_list=[4, 2, 1], training=False, ada_scale=True, ensemble=True):
-        if training == False:
-            channel = x.shape[1] // 2
-            img0 = x[:, :channel]
-            img1 = x[:, channel:]
+        channel = x.shape[1] // 2
+        img0 = x[:, :channel]
+        img1 = x[:, channel:]
         flow_list = []
         merged = []
         mask_list = []
@@ -123,4 +122,4 @@ class IFNet(nn.Module):
         '''
         mask_list[2] = torch.sigmoid(mask_list[2])
         merged[2] = merged[2][0] * mask_list[2] + merged[2][1] * (1 - mask_list[2])
-        return flow_list, mask_list[2], merged
+        return merged

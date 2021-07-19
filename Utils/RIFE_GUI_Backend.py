@@ -14,11 +14,11 @@ import traceback
 import cv2
 import psutil
 import torch
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-
+from PyQt5.QtCore import QSettings,pyqtSignal, pyqtSlot, QThread,QTime,QVariant,QPoint,QSize
+from PyQt5.QtGui import QIcon,QTextCursor
+from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
+from Utils.RIFE_GUI_Custom import SVFI_Config_Manager
 from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat
 
 MAC = True
@@ -39,71 +39,6 @@ appData.setIniCodec("UTF-8")
 logger = Utils.get_logger("GUI", dname)
 ols_potential = os.path.join(dname, "one_line_shot_args.exe")
 ico_path = os.path.join(dname, "svfi.ico")
-
-
-class SVFI_Config_Manager:
-    """
-    SVFI 配置文件管理类
-    """
-
-    def __init__(self, item_data: dict):
-        self.input_path = item_data['input_path']
-        self.task_id = item_data['task_id']
-        self.dirname = os.path.join(dname, "Configs")
-        if not os.path.exists(self.dirname):
-            os.mkdir(self.dirname)
-        self.SVFI_config_path = os.path.join(dname, "SVFI.ini")
-        self.config_path = self.__generate_config_path()
-        pass
-
-    def FetchConfig(self):
-        """
-        根据输入文件名获得配置文件路径
-        :return:
-        """
-        if os.path.exists(self.config_path):
-            return self.config_path
-        else:
-            return None
-
-    def DuplicateConfig(self):
-        """
-        复制配置文件
-        :return:
-        """
-        if not os.path.exists(self.SVFI_config_path):
-            logger.warning("Not find Basic Config")
-            return False
-        if os.path.exists(self.config_path):
-            os.remove(self.config_path)
-        shutil.copy(self.SVFI_config_path, self.config_path)
-        return True
-
-    def RemoveConfig(self):
-        """
-        移除配置文件
-        :return:
-        """
-        if os.path.exists(self.config_path):
-            os.remove(self.config_path)
-        else:
-            logger.warning("Not find Config to remove, guess executed directly from main file")
-        pass
-
-    def MaintainConfig(self):
-        """
-        维护配置文件,在LoadSettings后维护
-        :return:
-        """
-        if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, self.SVFI_config_path)
-            return True
-        else:
-            return False
-        pass
-
-    def __generate_config_path(self):
-        return os.path.join(self.dirname, f"SVFI_Config_{self.task_id}.ini")
 
 
 class SVFI_Help_Dialog(QDialog, SVFI_help.Ui_Dialog):
@@ -255,8 +190,8 @@ class SVFI_Run(QThread):
 
     def build_command(self, item_data: dict) -> (str, str):
         global appData
-        config_maintainer = SVFI_Config_Manager(item_data)
-        config_path = config_maintainer.FetchConfig()
+        config_manager = SVFI_Config_Manager(item_data, dname)
+        config_path = config_manager.FetchConfig()
         if config_path is None:
             logger.error(f"Invalid Task: {item_data}")
             return None, ""
@@ -494,6 +429,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.expert_mode = True
         self.preview_args = False
         self.is_gui_quiet = False
+        self.rife_cuda_cnt = 0
         self.SVFI_Preference_form = None
 
         """Initiate and Check GPU"""
@@ -508,9 +444,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.InputFileName.clicked.connect(self.on_InputFileName_currentItemChanged)
         self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
         self.InputFileName.currentItemChanged.connect(self.on_InputFileName_currentItemChanged)
+        self.InputFileName.addSignal.connect(self.on_InputFileName_currentItemChanged)
 
-        """Table Maintainer"""
-        # self.
         """Dilapidation Maintainer"""
         self.settings_dilapidation_hide()
 
@@ -521,6 +456,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetFlowLen.setVisible(False)
         self.SaveCurrentSettings.setVisible(False)
         self.LoadCurrentSettings.setVisible(False)
+        self.SettingsPresetGroup.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -547,17 +483,19 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_initiation(item_update=item_update)
         self.settings_update_gpu_info()
         self.settings_update_model_info()
-        self.on_HwaccelSelector_currentTextChanged()  # Flush Encoder Sets
+        self.on_UseNCNNButton_clicked(silent=True)
         self.on_ExpertMode_changed()
-        self.on_UseAiSR_clicked()
+        self.on_HwaccelSelector_currentTextChanged()  # Flush Encoder Sets
+        self.on_EncoderSelector_currentTextChanged()
         self.on_UseEncodeThread_clicked()
+        self.on_UseAiSR_clicked()
         self.on_slowmotion_clicked()
         self.on_MBufferChecker_clicked()
         self.on_DupRmMode_currentTextChanged()
         self.on_ScedetChecker_clicked()
-        self.on_EncoderSelector_currentTextChanged()
         self.on_ImgOutputChecker_clicked()
         self.on_AutoInterpScaleChecker_clicked()
+        self.on_UseMultiCardsChecker_clicked()
         self.settings_initiation(item_update=item_update)
         pass
 
@@ -575,12 +513,19 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 input_list_data = json.loads(appData.value("gui_inputs", ""))
                 if not len(self.function_get_input_paths()):
                     for item_data in input_list_data['inputs']:
-                        config_maintainer = SVFI_Config_Manager(item_data)
+                        config_maintainer = SVFI_Config_Manager(item_data, dname)
                         input_path = config_maintainer.FetchConfig()
                         if input_path is not None and os.path.exists(input_path):
                             self.InputFileName.addFileItem(item_data['input_path'], item_data['task_id'])
             except json.decoder.JSONDecodeError:
                 logger.error("Could Not Find Valid GUI Inputs from appData, leave blank")
+
+            """Maintain SVFI Startup Resolution"""
+            desktop = QApplication.desktop()
+            pos = appData.value("pos", QVariant(QPoint(960, 540)))
+            size = appData.value("size", QVariant(QSize(int(desktop.width() * 0.6), int(desktop.height() * 0.5))))
+            self.resize(size)
+            self.move(pos)
 
         appData.setValue("ols_path", ols_potential)
         appData.setValue("ffmpeg", dname)
@@ -602,6 +547,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.KeepChunksChecker.setChecked(not appData.value("is_output_only", True, type=bool))
         self.StartPoint.setTime(QTime.fromString(appData.value("input_start_point", "00:00:00"), "HH:mm:ss"))
         self.EndPoint.setTime(QTime.fromString(appData.value("input_end_point", "00:00:00"), "HH:mm:ss"))
+        self.StartChunk.setValue(appData.value("output_chunk_cnt", -1, type=int))
+        self.StartFrame.setValue(appData.value("interp_start", -1, type=int))
         self.DebugChecker.setChecked(appData.value("debug", False, type=bool))
 
         """Output Resize Configuration"""
@@ -609,6 +556,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.CropWidthpSettings.setValue(appData.value("crop_width", 0, type=int))
         self.ResizeHeightSettings.setValue(appData.value("resize_height", 0, type=int))
         self.ResizeWidthSettings.setValue(appData.value("resize_width", 0, type=int))
+        self.ResizeTemplate.setCurrentIndex(0)
 
         """Render Configuration"""
         self.UseCRF.setChecked(appData.value("use_crf", True, type=bool))
@@ -664,6 +612,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.TtaModeChecker.setChecked(appData.value("use_rife_tta_mode", False, type=bool))
         self.ncnnInterpThreadCnt.setValue(appData.value("ncnn_thread", 4, type=int))
         self.ncnnSelectGPU.setValue(appData.value("ncnn_gpu", 0, type=int))
+        self.UseMultiCardsChecker.setChecked(appData.value("use_rife_multi_cards", False, type=bool))
         # Update RIFE Model
         rife_model_list = []
         for item_data in range(self.ModuleSelector.count()):
@@ -684,12 +633,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.MBufferChecker.setChecked(appData.value("use_manual_buffer", False, type=bool))
         self.BufferSizeSelector.setValue(appData.value("manual_buffer_size", 1, type=int))
 
-        """Maintain SVFI Startup Resolution"""
-        desktop = QApplication.desktop()
-        pos = appData.value("pos", QVariant(QPoint(960, 540)))
-        size = appData.value("size", QVariant(QSize(int(desktop.width() * 0.6), int(desktop.height() * 0.5))))
-        self.resize(size)
-        self.move(pos)
+
 
         # self.setAttribute(Qt.WA_TranslucentBackground)
 
@@ -794,6 +738,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("is_rife_reverse", self.ReverseChecker.isChecked())
         appData.setValue("rife_model", os.path.join(appData.value("rife_model_dir"), self.ModuleSelector.currentText()))
         appData.setValue("rife_model_name", self.ModuleSelector.currentText())
+        appData.setValue("rife_cuda_cnt", self.rife_cuda_cnt)
+        appData.setValue("use_rife_multi_cards", self.UseMultiCardsChecker.isChecked())
         appData.setValue("use_specific_gpu", self.DiscreteCardSelector.currentIndex())
         appData.setValue("use_rife_auto_scale", self.AutoInterpScaleChecker.isChecked())
         appData.setValue("use_rife_forward_ensemble", self.ForwardEnsembleChecker.isChecked())
@@ -816,7 +762,13 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         logger.info("[Main]: Download all settings")
         self.OptionCheck.isReadOnly = True
-        # appData.sync()
+        if not os.path.exists(appData.fileName()):
+            appData.sync()
+        try:
+            if not os.path.samefile(appData.fileName(), appDataPath):
+                shutil.copy(appData.fileName(), appDataPath)
+        except FileNotFoundError:
+            logger.info("Unable to save Configs, probably permanent loss")
         pass
 
     def settings_check_args(self) -> bool:
@@ -893,37 +845,39 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         current_item = self.InputFileName.currentItem()
         if current_item is None:
+            self.function_send_msg(f"恢复进度？", f"正在使用队列的第一个任务进行进度检测")
             self.InputFileName.setCurrentRow(0)
             current_item = self.InputFileName.currentItem()
         output_dir = self.OutputFolder.text()
 
-        widget_data = self.InputFileName.get_widget_data(current_item)
+        widget_data = self.InputFileName.getWidgetData(current_item)
         input_path = widget_data.get('input_path')
         task_id = widget_data.get('task_id')
         project_dir = os.path.join(output_dir,
                                    f"{Tools.get_filename(input_path)}_{task_id}")
         if not os.path.exists(project_dir):
             os.mkdir(project_dir)
-            self.settings_set_start_info(0, 1, True)
+            self.function_send_msg(f"恢复进度", f"未找到与第{widget_data['row']}个任务相关的进度信息", 3)
+            self.settings_set_start_info(0, 1, True)  # start from zero
             return
 
         if self.ImgOutputChecker.isChecked():
             """Img Output"""
             img_io = ImgSeqIO(logger=logger, folder=output_dir, is_tool=True, output_ext=self.ExtSelector.currentText())
-            last_img = img_io.get_start_frame()
-            chunk_cnt = 1
+            last_img = img_io.get_start_frame()  # output_dir
             if last_img:
                 reply = self.function_send_msg(f"恢复进度？", f"检测到未完成的图片序列补帧任务，载入进度？", 3)
                 if reply == QMessageBox.No:
-                    self.settings_set_start_info(0, 1, True)
+                    self.settings_set_start_info(0, 1, False)  # start from zero
                     logger.info("User Abort Auto Set")
                     return
-            self.settings_set_start_info(last_img + 1, chunk_cnt, False)
+            self.settings_set_start_info(last_img + 1, 1, False)
             return
 
         chunk_info_path = os.path.join(project_dir, "chunk.json")
 
         if not os.path.exists(chunk_info_path):
+            self.function_send_msg(f"恢复进度", f"未找到与第{widget_data['row']}个任务相关的进度信息", 3)
             logger.info("AutoSet find None to resume interpolation")
             self.settings_set_start_info(0, 1, True)
             return
@@ -938,21 +892,22 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if chunk_cnt > 0:
             reply = self.function_send_msg(f"恢复进度？", f"检测到未完成的补帧任务，载入进度？", 3)
             if reply == QMessageBox.No:
-                self.settings_set_start_info(0, 1, True)
+                self.settings_set_start_info(0, 1, False)
                 logger.info("User Abort Auto Set")
                 return
         self.settings_set_start_info(last_frame + 1, chunk_cnt + 1, False)
         return
 
     def settings_update_gpu_info(self):
-        infos = {}
-        for i in range(torch.cuda.device_count()):
+        cuda_infos = {}
+        self.rife_cuda_cnt = torch.cuda.device_count()
+        for i in range(self.rife_cuda_cnt):
             card = torch.cuda.get_device_properties(i)
             info = f"{card.name}, {card.total_memory / 1024 ** 3:.1f} GB"
-            infos[f"{i}"] = info
-        logger.info(f"NVIDIA data: {infos}")
+            cuda_infos[f"{i}"] = info
+        logger.info(f"NVIDIA data: {cuda_infos}")
 
-        if not len(infos):
+        if not len(cuda_infos):
             self.hasNVIDIA = False
             self.function_send_msg("No NVIDIA Card Found", "未找到N卡，将使用A卡或核显")
             appData.setValue("use_ncnn", True)
@@ -967,10 +922,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 appData.setValue("use_ncnn", False)
 
         self.DiscreteCardSelector.clear()
-        for gpu in infos:
-            self.DiscreteCardSelector.addItem(f"{gpu}: {infos[gpu]}")
+        for gpu in cuda_infos:
+            self.DiscreteCardSelector.addItem(f"{gpu}: {cuda_infos[gpu]}")
         self.check_gpu = True
-        return infos
+        return cuda_infos
 
     def settings_update_model_info(self):
         app_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -1267,7 +1222,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             new_text += data["notice"] + "\n"
 
         if len(data.get("subprocess", "")):
-            dup_keys_list = ["Process at", "frame=", "matroska @"]
+            dup_keys_list = ["Process at", "frame=", "matroska @", "0%|"]
             if any([i in data["subprocess"] for i in dup_keys_list]):
                 tmp = ""
                 lines = data["subprocess"].splitlines()
@@ -1328,6 +1283,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.InputFileName.setEnabled(True)
             self.current_failed = False
             self.InputFileName.refreshTasks()
+            self.on_InputFileName_currentItemChanged()
 
         self.OptionCheck.moveCursor(QTextCursor.End)
 
@@ -1335,8 +1291,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_InputFileName_currentItemChanged(self):
         current_item = self.InputFileName.currentItem()
         if current_item is None:
-            if len(self.InputFileName.get_items()):
-                self.InputFileName.setCurrentRow(0)
+            item_count = len(self.InputFileName.getItems())
+            if item_count:
+                self.InputFileName.setCurrentRow(item_count - 1)
                 current_item = self.InputFileName.currentItem()
             else:
                 return
@@ -1344,9 +1301,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         if self.InputFileName.itemWidget(current_item) is None:
             return
-        widget_data = self.InputFileName.get_widget_data(current_item)
-        if self.last_item != widget_data:
-            self.settings_maintain_item_settings(widget_data)
+        widget_data = self.InputFileName.getWidgetData(current_item)
+        previous_config_manager = SVFI_Config_Manager(widget_data, dname, logger)
+        if self.last_item != widget_data or previous_config_manager.FetchConfig() is None:
+            self.settings_maintain_item_settings(widget_data)  # 保存当前设置，并准备跳转到新任务的历史设置（可能没有）
         input_path = widget_data.get('input_path')
         input_fps = Tools.get_fps(input_path)
         if not len(self.InputFPS.text()):
@@ -1392,7 +1350,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         if not self.settings_check_args():
             return
-        self.settings_auto_set()
+        # self.settings_auto_set()
         self.settings_load_current()  # update settings
 
         if self.preview_args and not self.is_gui_quiet:
@@ -1437,11 +1395,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         自动设置启动信息按钮（点我就完事了）
         :return:
         """
-        if not len(self.function_get_input_paths()) or not len(self.OutputFolder.text()):
+        if self.InputFileName.currentItem() is None or not len(self.OutputFolder.text()):
             self.function_send_msg("Invalid Inputs", "请检查你的输入和输出文件夹")
             return
-        if self.settings_check_args():
-            self.settings_auto_set()
+        self.settings_auto_set()
 
     @pyqtSlot(bool)
     def on_ConcatButton_clicked(self):
@@ -1499,8 +1456,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.function_send_msg("帧率输入有误", "请确认输入输出帧率为有效数据")
 
     @pyqtSlot(bool)
-    def on_UseNCNNButton_clicked(self):
-        if self.hasNVIDIA and self.UseNCNNButton.isChecked():
+    def on_UseNCNNButton_clicked(self, clicked=True, silent=False):
+        if self.hasNVIDIA and self.UseNCNNButton.isChecked() and not silent:
             reply = self.function_send_msg(f"确定使用NCNN？", f"你有N卡，确定使用A卡/核显？", 3)
             if reply == QMessageBox.Yes:
                 logger.info("Switch To NCNN Mode: %s" % self.UseNCNNButton.isChecked())
@@ -1518,6 +1475,13 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ForwardEnsembleChecker.setEnabled(bool_result)
         self.settings_update_model_info()
         # self.on_ExpSelecter_currentTextChanged()
+
+    @pyqtSlot(bool)
+    def on_UseMultiCardsChecker_clicked(self):
+        bool_result = self.UseMultiCardsChecker.isChecked()
+        self.DiscreteCardSelector.setEnabled(not bool_result)
+        self.SelectedGpuLabel.setText("选择的GPU" if not bool_result else "（使用A卡或核显）拥有的GPU个数")
+
 
     @pyqtSlot(bool)
     def on_UseAiSR_clicked(self):
@@ -1539,8 +1503,15 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         current_template = self.ResizeTemplate.currentText()
 
+        if not len(self.InputFileName.getItems()):
+            return
+        current_item = self.InputFileName.currentItem()
+        if current_item is None:
+            self.InputFileName.setCurrentRow(0)
+            current_item = self.InputFileName.currentItem()
+        row = self.InputFileName.getWidgetData(current_item)['row']
         input_files = self.function_get_input_paths()
-        sample_file = input_files[0]
+        sample_file = input_files[row]
         if not os.path.isfile(sample_file):
             self.function_send_msg("Input File not Video", "输入文件非视频，请手动输入需要的分辨率")
             return
@@ -1742,10 +1713,13 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_load_current()
         if self.last_item is None:
             self.last_item = widget_data
-        config_maintainer = SVFI_Config_Manager(self.last_item)
-        config_maintainer.DuplicateConfig()
-        config_maintainer = SVFI_Config_Manager(widget_data)
+        config_maintainer = SVFI_Config_Manager(self.last_item, dname)
+        config_maintainer.DuplicateConfig()  # 将当前设置保存到上一任务的配置文件，并准备跳转到新任务
+        config_maintainer = SVFI_Config_Manager(widget_data, dname)
         config_path = config_maintainer.FetchConfig()
+        if config_path is None:
+            config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
+            config_path = config_maintainer.FetchConfig()
         appData = QSettings(config_path, QSettings.IniFormat)
         appData.setIniCodec("UTF-8")
         self.settings_update_pack(True)
@@ -1811,7 +1785,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def on_RefreshStartInfo_clicked(self):
-        self.settings_set_start_info(0, 1)
+        self.settings_set_start_info(-1, -1)
         pass
 
     @pyqtSlot(bool)
