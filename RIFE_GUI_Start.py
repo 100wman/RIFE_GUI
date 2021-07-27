@@ -21,12 +21,12 @@ except ImportError as e:
     exit()
 
 """Release Version Control"""
-version_free = False
-version_tag = "3.4"
+is_free = False
+version_tag = "3.4.4 alpha"
 """ **** 改动以上参即可 **** """
 
 if "alpha" not in version_tag:
-    if version_free:
+    if is_free:
         version_tag += " Community"
     else:
         version_tag += " Professional"
@@ -35,7 +35,7 @@ version_title = f"Squirrel Video Frame Interpolation {version_tag}"
 """Initiate APP"""
 app = QApplication(sys.argv)
 app_backend_module = RIFE_GUI_Backend
-app_backend = app_backend_module.RIFE_GUI_BACKEND(free=version_free, version=version_tag)
+app_backend = app_backend_module.RIFE_GUI_BACKEND(is_free=is_free, version=version_tag)
 try:
     form = QCandyUi.CandyWindow.createWindow(app_backend, theme="blueDeep", ico_path="svfi.png",
                                              title=version_title)

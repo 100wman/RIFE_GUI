@@ -105,6 +105,10 @@ class Ui_Dialog(object):
         self.QuietModeChecker.setChecked(False)
         self.QuietModeChecker.setObjectName("QuietModeChecker")
         self.gridLayout_4.addWidget(self.QuietModeChecker, 1, 0, 1, 1)
+        self.OneWayModeChecker = QtWidgets.QCheckBox(self.groupBox_3)
+        self.OneWayModeChecker.setChecked(False)
+        self.OneWayModeChecker.setObjectName("OneWayModeChecker")
+        self.gridLayout_4.addWidget(self.OneWayModeChecker, 2, 0, 1, 1)
         self.verticalLayout_3.addWidget(self.groupBox_3)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_3.addItem(spacerItem)
@@ -135,4 +139,5 @@ class Ui_Dialog(object):
         self.ExpertModeChecker.setText(_translate("Dialog", "开启专家模式"))
         self.PreviewArgsModeChecker.setText(_translate("Dialog", "开启任务前参数文本预览"))
         self.QuietModeChecker.setText(_translate("Dialog", "开启安静模式（不显示弹窗等）"))
+        self.OneWayModeChecker.setText(_translate("Dialog", "任务完成后清空任务列表"))
 from Utils.RIFE_GUI_Custom import MySpinBox

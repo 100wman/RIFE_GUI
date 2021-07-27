@@ -68,7 +68,7 @@ class EncodePresetAssemply:
         "H264": {
             "x264": ["yuv420p", "yuv422p", "yuv444p", "yuv420p10le", "yuv422p10le", "yuv444p10le", ],
             "NVENC": ["yuv420p", "yuv444p"],
-            "QSV": ["yuv420p", ],  # TODO Seriously? QSV Not supporting p010le?
+            "QSV": ["yuv420p", ],
         },
         "ProRes": ["yuv422p10le", "yuv444p10le"]
     }
@@ -741,7 +741,7 @@ class VideoInfo:
 
         # update frame size info
         if 'width' in video_info and 'height' in video_info:
-            self.frames_size = (video_info['width'], video_info['height'])
+            self.frames_size = (int(video_info['width']), int(video_info['height']))
 
         if "r_frame_rate" in video_info:
             fps_info = video_info["r_frame_rate"].split('/')
@@ -771,7 +771,7 @@ class VideoInfo:
             self.frames_cnt = video_input.get(cv2.CAP_PROP_FRAME_COUNT)
         if not self.duration:
             self.duration = self.frames_cnt / self.fps
-        self.frames_size = (video_input.get(cv2.CAP_PROP_FRAME_WIDTH), video_input.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.frames_size = (round(video_input.get(cv2.CAP_PROP_FRAME_WIDTH)), round(video_input.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
     def update_info(self):
         if self.img_input:
@@ -781,7 +781,7 @@ class VideoInfo:
             self.frames_cnt = len(seqlist) * 2 ** self.exp
             img = cv2.imdecode(np.fromfile(os.path.join(self.filepath, seqlist[0]), dtype=np.uint8), 1)[:, :,
                   ::-1].copy()
-            self.frames_size = (img.shape[1], img.shape[0])
+            self.frames_size = (int(img.shape[1]), int(img.shape[0]))
             return
         self.update_frames_info_ffprobe()
         self.update_frames_info_cv2()

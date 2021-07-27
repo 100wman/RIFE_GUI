@@ -11,9 +11,12 @@ from Utils.utils import *
 
 print("INFO - ONE LINE SHOT ARGS 6.8.4 2021/7/19")
 """
-Update Log at 6.8.4
-1. Fix GUI Configuration Error
-2. Add Multi Cards Support
+Update Log at 6.8.5
+1. Fix several GUI Configuration System Errors
+2. Optimize several GUI configuration work flows(add task_id mannual control)
+3. Optimize Resolution Resize Check Control(resize not in string)
+4. Add Exp/OutputFPS Lock
+5. Disable rife_work_event to try to prevent obstruction
 """
 
 """设置环境路径"""
@@ -277,9 +280,11 @@ class InterpWorkFlow:
             """用以一拍二一拍N除重模式的预处理"""
             output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
                                 "-s": "256x256"})
-        elif len(self.ARGS.resize) and not self.ARGS.use_sr:
-            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                "-s": self.ARGS.resize.replace(":", "x").replace("*", "x")})
+        elif self.ARGS.resize_height and self.ARGS.resize_width and not self.ARGS.use_sr:
+            h, w = self.video_info["size"][1], self.video_info["size"][0]
+            if h != self.ARGS.resize_height or w != self.ARGS.resize_width:
+                output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
+                                    "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
         vf_args = f"copy"
         if self.ARGS.use_deinterlace:
             vf_args += f",yadif=parity=auto"
@@ -387,9 +392,9 @@ class InterpWorkFlow:
         vf_args = "copy"  # debug
         output_dict.update({"-vf": vf_args})
 
-        if self.ARGS.use_sr:
+        if self.ARGS.use_sr and self.ARGS.resize_height and self.ARGS.resize_width:
             output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                "-s": self.ARGS.resize.replace(":", "x").replace("*", "x")})
+                                "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
 
         """Assign Render Codec"""
         """CRF / Bitrate Controll"""
@@ -760,10 +765,9 @@ class InterpWorkFlow:
         :return:
         """
         try:
-            if len(self.ARGS.resize):
-                w, h = list(map(lambda x: int(x), self.ARGS.resize.split("x")))
+            if self.ARGS.resize_width and self.ARGS.resize_height:
+                w, h = self.ARGS.resize_width, self.ARGS.resize_height
             else:
-
                 w, h = list(map(lambda x: round(x), self.video_info["size"]))
 
             # if w * h > 1920 * 1080:
@@ -999,7 +1003,7 @@ class InterpWorkFlow:
                                       f"Please Check Your Input Settings(Start Point, Start Frame)")
             self.rife_work_event.set()
             raise self.main_error
-
+        self.logger.info("Loaded Input Frames")
         is_end = False
 
         self.rife_work_event.set()
@@ -1108,7 +1112,7 @@ class InterpWorkFlow:
                                       f"Please Check Your Input Settings(Start Point, Start Frame)")
             self.rife_work_event.set()
             raise self.main_error
-
+        self.logger.info("Loaded Input Frames")
         is_end = False
 
         """Update Interp Mode Info"""
@@ -1272,7 +1276,7 @@ class InterpWorkFlow:
             now_frame = start_frame
             PURE_SCENE_THRESHOLD = 30
 
-            self.rife_work_event.wait()  # 等待补帧线程启动（等待读取验证啥的）
+            # self.rife_work_event.wait()  # 等待补帧线程启动（等待读取验证啥的）
             if self.main_error:
                 self.logger.error("Threads outside RUN encounters error,")
                 self.feed_to_render([None], is_end=True)
