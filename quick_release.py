@@ -5,9 +5,9 @@ import time
 
 root = r"D:\60-fps-Project\Projects\RIFE GUI"
 ico_path = os.path.join(root, "svfi-i.ico")
-gui_version = "3.4"
-cli_version = "6.8.4"
-tag_version = gui_version + ".Professional"
+gui_version = "3.4.4"
+cli_version = "6.8.5"
+tag_version = gui_version + ".alpha"
 # gui_version = input("SVFI GUI Version: ")
 # cli_version = input("SVFI CLI Version: ")
 # tag_version = input("SVFI Tag Version: ")

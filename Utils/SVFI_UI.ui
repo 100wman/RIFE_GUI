@@ -247,21 +247,12 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QLabel" name="InterpExpReminder">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
-                      <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;该倍率仅当输入为&lt;span style=&quot; font-weight:600;&quot;&gt;图片序列时&lt;/span&gt;生效，其余情况仅作为计算按钮&lt;/p&gt;&lt;p&gt;输入为图片序列时，会按照补帧倍率多倍复制图片输入到补帧流，并最终按照输出帧率压制输出&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                      </property>
+                     <widget class="QRadioButton" name="InterpExpReminder">
                       <property name="text">
-                       <string>补帧倍率：</string>
+                       <string>补帧倍率</string>
                       </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
+                      <property name="checked">
+                       <bool>false</bool>
                       </property>
                      </widget>
                     </item>
@@ -309,21 +300,12 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QLabel" name="OutputFPSReminder">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
-                      <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;当输入为&lt;span style=&quot; font-weight:600;&quot;&gt;图片序列，&lt;/span&gt;使用非输入帧率倍数的输出帧率可能会导致时长问题&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                      </property>
+                     <widget class="QRadioButton" name="OutputFPSReminder">
                       <property name="text">
                        <string>输出帧率</string>
                       </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
+                      <property name="checked">
+                       <bool>true</bool>
                       </property>
                      </widget>
                     </item>
@@ -462,7 +444,7 @@
                     </sizepolicy>
                    </property>
                    <property name="text">
-                    <string>输入文件或文件夹，请切换条目以保存设置，任务启动前请务必检查所有条目的设置</string>
+                    <string>输入文件或文件夹，切换条目以保存设置</string>
                    </property>
                   </widget>
                  </item>
@@ -596,7 +578,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>557</width>
+                    <width>549</width>
                     <height>724</height>
                    </rect>
                   </property>
@@ -645,14 +627,14 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>4</number>
+                      <number>0</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>539</width>
+                        <width>531</width>
                         <height>421</height>
                        </rect>
                       </property>
@@ -895,7 +877,7 @@
                             <item row="7" column="0">
                              <widget class="QPushButton" name="RefreshStartInfo">
                               <property name="text">
-                               <string>复原</string>
+                               <string>复原至起点</string>
                               </property>
                              </widget>
                             </item>
@@ -911,7 +893,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>539</width>
+                        <width>531</width>
                         <height>421</height>
                        </rect>
                       </property>
@@ -1174,7 +1156,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>539</width>
+                        <width>531</width>
                         <height>421</height>
                        </rect>
                       </property>
@@ -1419,7 +1401,7 @@
                             </property>
                             <item>
                              <property name="text">
-                              <string>自定义</string>
+                              <string>100%</string>
                              </property>
                             </item>
                             <item>
@@ -1489,7 +1471,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>522</width>
+                        <width>514</width>
                         <height>452</height>
                        </rect>
                       </property>
@@ -2017,7 +1999,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>539</width>
+                        <width>531</width>
                         <height>421</height>
                        </rect>
                       </property>
@@ -2283,8 +2265,8 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-37</y>
-                        <width>522</width>
+                        <y>0</y>
+                        <width>514</width>
                         <height>458</height>
                        </rect>
                       </property>

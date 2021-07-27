@@ -50,10 +50,14 @@ class MyListWidgetItem(QWidget):
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.RemoveItemButton.sizePolicy().hasHeightForWidth())
-        self.task_id_display = QtWidgets.QLabel(self)
-        self.task_id_display.setSizePolicy(sizePolicy)
-        self.task_id_display.setObjectName("task_id_display")
-        self.horizontalLayout.addWidget(self.task_id_display)
+        self.task_id_reminder = QtWidgets.QLabel(self)
+        self.task_id_reminder.setSizePolicy(sizePolicy)
+        self.task_id_reminder.setObjectName("task_id_reminder")
+        self.TaskIdDisplay = MyLineWidget(self)
+        self.TaskIdDisplay.setSizePolicy(sizePolicy)
+        self.TaskIdDisplay.setObjectName("TaskIdDisplay")
+        self.horizontalLayout.addWidget(self.task_id_reminder)
+        self.horizontalLayout.addWidget(self.TaskIdDisplay)
         self.RemoveItemButton.setSizePolicy(sizePolicy)
         self.RemoveItemButton.setObjectName("RemoveItemButton")
         self.horizontalLayout.addWidget(self.RemoveItemButton)
@@ -66,6 +70,7 @@ class MyListWidgetItem(QWidget):
         self.DuplicateItemButton.setText("    +    ")
         self.RemoveItemButton.clicked.connect(self.on_RemoveItemButton_clicked)
         self.DuplicateItemButton.clicked.connect(self.on_DuplicateItemButton_clicked)
+        self.TaskIdDisplay.editingFinished.connect(self.on_TaskIdDisplay_editingFinished)
         """Item Data Settings"""
         self.task_id = None
         self.input_path = None
@@ -78,7 +83,12 @@ class MyListWidgetItem(QWidget):
             self.filename.setText(self.input_path[:len_cut] + "...")
         else:
             self.filename.setText(self.input_path)
-        self.task_id_display.setText(f"  id: {self.task_id}  ")
+        self.task_id_reminder.setText("  id:")
+        self.TaskIdDisplay.setText(f"{self.task_id}")
+
+    def get_task_info(self):
+        self.task_id = self.TaskIdDisplay.text()
+        return {"task_id": self.task_id, "input_path": self.input_path}
 
     def on_DuplicateItemButton_clicked(self, e):
         """
@@ -89,13 +99,22 @@ class MyListWidgetItem(QWidget):
         :param e:
         :return:
         """
-        self.dupSignal.emit({"task_id": self.task_id, "input_path": self.input_path, "action": 1})
+        emit_data = self.get_task_info()
+        emit_data.update({"action": 1})
+        self.dupSignal.emit(emit_data)
         pass
 
     def on_RemoveItemButton_clicked(self, e):
-        self.dupSignal.emit({"task_id": self.task_id, "input_path": self.input_path, "action": 0})
+        emit_data = self.get_task_info()
+        emit_data.update({"action": 0})
+        self.dupSignal.emit(emit_data)
         pass
 
+    def on_TaskIdDisplay_editingFinished(self):
+        previous_task_id = self.task_id
+        emit_data = self.get_task_info()  # update task id by the way
+        emit_data.update({"previous_task_id": previous_task_id, "action": 3})
+        self.dupSignal.emit(emit_data)  # update
 
 class MyLineWidget(QtWidgets.QLineEdit):
     def __init__(self, parent=None):
@@ -137,7 +156,7 @@ class MyListWidget(QListWidget):
         data = list()
         for item in self.getItems():
             widget = self.itemWidget(item)
-            item_data = {"task_id": widget.task_id, "input_path": widget.input_path}
+            item_data = widget.get_task_info()
             data.append(item_data)
         return json.dumps({"inputs": data})
 
@@ -152,14 +171,18 @@ class MyListWidget(QListWidget):
     def dragEnterEvent(self, e):
         self.dropEvent(e)
 
-    def getWidgetData(self, item) -> dict:
+    def getWidgetData(self, item):
         """
         Get widget data from item's widget
         :param item: item
         :return: dict of widget data, including row
         """
-        widget = self.itemWidget(item)
-        item_data = {"task_id": widget.task_id, "input_path": widget.input_path, "row": self.row(item)}
+        try:
+            widget = self.itemWidget(item)
+            item_data = widget.get_task_info()
+            item_data.update({"row": self.row(item)})
+        except AttributeError:
+            return None
         return item_data
 
     def getItems(self):
@@ -217,7 +240,8 @@ class MyListWidget(QListWidget):
         task_id = e.get('task_id')
         target_item = None
         for item in self.getItems():
-            if self.itemWidget(item).task_id == task_id:
+            task_data = self.itemWidget(item).get_task_info()
+            if task_data['task_id'] == task_id:
                 target_item = item
                 break
         if target_item is None:
@@ -230,6 +254,11 @@ class MyListWidget(QListWidget):
             pass
         elif e.get("action") == 0:
             self.takeItem(self.row(target_item))
+        elif e.get("action") == 3:
+            item_data = self.getWidgetData(target_item)
+            config_maintainer = SVFI_Config_Manager(item_data, dname)
+            previous_item_data = {"input_path": item_data['input_path'], "task_id": e.get("previous_task_id")}
+            config_maintainer.DuplicateConfig(previous_item_data)
 
     def keyPressEvent(self, e):
         current_item = self.currentItem()
@@ -279,7 +308,7 @@ class SVFI_Config_Manager:
     SVFI 配置文件管理类
     """
 
-    def __init__(self, item_data: dict, app_dir:str, _logger=None):
+    def __init__(self, item_data: dict, app_dir: str, _logger=None):
 
         self.input_path = item_data['input_path']
         self.task_id = item_data['task_id']
@@ -319,7 +348,7 @@ class SVFI_Config_Manager:
             previous_config_manager = SVFI_Config_Manager(item_data, dname)
             previous_config_path = previous_config_manager.FetchConfig()
             if previous_config_path is not None:
-                """Previous Item Data is None"""
+                """Previous Item Data is not None"""
                 shutil.copy(previous_config_path, self.config_path)
         else:
             shutil.copy(self.SVFI_config_path, self.config_path)
@@ -333,7 +362,7 @@ class SVFI_Config_Manager:
         if os.path.exists(self.config_path):
             os.remove(self.config_path)
         else:
-            logger.warning("Not find Config to remove, guess executed directly from main file")
+            self.logger.warning("Not find Config to remove, guess executed directly from main file")
         pass
 
     def MaintainConfig(self):

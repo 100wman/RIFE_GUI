@@ -1,4 +1,4 @@
-# SVFI 2 (Original based on RIFE GUI)
+# SVFI 3.x (Original based on RIFE GUI)
 A GUI for RIFE interpolation of long-time movies or video materials
 
 ## How to use SVFI 使用简明教程
@@ -6,7 +6,7 @@ built by PyQt5, easy to launch. Support CPU, NVIDIA(CUDA) and AMD([NCNN](https:/
 - Extract release package to an empty folder, ASCII path only 将release压缩包解压到仅有纯英文、无空格路径的文件夹
 
 ![Step1](./static/step1.png)
-- launch SVFI 双击启动SVFI（你也可以自己在Package文件夹里找到SVFI.2.0.1.exe，双击启动）
+- launch SVFI 双击启动SVFI（你也可以自己在Package文件夹里找到SVFI.exe，双击启动）
 
 ![Step2](./static/step2.png)
 - Fill in related parameters, follow the step from 1 to 2 to 3 输入相关参数完成准备工作
@@ -24,7 +24,7 @@ If you anticipate some more customizable outputs, please use CLI tool(one line s
 ```
 python3 one_line_shot_args.py -h
 ```
-*For Latest Update: 最新公测版本 2.0.1：*
+*For Latest Update: 最新专业版 3.4 Professional：*
 ```
 usage: #### RIFE CLI tool/补帧分步设置命令行工具 by Jeanna #### [-h] -i INPUT -o OUTPUT
                                                      -c CONFIG [--concat-only]
