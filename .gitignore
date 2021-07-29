@@ -7,3 +7,7 @@
 /Utils/dilapidated/
 /train_log/
 /Configs/
+/Utils/Auxiliary/
+/Utils/RealESRGAN/models/
+/Utils/RealESRGAN/input/
+/Utils/RealESRGAN/output/
