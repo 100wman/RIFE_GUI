@@ -627,7 +627,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>0</number>
+                      <number>3</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -1902,7 +1902,7 @@
                            </widget>
                           </item>
                           <item row="7" column="1">
-                           <layout class="QHBoxLayout" name="horizontalLayout_15">
+                           <layout class="QHBoxLayout" name="EncodeThreadLayout">
                             <item>
                              <widget class="QCheckBox" name="UseEncodeThread">
                               <property name="toolTip">

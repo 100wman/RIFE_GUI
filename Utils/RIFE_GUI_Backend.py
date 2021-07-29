@@ -402,8 +402,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.chores_thread = None
         self.version = version
         self.is_free = is_free
-        if self.is_free:
-            self.settings_free_hide()
+
 
         appData.setValue("app_dir", ddname)
 
@@ -449,7 +448,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.InputFileName.currentItemChanged.connect(self.on_InputFileName_currentItemChanged)
         self.InputFileName.addSignal.connect(self.on_InputFileName_currentItemChanged)
 
-        """Dilapidation Maintainer"""
+        """Dilapidation and Free Version Maintainer"""
+        if self.is_free:
+            self.settings_free_hide()
         self.settings_dilapidation_hide()
 
     def settings_dilapidation_hide(self):
@@ -460,6 +461,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SaveCurrentSettings.setVisible(False)
         self.LoadCurrentSettings.setVisible(False)
         self.SettingsPresetGroup.setVisible(False)
+
 
     def settings_free_hide(self):
         """
@@ -478,9 +480,17 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.EndPoint.setVisible(False)
         self.StartPointLabel.setVisible(False)
         self.EndPointLabel.setVisible(False)
+        self.ScdetOutput.setVisible(False)
         self.ScdetUseMix.setVisible(False)
         self.UseAiSR.setVisible(False)
-        self.RenderOnlyGroupbox.setVisible(False)
+        self.RenderSettingsLabel.setVisible(False)
+        self.RenderSettingsGroup.setVisible(False)
+        # self.RenderOnlyGroupbox.setVisible(False)
+        self.UseMultiCardsChecker.setVisible(False)
+        self.TtaModeChecker.setVisible(False)
+        self.DeinterlaceChecker.setVisible(False)
+        self.FastDenoiseChecker.setVisible(False)
+        self.EncodeThreadLayout.setEnabled(False)
 
     def settings_update_pack(self, item_update=False):
         self.settings_initiation(item_update=item_update)
@@ -576,6 +586,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.UseEncodeThread.setChecked(appData.value("use_manual_encode_thread", False, type=bool))
         self.EncodeThreadSelector.setValue(appData.value("render_encode_thread", 16, type=int))
         self.EncoderSelector.setCurrentText(appData.value("render_encoder", "H264, 8bit"))
+        self.PresetSelector.setCurrentText(appData.value("render_encoder_preset", "slow"))
         self.FFmpegCustomer.setText(appData.value("render_ffmpeg_customized", ""))
         self.ExtSelector.setCurrentText(appData.value("output_ext", "mp4"))
         self.RenderGapSelector.setValue(appData.value("render_gap", 1000, type=int))
@@ -1586,6 +1597,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetMaxDiffSelector.setVisible(bool_result)
         self.ScdetUseMix.setVisible(bool_result)
         self.ScdetOutput.setVisible(bool_result)
+        self.on_ExpertMode_changed()
+        self.settings_free_hide()
 
     @pyqtSlot(str)
     def on_DupRmMode_currentTextChanged(self):
@@ -1868,6 +1881,11 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         # self.TtaModeChecker.setVisible(self.expert_mode)
         self.KeepChunksChecker.setVisible(self.expert_mode)
         self.AutoInterpScaleChecker.setVisible(self.expert_mode)
+        self.ScdetOutput.setVisible(self.expert_mode)
+        self.ScdetUseMix.setVisible(self.expert_mode)
+        self.DeinterlaceChecker.setVisible(self.expert_mode)
+        self.FastDenoiseChecker.setVisible(self.expert_mode)
+        self.EncodeThreadLayout.setEnabled(self.expert_mode)
 
         if self.is_free:
             self.settings_free_hide()
