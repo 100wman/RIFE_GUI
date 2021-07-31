@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 import torch
-# from line_profiler_pycharm import profile
+from line_profiler_pycharm import profile
 
 class Upscaler(object): 
     def upscale(self, input_image):
@@ -17,15 +17,16 @@ class RRDBNetUpscaler(Upscaler):
         self.scale_factor = scale
         logging.basicConfig(level=logging.DEBUG, filename="../prog", filemode="w", format="%(message)s")
 
-    # @profile
+    @profile
     def upscale(self, input_image):
         input_image = input_image * 1.0 / 255
         input_image = np.transpose(input_image[:, :, [2, 1, 0]], (2, 0, 1))
         input_image = torch.from_numpy(input_image).float()
         input_image = input_image.unsqueeze(0).to(self.device)
-
+        torch.cuda.synchronize()
         model_img = self.model(input_image).data
         output_inference = model_img.squeeze().float()
+        torch.cuda.synchronize()
         cpu_image = output_inference.cpu()
         clamp_img = cpu_image.clamp_(0, 1)
         output_image = clamp_img.numpy()

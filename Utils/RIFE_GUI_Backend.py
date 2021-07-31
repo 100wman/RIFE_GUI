@@ -283,7 +283,7 @@ class SVFI_Run(QThread):
 
             if not self.task_cnt:
                 logger.info("Task List Empty, Please Check Your Settings! (input fps for example)")
-                self.update_status(True, "\nTask List is Empty!\n", returncode=404)
+                self.update_status(True, "\nTask List is Empty!\n请点击输入条目以更新设置", returncode=404)
                 return
 
             interval_time = time.time()
@@ -403,7 +403,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.version = version
         self.is_free = is_free
 
-
         appData.setValue("app_dir", ddname)
 
         if appData.value("ffmpeg", "") != "ffmpeg":
@@ -462,7 +461,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.LoadCurrentSettings.setVisible(False)
         self.SettingsPresetGroup.setVisible(False)
 
-
     def settings_free_hide(self):
         """
         ST only
@@ -495,7 +493,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     def settings_update_pack(self, item_update=False):
         self.settings_initiation(item_update=item_update)
         self.settings_update_gpu_info()
-        self.settings_update_model_info()
+        self.settings_update_rife_model_info()
         self.on_UseNCNNButton_clicked(silent=True)
         self.on_ExpertMode_changed()
         self.on_HwaccelSelector_currentTextChanged()  # Flush Encoder Sets
@@ -530,7 +528,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                         config_maintainer = SVFI_Config_Manager(item_data, dname)
                         input_path = config_maintainer.FetchConfig()
                         if input_path is not None and os.path.exists(input_path):
-                            self.InputFileName.addFileItem(item_data['input_path'], item_data['task_id'])  # resume previous tasks
+                            self.InputFileName.addFileItem(item_data['input_path'],
+                                                           item_data['task_id'])  # resume previous tasks
             except json.decoder.JSONDecodeError:
                 logger.error("Could Not Find Valid GUI Inputs from appData, leave blank")
 
@@ -616,7 +615,14 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         """AI Super Resolution Configuration"""
         self.UseAiSR.setChecked(appData.value("use_sr", False, type=bool))
-        self.on_UseAiSR_clicked()
+        self.SrTileSizeSelector.setValue(appData.value("sr_tilesize", 100, type=int))
+        self.AiSrSelector.setCurrentText(appData.value("use_sr_algo", "realESR"))
+        last_sr_model = appData.value("use_sr_model", "")
+        if len(last_sr_model):
+            self.AiSrModuleSelector.setCurrentText(last_sr_model)
+        else:
+            self.on_UseAiSR_clicked()
+        self.AiSrMode.setCurrentIndex(appData.value("use_sr_mode", 0, type=int))
 
         """RIFE Configuration"""
         self.FP16Checker.setChecked(appData.value("use_rife_fp16", False, type=bool))
@@ -749,6 +755,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_sr_algo", self.AiSrSelector.currentText())
         appData.setValue("use_sr_model", self.AiSrModuleSelector.currentText())
         appData.setValue("use_sr_mode", self.AiSrMode.currentIndex())
+        appData.setValue("sr_tilesize", self.SrTileSizeSelector.value())
 
         """RIFE Settings"""
         appData.setValue("use_ncnn", self.UseNCNNButton.isChecked())
@@ -758,7 +765,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_rife_fp16", self.FP16Checker.isChecked())
         appData.setValue("rife_scale", self.InterpScaleSelector.currentText())
         appData.setValue("is_rife_reverse", self.ReverseChecker.isChecked())
-        appData.setValue("rife_model", os.path.join(appData.value("rife_model_dir", ""), self.ModuleSelector.currentText()))
+        appData.setValue("rife_model",
+                         os.path.join(appData.value("rife_model_dir", ""), self.ModuleSelector.currentText()))
         appData.setValue("rife_model_name", self.ModuleSelector.currentText())
         appData.setValue("rife_cuda_cnt", self.rife_cuda_cnt)
         appData.setValue("use_rife_multi_cards", self.UseMultiCardsChecker.isChecked())
@@ -878,7 +886,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         task_id = widget_data.get('task_id')
         project_dir = os.path.join(output_dir,
                                    f"{Tools.get_filename(input_path)}_{task_id}")
-        if not os.path.exists(project_dir):  # TODO 相同文件输入，不同任务id，恢复进度 -> 手动更改任务id
+        if not os.path.exists(project_dir):
             os.mkdir(project_dir)
             self.function_send_msg(f"恢复进度", f"未找到与第{widget_data['row']}个任务相关的进度信息", 3)
             self.settings_set_start_info(0, 1, True)  # start from zero
@@ -950,7 +958,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.check_gpu = True
         return cuda_infos
 
-    def settings_update_model_info(self):
+    def settings_update_rife_model_info(self):
         app_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         ncnn_dir = os.path.join(app_dir, "ncnn")
         rife_ncnn_dir = os.path.join(ncnn_dir, "rife")
@@ -995,10 +1003,11 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         更新NCNN超分模型
         :return:
         """
-        if not len(self.AiSrSelector.currentText()):
+        current_sr_algo = self.AiSrSelector.currentText()
+        if not len(current_sr_algo):
             return
         sr_algo_ncnn_dir = self.function_get_SuperResolution_paths(path_type=1,
-                                                                   key_word=self.AiSrSelector.currentText())
+                                                                   key_word=current_sr_algo)
 
         if not os.path.exists(sr_algo_ncnn_dir):
             logger.info(f"Not find SR Algorithm dir at {sr_algo_ncnn_dir}")
@@ -1008,6 +1017,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         model_list = list()
         for m in os.listdir(sr_algo_ncnn_dir):
             if not os.path.isfile(os.path.join(sr_algo_ncnn_dir, m)):
+                model_list.append(m)
+            if "realESR" in current_sr_algo:
+                # pth model only
                 model_list.append(m)
 
         self.AiSrModuleSelector.clear()
@@ -1341,8 +1353,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             if os.path.isfile(input_path):
                 ext = os.path.splitext(input_path)[1]
                 if ext in SupportFormat.vid_outputs:
-                    self.ExtSelector.setCurrentText(ext.strip("."))
-
+                    # self.ExtSelector.setCurrentText(ext.strip("."))
+                    # TODO Check lock here
+                    pass
         if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
             try:
                 exp = int(self.ExpSelecter.currentText()[1:])
@@ -1380,6 +1393,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         懒人式启动补帧按钮
         :return:
         """
+        for it in range(len(self.function_get_input_paths())):
+            self.InputFileName.setCurrentRow(it)
         if not self.settings_check_args():
             return
         # self.settings_auto_set()
@@ -1510,7 +1525,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ncnnInterpThreadCnt.setEnabled(not bool_result)
         self.ncnnSelectGPU.setEnabled(not bool_result)
         self.ForwardEnsembleChecker.setEnabled(bool_result)
-        self.settings_update_model_info()
+        self.settings_update_rife_model_info()
         # self.on_ExpSelecter_currentTextChanged()
 
     @pyqtSlot(bool)
@@ -1598,7 +1613,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetUseMix.setVisible(bool_result)
         self.ScdetOutput.setVisible(bool_result)
         self.on_ExpertMode_changed()
-        self.settings_free_hide()
+        if self.is_free:
+            self.settings_free_hide()
 
     @pyqtSlot(str)
     def on_DupRmMode_currentTextChanged(self):

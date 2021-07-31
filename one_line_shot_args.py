@@ -9,14 +9,13 @@ from skvideo.io import FFmpegWriter, FFmpegReader
 
 from Utils.utils import *
 
-print("INFO - ONE LINE SHOT ARGS 6.8.4 2021/7/19")
+print("INFO - ONE LINE SHOT ARGS 6.9.0 2021/7/31")
 """
-Update Log at 6.8.5
-1. Fix several GUI Configuration System Errors
-2. Optimize several GUI configuration work flows(add task_id mannual control)
-3. Optimize Resolution Resize Check Control(resize not in string)
-4. Add Exp/OutputFPS Lock
-5. Disable rife_work_event to try to prevent obstruction
+Update Log at 6.9.0
+1. Add RealESR Super Resolution Algorithm Support
+2. Optimize UI multi-tasks workflow 
+3. Optimize Img Output to single folder
+4. Optimize Historic SR Workflow(6.8->6.9)
 """
 
 """设置环境路径"""
@@ -67,8 +66,8 @@ class InterpWorkFlow:
         """获得补帧输出路径"""
         if os.path.isfile(self.ARGS.output_dir):
             self.ARGS.output_dir = os.path.dirname(self.ARGS.output_dir)
-        self.project_dir = os.path.join(self.ARGS.output_dir,
-                                        f"{Tools.get_filename(self.ARGS.input)}_{self.ARGS.task_id}")
+        self.project_name = f"{Tools.get_filename(self.ARGS.input)}_{self.ARGS.task_id}"
+        self.project_dir = os.path.join(self.ARGS.output_dir, self.project_name)
 
         if not os.path.exists(self.project_dir):
             os.mkdir(self.project_dir)
@@ -95,6 +94,9 @@ class InterpWorkFlow:
         self.interp_dir = os.path.join(self.project_dir, 'interp')
         self.scene_dir = os.path.join(self.project_dir, 'scenes')
         self.env = [self.input_dir, self.interp_dir, self.scene_dir]
+        if self.ARGS.is_img_output:
+            self.output = os.path.join(self.output, self.project_name)
+            os.makedirs(self.output, exist_ok=True)
 
         self.ARGS.is_img_input = not os.path.isfile(self.input)
 
@@ -179,19 +181,33 @@ class InterpWorkFlow:
 
         if self.ARGS.use_sr:
             try:
-                import Utils.SuperResolutionModule
                 input_resolution = self.video_info["size"][0] * self.video_info["size"][1]
                 output_resolution = self.ARGS.resize_width * self.ARGS.resize_height
                 resolution_rate = output_resolution / input_resolution
                 if input_resolution and resolution_rate > 1:
                     sr_scale = Tools.get_exp_edge(resolution_rate)
                     if self.ARGS.use_sr_algo == "waifu2x":
+                        import Utils.SuperResolutionModule
                         self.sr_module = Utils.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
                                                                                scale=sr_scale,
                                                                                num_threads=self.ARGS.ncnn_thread)
                     elif self.ARGS.use_sr_algo == "realSR":
+                        import Utils.SuperResolutionModule
                         self.sr_module = Utils.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
                                                                                 scale=sr_scale)
+                    elif self.ARGS.use_sr_algo == "realESR":
+                        import Utils.RealESRModule
+                        sr_scale = 4
+                        self.sr_module = Utils.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
+                                                                         gpu_id=self.ARGS.use_specific_gpu,
+                                                                         scale=sr_scale, tile=self.ARGS.sr_tilesize)
+                        # RealESR 4x 特判
+                        self.ARGS.resize_width = int(self.ARGS.resize_width / 4)
+                        self.ARGS.resize_height = int(self.ARGS.resize_height / 4)
+                        if int(self.ARGS.resize_width) % 2:
+                            self.ARGS.resize_width += 1
+                        if int(self.ARGS.resize_height) % 2:
+                            self.ARGS.resize_height += 1
                     self.logger.info(
                         f"Load AI SR at {self.ARGS.use_sr_algo}, {self.ARGS.use_sr_model}, scale = {sr_scale}")
                 else:
@@ -666,6 +682,9 @@ class InterpWorkFlow:
 
             if self.ARGS.use_fast_denoise:
                 frame = cv2.fastNlMeansDenoising(frame)
+            if self.ARGS.use_sr and self.ARGS.use_sr_mode == 1:
+                """先补后超"""
+                frame = self.sr_module.svfi_process(frame)
 
             frame_writer.writeFrame(frame)
 
@@ -739,6 +758,10 @@ class InterpWorkFlow:
                 y100 = 0.0000134965 * (x ** 3) - 0.000246688 * (x ** 2) - 0.01987 * x - 0.70953
                 m = min(y25, y50, y100)
                 scale = {y25: 0.25, y50: 0.5, y100: 1.0}[m]
+
+        if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0:
+            """先超后补"""
+            img0, img1 = self.sr_module.svfi_process(img0), self.sr_module.svfi_process(img1)
 
         self.rife_task_queue.put(
             {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "exp": exp, "scale": scale,
@@ -1311,10 +1334,6 @@ class InterpWorkFlow:
                     self.feed_to_render([None], is_end=True)
                     break
 
-                if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0:
-                    """先超后补"""
-                    img0, img1 = self.sr_module.svfi_process(img0), self.sr_module.svfi_process(img1)
-
                 frames_list = [img0]
                 if self.ARGS.is_scdet_mix and add_scene:
                     mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
@@ -1330,11 +1349,6 @@ class InterpWorkFlow:
                             frames_list.extend(interp_list)
                     if add_scene:
                         frames_list.append(img1)
-
-                if self.ARGS.use_sr and self.ARGS.use_sr_mode == 1:
-                    """先补后超"""
-                    for i in range(len(frames_list)):
-                        frames_list[i] = self.sr_module.svfi_process(frames_list[i])
                 feed_list = list()
                 for i in frames_list:
                     feed_list.append([now_frame, i])
