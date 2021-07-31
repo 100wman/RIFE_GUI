@@ -470,7 +470,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.DupFramesTSelector.setVisible(False)
         self.DupFramesTSelector.setValue(0.2)
         self.DupRmMode.clear()
-        ST_RmMode = ["不去除重复帧", "单一识别"]
+        ST_RmMode = ["不去除重复帧", "单一识别", "去除一拍二", "去除一拍三"]
         for m in ST_RmMode:
             self.DupRmMode.addItem(m)
 
@@ -480,7 +480,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.EndPointLabel.setVisible(False)
         self.ScdetOutput.setVisible(False)
         self.ScdetUseMix.setVisible(False)
+        self.UseAiSR.setChecked(False)
         self.UseAiSR.setVisible(False)
+        self.SrField.setVisible(False)
         self.RenderSettingsLabel.setVisible(False)
         self.RenderSettingsGroup.setVisible(False)
         # self.RenderOnlyGroupbox.setVisible(False)
@@ -488,7 +490,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.TtaModeChecker.setVisible(False)
         self.DeinterlaceChecker.setVisible(False)
         self.FastDenoiseChecker.setVisible(False)
-        self.EncodeThreadLayout.setEnabled(False)
+        self.HwaccelDecode.setVisible(False)
+        self.EncodeThreadField.setVisible(False)
+        self.HwaccelEncodeBox.setEnabled(False)
 
     def settings_update_pack(self, item_update=False):
         self.settings_initiation(item_update=item_update)
@@ -1901,7 +1905,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetUseMix.setVisible(self.expert_mode)
         self.DeinterlaceChecker.setVisible(self.expert_mode)
         self.FastDenoiseChecker.setVisible(self.expert_mode)
-        self.EncodeThreadLayout.setEnabled(self.expert_mode)
+        self.EncodeThreadField.setVisible(self.expert_mode)
 
         if self.is_free:
             self.settings_free_hide()
