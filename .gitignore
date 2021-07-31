@@ -8,6 +8,7 @@
 /train_log/
 /Configs/
 /Utils/Auxiliary/
-/Utils/RealESRGAN/models/
+/ncnn/sr/realESR/models/
 /Utils/RealESRGAN/input/
 /Utils/RealESRGAN/output/
+/Utils/RealESRGAN/

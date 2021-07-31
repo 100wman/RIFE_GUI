@@ -21,6 +21,11 @@ from sklearn import linear_model
 from skvideo.utils import check_output
 
 
+class AiModulePaths:
+    """Relevant to root dir(app dir)"""
+    sr_algos = ["ncnn/sr", ]
+
+
 class SupportFormat:
     img_inputs = ['.png', '.tif', '.tiff', '.jpg', '.jpeg']
     img_outputs = ['.png', '.tiff', '.jpg']
@@ -357,7 +362,7 @@ class ImgSeqIO:
             return
         self.seq_folder = folder  # + "/tmp"  # weird situation, cannot write to target dir, father dir instead
         if not os.path.exists(self.seq_folder):
-            os.mkdir(self.seq_folder)
+            os.makedirs(self.seq_folder, exist_ok=True)
             start_frame = 0
         elif start_frame == -1 and not is_read:
             start_frame = self.get_start_frame()
@@ -634,6 +639,7 @@ class ArgumentManager:
         self.use_sr_algo = args.get("use_sr_algo", "")
         self.use_sr_model = args.get("use_sr_model", "")
         self.use_sr_mode = args.get("use_sr_mode", "")
+        self.sr_tilesize = args.get("sr_tilesize", 200)
 
         self.render_gap = args.get("render_gap", 1000)
         self.use_crf = args.get("use_crf", True)
@@ -771,7 +777,8 @@ class VideoInfo:
             self.frames_cnt = video_input.get(cv2.CAP_PROP_FRAME_COUNT)
         if not self.duration:
             self.duration = self.frames_cnt / self.fps
-        self.frames_size = (round(video_input.get(cv2.CAP_PROP_FRAME_WIDTH)), round(video_input.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        self.frames_size = (
+        round(video_input.get(cv2.CAP_PROP_FRAME_WIDTH)), round(video_input.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
     def update_info(self):
         if self.img_input:
@@ -865,16 +872,6 @@ class TransitionDetection_ST:
                 self.save_scene(f"diff: {diff:.3f}, Dead Scene, cnt: {self.scdet_cnt}")
                 self.scene_checked_queue.append(diff)
                 return True
-            # TODO: Check Removing Band Detection makes things better
-            # if len(self.scene_checked_queue):
-            #     max_scene_diff = np.max(self.scene_checked_queue)
-            #     if diff > max_scene_diff * 0.9:
-            #         self.scene_checked_queue.append(diff)
-            #         self.scdet_cnt += 1
-            #         self.save_scene(f"diff: {diff:.3f}, Scene Band, "
-            #                         f"max: {max_scene_diff:.3f}, cnt: {self.scdet_cnt}")
-            #         return True
-            # see_result(f"compare: False, diff: {diff}, bm: {before_measure}")
             return False
 
     def end_view(self):

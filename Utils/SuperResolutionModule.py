@@ -7,9 +7,9 @@ from PIL import Image
 from ncnn.sr.realSR.realsr_ncnn_vulkan import RealSR
 from ncnn.sr.waifu2x.waifu2x_ncnn_vulkan import Waifu2x
 
-
 class SvfiWaifu(Waifu2x):
     def __init__(self, model="", scale=1, num_threads=4, **kwargs):
+        self.available_scales = [2, 4, 8, 16]
         super().__init__(gpuid=0,
                          model=model,
                          tta_mode=False,
@@ -27,6 +27,7 @@ class SvfiWaifu(Waifu2x):
 
 class SvfiRealSR(RealSR):
     def __init__(self, model="", scale=1, num_threads=4, **kwargs):
+        self.available_scales = [4, 16]
         super().__init__(gpuid=0,
                          model=model,
                          tta_mode=False,
