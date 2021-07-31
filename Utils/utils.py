@@ -347,7 +347,7 @@ class Tools:
 
 class ImgSeqIO:
     def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
-                 output_ext=".png", exp=2, **kwargs):
+                 output_ext=".png", exp=2, resize=(0,0), **kwargs):
         if logger is None:
             self.logger = Tools.get_logger(name="ImgIO", log_path=folder)
         else:
@@ -377,13 +377,10 @@ class ImgSeqIO:
         self.thread_pool = list()
 
         self.use_imdecode = False
-        self.resize = (0, 0)
-        self.resize_flag = False
+        self.resize = resize
+        self.resize_flag = self.resize[0] != 0 and self.resize[1] != 0
 
         self.exp = exp
-        if "resize" in kwargs and len(kwargs["resize"]):
-            self.resize = list(map(lambda x: int(x), kwargs["resize"].split("x")))
-            self.resize_flag = True
 
         if is_tool:
             return
@@ -401,7 +398,7 @@ class ImgSeqIO:
         else:
             """Write Img"""
             self.frame_cnt = start_frame
-            self.logger.debug(f"Start Writing at {self.frame_cnt} frames")
+            self.logger.debug(f"Start Writing {self.output_ext} at No. {self.frame_cnt}")
             for t in range(self.thread_cnt):
                 _t = threading.Thread(target=self.write_buffer, name=f"[IMG.IO] Write Buffer No.{t + 1}")
                 self.thread_pool.append(_t)
@@ -416,7 +413,7 @@ class ImgSeqIO:
         img_list = list()
         for f in os.listdir(self.seq_folder):
             fn, ext = os.path.splitext(f)
-            if ext == self.output_ext and fn.isalnum():
+            if ext in SupportFormat.img_inputs and fn.isalnum():
                 img_list.append(int(fn))
         if not len(img_list):
             return 0

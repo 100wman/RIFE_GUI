@@ -9,13 +9,11 @@ from skvideo.io import FFmpegWriter, FFmpegReader
 
 from Utils.utils import *
 
-print("INFO - ONE LINE SHOT ARGS 6.9.0 2021/7/31")
+print("INFO - ONE LINE SHOT ARGS 6.9.1 2021/7/31")
 """
-Update Log at 6.9.0
-1. Add RealESR Super Resolution Algorithm Support
-2. Optimize UI multi-tasks workflow 
-3. Optimize Img Output to single folder
-4. Optimize Historic SR Workflow(6.8->6.9)
+Update Log at 6.9.1
+1. SVFI 3.5 Professional/Community Release
+2. Optimize some minor maneuvers
 """
 
 """设置环境路径"""
@@ -108,7 +106,7 @@ class InterpWorkFlow:
                                              ffmpeg=self.ARGS.ffmpeg, img_input=self.ARGS.is_img_input,
                                              strict_mode=self.ARGS.is_hdr_strict_mode, exp=self.ARGS.rife_exp)
         self.video_info = self.video_info_instance.get_info()
-        if self.ARGS.batch and not self.ARGS.is_img_input:  # 检测到批处理，且输入不是文件夹，使用检测到的帧率
+        if not self.ARGS.is_img_input:  # 输入不是文件夹，使用检测到的帧率
             self.input_fps = self.video_info["fps"]
         elif self.ARGS.input_fps:
             self.input_fps = self.ARGS.input_fps
@@ -120,7 +118,7 @@ class InterpWorkFlow:
         if self.ARGS.is_img_input:
             self.target_fps = self.ARGS.target_fps
             self.ARGS.is_save_audio = False
-            # but assigned output fps will be not touched
+            # but assigned output fps will be not altered
         else:
             if self.ARGS.target_fps:
                 self.target_fps = self.ARGS.target_fps
@@ -262,7 +260,8 @@ class InterpWorkFlow:
         if self.ARGS.is_img_input:
             img_io = ImgSeqIO(folder=self.input, is_read=True,
                               start_frame=self.ARGS.interp_start, logger=self.logger,
-                              output_ext=self.ARGS.output_ext, exp=self.ARGS.rife_exp)
+                              output_ext=self.ARGS.output_ext, exp=self.ARGS.rife_exp,
+                              resize=(self.ARGS.resize_width, self.ARGS.resize_height))
             self.all_frames_cnt = img_io.get_frames_cnt()
             self.logger.info(f"Img Input, update frames count to {self.all_frames_cnt}")
             return img_io
@@ -307,7 +306,7 @@ class InterpWorkFlow:
         vf_args += f",minterpolate=fps={self.target_fps}:mi_mode=dup"
         if start_frame not in [-1, 0]:
             # not start from the beginning
-            input_dict.update({"-ss": f"{start_frame / self.target_fps:.3f}"})
+            output_dict.update({"-ss": f"{start_frame / self.target_fps:.3f}"})
 
         """Quick Extraction"""
         if not self.ARGS.is_quick_extract:
@@ -325,11 +324,15 @@ class InterpWorkFlow:
         :param output_path:
         :return:
         """
-        params_265 = ("ref=4:rd=3:no-rect=1:no-amp=1:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:"
+        params_265 = ("ref=3:rd=3:no-rect=1:no-amp=1:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:"
                       "weightb=1:no-strong-intra-smoothing=1:psy-rd=2.0:psy-rdoq=1.0:no-open-gop=1:"
-                      f"keyint={int(self.target_fps * 3)}:min-keyint=1:rc-lookahead=120:bframes=6:"
+                      f"keyint={int(self.target_fps * 3)}:min-keyint=1:rc-lookahead=50:bframes=6:"
                       f"aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
                       f"deblock=-1:no-sao=1")
+        params_265_fast = ("ref=2:rd=1:ctu=32:no-rect=1:no-amp=1:early-skip=1:fast-intra=1:b-intra=1:"
+                           "rdoq-level=0:limit-tu=4:me=2:subme=3:merange=25:weightb=1:no-strong-intra-smoothing=1:"
+                           "no-open-gop=1:keyint=250:min-keyint=1:rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:"
+                           "qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:no-sao=1:repeat-headers=1")
 
         def HDRChecker():
             nonlocal params_265
@@ -387,7 +390,7 @@ class InterpWorkFlow:
         input_dict = {"-vsync": "cfr"}
 
         output_dict = {"-r": f"{self.target_fps}", "-preset": self.ARGS.render_encoder_preset,
-                       "-metadata": f'title="Made By SVFI {self.ARGS.version}"'}
+                       "-metadata": f'title="Powered By SVFI {self.ARGS.version}"'}
 
         output_dict.update(self.color_info)
 
@@ -445,6 +448,8 @@ class InterpWorkFlow:
                     """10bit"""
                     output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "main10",
                                         "-x265-params": params_265})
+                if any([i in self.ARGS.render_encoder_preset for i in ['fast']]):
+                    output_dict.update({"-x265-params": params_265_fast})
             else:
                 """ProRes"""
                 if "-preset" in output_dict:
@@ -804,7 +809,7 @@ class InterpWorkFlow:
             test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
                                    np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
             self.rife_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
-            self.logger.info(f"VRAM Test Success")
+            self.logger.info(f"VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
         except Exception as e:
             self.logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc())
@@ -1299,7 +1304,7 @@ class InterpWorkFlow:
             now_frame = start_frame
             PURE_SCENE_THRESHOLD = 30
 
-            # self.rife_work_event.wait()  # 等待补帧线程启动（等待读取验证啥的）
+            self.rife_work_event.wait()  # 等待补帧线程启动（等待all frames cnt 更新、验证啥的）
             if self.main_error:
                 self.logger.error("Threads outside RUN encounters error,")
                 self.feed_to_render([None], is_end=True)
@@ -1395,7 +1400,8 @@ class InterpWorkFlow:
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
-            raise OSError(f"Input file not valid: {self.input}")
+            raise OSError(f"Input file not valid: {self.input}, "
+                          f"Please Check Your Input Settings(Start Point, Start Frame)")
 
         renderer = ImgSeqIO(folder=self.output, is_read=False,
                             start_frame=self.ARGS.interp_start, logger=self.logger,
@@ -1419,9 +1425,11 @@ class InterpWorkFlow:
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
-            raise OSError(f"Input file not valid: {self.input}")
+            raise OSError(f"Input file not valid: {self.input}, "
+                          f"Please Check Your Input Settings(Start Point, Start Frame)")
 
-        render_path = os.path.join(self.output, Tools.get_filename(self.input) + f"_SVFI_Render{self.output_ext}")
+        render_path = os.path.join(self.output, Tools.get_filename(self.input) +
+                                   f"_{self.ARGS.task_id}_SVFI_Render{self.output_ext}")
         renderer = self.generate_frame_renderer(render_path)
         pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
         pbar.update(n=start_frame)
