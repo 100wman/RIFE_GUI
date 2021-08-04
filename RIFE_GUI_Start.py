@@ -21,8 +21,8 @@ except ImportError as e:
     exit()
 
 """Release Version Control"""
-is_free = True
-version_tag = "3.5"
+is_free = False
+version_tag = "3.5.1 alpha"
 """ **** 改动以上参即可 **** """
 
 if "alpha" not in version_tag:

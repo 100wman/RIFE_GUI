@@ -9,11 +9,13 @@ from skvideo.io import FFmpegWriter, FFmpegReader
 
 from Utils.utils import *
 
-print("INFO - ONE LINE SHOT ARGS 6.9.1 2021/7/31")
+print("INFO - ONE LINE SHOT ARGS 6.9.2 2021/8/4")
 """
-Update Log at 6.9.1
-1. SVFI 3.5 Professional/Community Release
-2. Optimize some minor maneuvers
+Update Log at 6.9.2
+1. Optimize Documentation on UI issue#126
+2. Support FP16 mode on RealESR
+3. Optimize Input Img Sequence Support
+4. Try to fix appointing multi nvidia cards by torch.set_current_device
 """
 
 """设置环境路径"""
@@ -49,8 +51,8 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 if int(ARGS.rife_cuda_cnt) != 0 and ARGS.use_rife_multi_cards:
     cuda_devices = [str(i) for i in range(ARGS.rife_cuda_cnt)]
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(cuda_devices)}"
-else:
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{ARGS.use_specific_gpu}"
+# else:
+#     os.environ["CUDA_VISIBLE_DEVICES"] = f"{ARGS.use_specific_gpu}"
 
 """强制使用CPU"""
 if ARGS.force_cpu:
@@ -182,8 +184,13 @@ class InterpWorkFlow:
                 input_resolution = self.video_info["size"][0] * self.video_info["size"][1]
                 output_resolution = self.ARGS.resize_width * self.ARGS.resize_height
                 resolution_rate = output_resolution / input_resolution
+                sr_scale = 0
                 if input_resolution and resolution_rate > 1:
                     sr_scale = Tools.get_exp_edge(resolution_rate)
+                if self.ARGS.resize_exp > 1:
+                    """Compulsorily assign scale = resize_exp"""
+                    sr_scale = self.ARGS.resize_exp
+                if sr_scale > 1:
                     if self.ARGS.use_sr_algo == "waifu2x":
                         import Utils.SuperResolutionModule
                         self.sr_module = Utils.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
@@ -198,14 +205,8 @@ class InterpWorkFlow:
                         sr_scale = 4
                         self.sr_module = Utils.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
                                                                          gpu_id=self.ARGS.use_specific_gpu,
-                                                                         scale=sr_scale, tile=self.ARGS.sr_tilesize)
-                        # RealESR 4x 特判
-                        self.ARGS.resize_width = int(self.ARGS.resize_width / 4)
-                        self.ARGS.resize_height = int(self.ARGS.resize_height / 4)
-                        if int(self.ARGS.resize_width) % 2:
-                            self.ARGS.resize_width += 1
-                        if int(self.ARGS.resize_height) % 2:
-                            self.ARGS.resize_height += 1
+                                                                         scale=sr_scale, tile=self.ARGS.sr_tilesize,
+                                                                         half=self.ARGS.use_rife_fp16)
                     self.logger.info(
                         f"Load AI SR at {self.ARGS.use_sr_algo}, {self.ARGS.use_sr_model}, scale = {sr_scale}")
                 else:
@@ -261,14 +262,15 @@ class InterpWorkFlow:
             img_io = ImgSeqIO(folder=self.input, is_read=True,
                               start_frame=self.ARGS.interp_start, logger=self.logger,
                               output_ext=self.ARGS.output_ext, exp=self.ARGS.rife_exp,
-                              resize=(self.ARGS.resize_width, self.ARGS.resize_height))
+                              resize=(self.ARGS.resize_width, self.ARGS.resize_height),
+                              is_esr=self.ARGS.use_sr_algo == "realESR")
             self.all_frames_cnt = img_io.get_frames_cnt()
             self.logger.info(f"Img Input, update frames count to {self.all_frames_cnt}")
             return img_io
 
         """If input is a video"""
         input_dict = {"-vsync": "0", }
-        if self.ARGS.render_hwaccel_mode:
+        if self.ARGS.use_hwaccel_decode:
             input_dict.update({"-hwaccel": "auto"})
         if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
             """任意时段补帧"""
@@ -288,7 +290,8 @@ class InterpWorkFlow:
 
         output_dict = {
             "-vframes": str(10 ** 10), }  # use read frames cnt to avoid ffprobe, fuck
-
+        # debug
+        # output_dict = {}
         output_dict.update(self.color_info)
 
         if frame_check:
@@ -1421,7 +1424,7 @@ class InterpWorkFlow:
 
     def render_only(self):
         chunk_cnt, start_frame = self.check_chunk()
-        videogen = self.generate_frame_reader(start_frame).nextFrame()
+        videogen = self.generate_frame_reader(start_frame)
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
