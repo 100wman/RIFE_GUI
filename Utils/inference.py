@@ -38,6 +38,7 @@ class RifeInterpolation:
             print("INFO - use cpu to interpolate")
         else:
             self.device = torch.device(f"cuda")
+            torch.cuda.set_device(self.ARGS.use_specific_gpu)
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
 

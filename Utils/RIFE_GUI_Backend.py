@@ -432,6 +432,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.use_clear_inputs = False
         self.rife_cuda_cnt = 0
         self.SVFI_Preference_form = None
+        self.resize_exp = 0
 
         """Initiate and Check GPU"""
         self.hasNVIDIA = True
@@ -460,6 +461,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SaveCurrentSettings.setVisible(False)
         self.LoadCurrentSettings.setVisible(False)
         self.SettingsPresetGroup.setVisible(False)
+        self.LockWHChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -512,6 +514,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_AutoInterpScaleChecker_clicked()
         self.on_UseMultiCardsChecker_clicked()
         self.on_InterpExpReminder_toggled()
+        self.on_ResizeTemplate_activated()
         self.settings_initiation(item_update=item_update)
         pass
 
@@ -627,6 +630,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.on_UseAiSR_clicked()
         self.AiSrMode.setCurrentIndex(appData.value("use_sr_mode", 0, type=int))
+        self.resize_exp = appData.value("resize_exp", 1, type=int)
 
         """RIFE Configuration"""
         self.FP16Checker.setChecked(appData.value("use_rife_fp16", False, type=bool))
@@ -760,6 +764,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_sr_model", self.AiSrModuleSelector.currentText())
         appData.setValue("use_sr_mode", self.AiSrMode.currentIndex())
         appData.setValue("sr_tilesize", self.SrTileSizeSelector.value())
+        appData.setValue("resize_exp", self.resize_exp)
 
         """RIFE Settings"""
         appData.setValue("use_ncnn", self.UseNCNNButton.isChecked())
@@ -1551,7 +1556,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_update_sr_model()
 
     @pyqtSlot(int)
-    def on_ResizeTemplate_activated(self, i):
+    def on_ResizeTemplate_activated(self):
         """
         自定义输出分辨率
         :return:
@@ -1567,9 +1572,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         row = self.InputFileName.getWidgetData(current_item)['row']
         input_files = self.function_get_input_paths()
         sample_file = input_files[row]
-        if not os.path.isfile(sample_file):
-            self.function_send_msg("Input File not Video", "输入文件非视频，请手动输入需要的分辨率")
-            return
+        # if not os.path.isfile(sample_file):
+        #     self.function_send_msg("Input File not Video", "输入文件非视频，请手动输入需要的分辨率")
+        #     return
 
         try:
             input_stream = cv2.VideoCapture(sample_file)
@@ -1590,6 +1595,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         elif "%" in current_template and "自定义" not in current_template:
             ratio = int(current_template[:-1]) / 100
             width, height = width * ratio, height * ratio
+            self.resize_exp = ratio
         self.ResizeWidthSettings.setValue(width)
         self.ResizeHeightSettings.setValue(height)
 

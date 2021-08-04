@@ -9,12 +9,13 @@ from torch.nn import functional as F
 
 
 class RealESRGANer:
-    def __init__(self, scale, model_path, tile=0, tile_pad=10, pre_pad=10):
+    def __init__(self, scale, model_path, tile=0, tile_pad=10, pre_pad=10, half=False):
         self.scale = scale
         self.tile_size = tile
         self.tile_pad = tile_pad
         self.pre_pad = pre_pad
         self.mod_scale = None
+        self.half = half
 
         # initialize model
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -27,10 +28,14 @@ class RealESRGANer:
         model.load_state_dict(loadnet[keyname], strict=True)
         model.eval()
         self.model = model.to(self.device)
+        if self.half:
+            self.model = self.model.half()
 
     def pre_process(self, img):
         img = torch.from_numpy(np.transpose(img, (2, 0, 1))).float()
         self.img = img.unsqueeze(0).to(self.device)
+        if self.half:
+            self.img = self.img.half()
 
         # pre_pad
         if self.pre_pad != 0:
@@ -132,7 +137,7 @@ class RealESRGANer:
 
 
 class SvfiRealESR:
-    def __init__(self, model="", gpu_id=0, precent=90, scale=4, tile=100):
+    def __init__(self, model="", gpu_id=0, precent=90, scale=4, tile=100, half=False):
         # TODO optimize auto detect tilesize
         # const_model_memory_usage = 0.6
         # const_pixel_memory_usage = 0.9 / 65536
@@ -146,7 +151,7 @@ class SvfiRealESR:
         self.available_scales = [4]
         self.alpha = None
         model_path = os.path.join(app_dir, "ncnn", "sr", "realESR", "models", model)
-        self.upscaler = RealESRGANer(scale=scale, model_path=model_path, tile=tile)
+        self.upscaler = RealESRGANer(scale=scale, model_path=model_path, tile=tile, half=half)
         # super().__init__(scale=scale, model_path=model,tile=tile_size)
         pass
 
