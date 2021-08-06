@@ -6,15 +6,15 @@ import time
 root = r"D:\60-fps-Project\Projects\RIFE GUI"
 ico_path = os.path.join(root, "svfi-i.ico")
 gui_version = "3.5.1"
-cli_version = "6.9.2"
+cli_version = "6.9.3"
 # tag_version = gui_version + ".alpha"
 # tag_version = gui_version + ".alpha"
-tag_version = "3.5.1.alpha"
+tag_version = "3.5.1.alpha-community"
 # gui_version = input("SVFI GUI Version: ")
 # cli_version = input("SVFI CLI Version: ")
 # tag_version = input("SVFI Tag Version: ")
-compile_ols = f'nuitka --standalone --windows-disable-console --mingw64 --show-memory --show-progress --nofollow-imports --plugin-enable=qt-plugins --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI CLI" --windows-product-version={cli_version} --windows-file-description="SVFI Interpolation CLI" --windows-company-name="Jeanna-SVFI"  --follow-import-to=Utils --output-dir=release .\one_line_shot_args.py'
-compile_gui = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports --include-qt-plugins=sensible,styles --plugin-enable=qt-plugins  --include-package=QCandyUi,PyQt5 --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI" --windows-product-version={gui_version} --windows-file-description="Squirrel Video Frame Interpolation" --windows-company-name="SVFI" --follow-import-to=Utils --output-dir=release --windows-disable-console .\RIFE_GUI_Start.py'
+compile_ols = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports                                      --plugin-enable=qt-plugins                                              --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI CLI" --windows-product-version={cli_version} --windows-file-description="SVFI Interpolation CLI"             --windows-company-name="Jeanna-SVFI"  --follow-import-to=Utils --output-dir=release --windows-disable-console .\one_line_shot_args.py'
+compile_gui = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports --include-qt-plugins=sensible,styles --plugin-enable=qt-plugins  --include-package=QCandyUi,PyQt5,steamworks --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI"     --windows-product-version={gui_version} --windows-file-description="Squirrel Video Frame Interpolation" --windows-company-name="SVFI"         --follow-import-to=Utils --output-dir=release --windows-disable-console .\RIFE_GUI_Start.py'
 # debug
 # os.system(f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports --include-qt-plugins=sensible,styles --plugin-enable=qt-plugins  --include-package=QCandyUi,PyQt5 --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI" --windows-product-version={gui_version} --windows-file-description="Squirrel Video Frame Interpolation" --windows-company-name="SVFI" --follow-import-to=Utils --output-dir=release .\RIFE_GUI_Start.py')
 
