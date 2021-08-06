@@ -6,16 +6,18 @@ import sys
 import psutil
 import tqdm
 from skvideo.io import FFmpegWriter, FFmpegReader
+from steamworks import STEAMWORKS
 
 from Utils.utils import *
-
-print("INFO - ONE LINE SHOT ARGS 6.9.2 2021/8/4")
+try:
+    _steamworks = STEAMWORKS(ArgumentManager.app_id)
+    _steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
+except:
+    pass
+print("INFO - ONE LINE SHOT ARGS 6.9.3 2021/8/6")
 """
-Update Log at 6.9.2
-1. Optimize Documentation on UI issue#126
-2. Support FP16 mode on RealESR
-3. Optimize Input Img Sequence Support
-4. Try to fix appointing multi nvidia cards by torch.set_current_device
+Update Log at 6.9.3
+1. Inherit Steam Validation Framework
 """
 
 """设置环境路径"""
@@ -1242,6 +1244,20 @@ class InterpWorkFlow:
         self.rife_task_queue.put(None)  # bad way to end
 
     def run(self):
+        is_steam = True
+        if is_steam:
+            from steamworks.exceptions import SteamException
+            steamworks = STEAMWORKS(self.ARGS.app_id)
+            steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
+            steam_64id = steamworks.Users.GetSteamID()
+            steam_level = steamworks.Users.GetPlayerSteamLevel()
+            valid_response = steamworks.Users.GetAuthSessionTicket()
+            self.logger.info(f'Steam User Logged on as {steam_64id}, level: {steam_level}, auth: {valid_response}')
+            # debug
+            # valid_response = 1
+            if valid_response != 0:
+                raise SteamException(f"Steam Validation Failed, code {valid_response}")
+
         if self.ARGS.concat_only:
             self.concat_all()
         elif self.ARGS.extract_only:

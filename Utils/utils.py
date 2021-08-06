@@ -325,8 +325,11 @@ class Tools:
         if not os.path.isfile(path):
             return 0
         try:
-            input_stream = cv2.VideoCapture(path)
-            input_fps = input_stream.get(cv2.CAP_PROP_FPS)
+            if not os.path.isfile(path):
+                input_fps = 0
+            else:
+                input_stream = cv2.VideoCapture(path)
+                input_fps = input_stream.get(cv2.CAP_PROP_FPS)
             return input_fps
         except Exception:
             return 0
@@ -607,7 +610,7 @@ class ArgumentManager:
     """
     For OLS's arguments input management
     """
-
+    app_id = 1692080
     def __init__(self, args: dict):
         self.app_dir = args.get("app_dir", "")
         self.ols_path = args.get("ols_path", "")
@@ -788,6 +791,8 @@ class VideoInfo:
         return True
 
     def update_frames_info_cv2(self):
+        # if not os.path.isfile(self.filepath):
+        #     height, width = 0, 0
         video_input = cv2.VideoCapture(self.filepath)
         if not self.fps:
             self.fps = video_input.get(cv2.CAP_PROP_FPS)

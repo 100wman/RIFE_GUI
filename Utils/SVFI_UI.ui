@@ -592,60 +592,12 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>533</width>
+                    <width>521</width>
                     <height>724</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_10">
                    <item row="1" column="0">
-                    <widget class="QLabel" name="AdvanceSettingsLabel">
-                     <property name="text">
-                      <string>高级设置</string>
-                     </property>
-                     <property name="alignment">
-                      <set>Qt::AlignCenter</set>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="3" column="0">
-                    <layout class="QVBoxLayout" name="verticalLayout_8">
-                     <item>
-                      <widget class="QPushButton" name="SaveCurrentSettings">
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;为该输入设置单独的参数文件；默认按照全局参数输出&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>单独保存当前选中的输入设置</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="LoadCurrentSettings">
-                       <property name="text">
-                        <string>载入当前选中输入的设置</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="OutputSettingsButton">
-                       <property name="text">
-                        <string>导出当前设置到文本文件</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="DebugChecker">
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;除虫模式：&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;该模式启用后将不会弹窗&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>Debug (?)</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item row="0" column="0">
                     <widget class="QToolBox" name="toolBox">
                      <property name="maximumSize">
                       <size>
@@ -661,8 +613,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>515</width>
-                        <height>421</height>
+                        <width>246</width>
+                        <height>202</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -926,8 +878,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>515</width>
-                        <height>421</height>
+                        <width>349</width>
+                        <height>172</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1189,8 +1141,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>515</width>
-                        <height>421</height>
+                        <width>285</width>
+                        <height>308</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1551,7 +1503,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>498</width>
+                        <width>486</width>
                         <height>468</height>
                        </rect>
                       </property>
@@ -2081,8 +2033,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>515</width>
-                        <height>421</height>
+                        <width>273</width>
+                        <height>305</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2348,7 +2300,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>498</width>
+                        <width>450</width>
                         <height>460</height>
                        </rect>
                       </property>
@@ -2610,6 +2562,54 @@
                        </item>
                       </layout>
                      </widget>
+                    </widget>
+                   </item>
+                   <item row="4" column="0">
+                    <layout class="QVBoxLayout" name="verticalLayout_8">
+                     <item>
+                      <widget class="QPushButton" name="SaveCurrentSettings">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;为该输入设置单独的参数文件；默认按照全局参数输出&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>单独保存当前选中的输入设置</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="LoadCurrentSettings">
+                       <property name="text">
+                        <string>载入当前选中输入的设置</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="OutputSettingsButton">
+                       <property name="text">
+                        <string>导出当前设置到文本文件</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="DebugChecker">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;除虫模式：&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;该模式启用后将不会弹窗&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>Debug (?)</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="AdvanceSettingsLabel">
+                     <property name="text">
+                      <string>高级设置</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignCenter</set>
+                     </property>
                     </widget>
                    </item>
                   </layout>
