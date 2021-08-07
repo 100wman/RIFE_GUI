@@ -1,28 +1,28 @@
+import os
 import sys
 import traceback
 
 import QCandyUi
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
-import os
-import sys
+
 from Utils.utils import ArgumentManager
-"""Release Version Control"""
-is_steam = True
-is_free = True
-version_tag = "3.5.1 alpha"
-""" **** 改动以上参即可 **** """
-original_cwd = os.getcwd()
-try:
-    from steamworks import STEAMWORKS  # Import main STEAMWORKS class
-    if is_steam:
+
+version_title = f"Squirrel Video Frame Interpolation {ArgumentManager.version_tag}"
+
+if ArgumentManager.is_steam:
+    """Initiate DLL Env(special bugs here)"""
+    original_cwd = os.getcwd()
+    try:
+        from steamworks import STEAMWORKS  # Import main STEAMWORKS class
+
         steamworks = STEAMWORKS(ArgumentManager.app_id)
         steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-except:
-    pass
-os.chdir(original_cwd)
+    except:
+        pass
+    os.chdir(original_cwd)
 
-"""High Resolution Support"""
+"""SVFI High Resolution Support"""
 if hasattr(Qt, 'AA_EnableHighDpiScaling'):
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 
@@ -37,24 +37,17 @@ except ImportError as e:
     input("Press Any Key to Quit")
     exit()
 
-if "alpha" not in version_tag:
-    if is_free:
-        version_tag += " Community"
-    else:
-        version_tag += " Professional"
-version_title = f"Squirrel Video Frame Interpolation {version_tag}"
-
 """Initiate APP"""
 app = QApplication(sys.argv)
 app_backend_module = RIFE_GUI_Backend
-app_backend = app_backend_module.RIFE_GUI_BACKEND(is_free=is_free, is_steam=is_steam, version=version_tag)
+app_backend = app_backend_module.RIFE_GUI_BACKEND()
 try:
-    if app_backend.steam_valid:
+    if app_backend.STEAM.steam_valid:
         form = QCandyUi.CandyWindow.createWindow(app_backend, theme="blueDeep", ico_path="svfi.png",
                                                  title=version_title)
-        # TODO if steam not valid, open up a checkout dialog and modify self.steam_valid = False
-        # if not steam valid, terminate the process
         form.show()
         app.exec_()
 except Exception:
     app_backend_module.logger.critical(traceback.format_exc())
+
+# TODO Optimize SVFI Launch Option bundled with DLC

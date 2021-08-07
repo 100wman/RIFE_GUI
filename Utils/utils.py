@@ -19,6 +19,7 @@ import cv2
 import numpy as np
 from sklearn import linear_model
 from skvideo.utils import check_output
+from steamworks import STEAMWORKS
 
 
 class AiModulePaths:
@@ -350,7 +351,7 @@ class Tools:
 
 class ImgSeqIO:
     def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
-                 output_ext=".png", exp=2, resize=(0,0), is_esr=False, **kwargs):
+                 output_ext=".png", exp=2, resize=(0, 0), is_esr=False, **kwargs):
         if logger is None:
             self.logger = Tools.get_logger(name="ImgIO", log_path=folder)
         else:
@@ -611,6 +612,14 @@ class ArgumentManager:
     For OLS's arguments input management
     """
     app_id = 1692080
+    pro_dlc_id = 1718750
+
+    """Release Version Control"""
+    is_steam = True
+    is_free = True
+    version_tag = "3.5.1 alpha"
+    """ 发布前改动以上参数即可 """
+
     def __init__(self, args: dict):
         self.app_dir = args.get("app_dir", "")
         self.ols_path = args.get("ols_path", "")
@@ -801,7 +810,7 @@ class VideoInfo:
         if not self.duration:
             self.duration = self.frames_cnt / self.fps
         self.frames_size = (
-        round(video_input.get(cv2.CAP_PROP_FRAME_WIDTH)), round(video_input.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+            round(video_input.get(cv2.CAP_PROP_FRAME_WIDTH)), round(video_input.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
     def update_info(self):
         if self.img_input:
@@ -1238,6 +1247,46 @@ class TransitionDetection:
 
     def get_scene_status(self):
         return self.scedet_info
+
+
+class SteamValidation:
+    def CheckSteamAuth(self):
+        if self.is_steam:
+            return 0
+        steam_64id = self.steamworks.Users.GetSteamID()
+        valid_response = self.steamworks.Users.GetAuthSessionTicket()
+        self.logger.info(f'Steam User Logged on as {steam_64id}, auth: {valid_response}')
+        return valid_response
+
+    def CheckProDLC(self) -> bool:
+        if self.is_steam:
+            return True
+        purchase_pro = self.steamworks.Apps.IsDLCInstalled(ArgumentManager.pro_dlc_id)
+        self.logger.info(f'Steam User Purchase Pro Version: {purchase_pro}')
+        return purchase_pro
+
+    def __init__(self, is_steam, logger=None):
+        """
+        Whether use steam for validation
+        :param is_steam:
+        """
+        original_cwd = os.getcwd()
+        self.is_steam = is_steam
+        if logger is None:
+            self.logger = Tools().get_logger(__file__, "")
+        else:
+            self.logger = logger
+        self.steamworks = None
+        self.steam_valid = True
+        self.steam_error = ""
+        if self.is_steam:
+            try:
+                self.steamworks = STEAMWORKS(ArgumentManager.app_id)
+                self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
+            except Exception:
+                self.steam_valid = False
+                self.steam_error = "\n".join(traceback.format_exc().splitlines()[-2:])
+        os.chdir(original_cwd)
 
 
 if __name__ == "__main__":

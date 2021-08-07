@@ -19,7 +19,7 @@ from PyQt5.QtGui import QIcon, QTextCursor
 from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager
-from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager
+from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamValidation
 from steamworks import STEAMWORKS
 
 MAC = True
@@ -284,7 +284,7 @@ class SVFI_Run(QThread):
 
             if not self.task_cnt:
                 logger.info("Task List Empty, Please Check Your Settings! (input fps for example)")
-                self.update_status(True, "\nTask List is Empty!\n请点击输入条目以更新设置", returncode=404)
+                self.update_status(True, "\nTask List is Empty!\n请点击输入条目以更新设置并确认输入输出帧率不为0", returncode=404)
                 return
 
             interval_time = time.time()
@@ -381,7 +381,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     kill_proc = pyqtSignal(int)
     notfound = pyqtSignal(int)
 
-    def __init__(self, parent=None, is_free=False, is_steam=False, version="0.0.0 beta"):
+    def __init__(self, parent=None):
         """
         SVFI 主界面类初始化方法
 
@@ -395,16 +395,14 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         添加新选项/变量 3/3 实现先于load_current_settings的特殊新配置
         :param parent:
-        :param is_free:
         """
         super(RIFE_GUI_BACKEND, self).__init__()
         self.setupUi(self)
         self.rife_thread = None
         self.chores_thread = None
-        self.version = version
-        self.is_free = is_free
-        self.is_steam = is_steam
-        self.steam_valid = True
+        self.version = ArgumentManager.version_tag
+        self.is_free = ArgumentManager.is_free
+        self.is_steam = ArgumentManager.is_steam
 
         appData.setValue("app_dir", ddname)
 
@@ -456,18 +454,19 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.settings_free_hide()
         self.settings_dilapidation_hide()
 
-        if is_steam:
-            try:
-                steamworks = STEAMWORKS(ArgumentManager.app_id)
-                steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-                steam_64id = steamworks.Users.GetSteamID()
-                steam_level = steamworks.Users.GetPlayerSteamLevel()
-                valid_response = steamworks.Users.GetAuthSessionTicket()
-                logger.info(f'Steam User Logged on as {steam_64id}, level: {steam_level}, auth: {valid_response}')
+        self.STEAM = SteamValidation(self.is_steam, logger=logger)
+        if self.is_steam:
+            if not self.STEAM.steam_valid:
+                warning_title = "Steam认证出错！SVFI用不了啦！"
+                error = self.STEAM.steam_error
+                logger.error(f"Steam Validation failed\n{error}")
+                self.function_send_msg(warning_title, error)
+            else:
+                valid_response = self.STEAM.CheckSteamAuth()
                 # debug
                 # valid_response = 1
                 if valid_response != 0:
-                    self.steam_valid = False
+                    self.STEAM.steam_valid = False
                     warning_title = "Steam认证失败！SVFI用不了啦！"
                     warning_msg = f"错误代码：{valid_response}"
                     if valid_response == 1:
@@ -481,13 +480,17 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                     elif valid_response == 5:
                         warning_msg = "Ticket has expired\n购买的凭证过期"
                     self.function_send_msg(warning_title, warning_msg)
-            except Exception:
-                self.steam_valid = False
-                warning_title = "Steam认证出错！SVFI用不了啦！"
-                error = "\n".join(traceback.format_exc().splitlines()[-2:])
-                warning_msg = f"信息：\n{error}"
-                logger.error(f"Steam Validation failed\n{warning_msg}")
-                self.function_send_msg(warning_title, warning_msg)
+                    return
+
+                if not self.is_free:
+                    valid_response = self.STEAM.CheckProDLC()
+                    if not valid_response:
+                        self.STEAM.steam_valid = False
+                        warning_title = "未购买专业版！SVFI用不了啦！"
+                        warning_msg = f"请确保专业版DLC已安装"
+                        self.function_send_msg(warning_title, warning_msg)
+                        return
+
         os.chdir(dname)
 
     def settings_dilapidation_hide(self):
@@ -1302,7 +1305,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             new_text += data["notice"] + "\n"
 
         if len(data.get("subprocess", "")):
-            dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID", "AppID"]
+            dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
+                             "AppID"]
             if any([i in data["subprocess"] for i in dup_keys_list]):
                 tmp = ""
                 lines = data["subprocess"].splitlines()
@@ -2000,7 +2004,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.function_send_msg("Load Success", "已载入默认设置", 3)
 
     def closeEvent(self, event):
-        if not self.steam_valid:
+        if not self.STEAM.steam_valid:
             event.ignore()
             return
         reply = self.function_send_msg("Quit", "是否保存当前设置？", 3)

@@ -7,8 +7,10 @@ import psutil
 import tqdm
 from skvideo.io import FFmpegWriter, FFmpegReader
 from steamworks import STEAMWORKS
+from steamworks.exceptions import SteamException
 
 from Utils.utils import *
+
 try:
     _steamworks = STEAMWORKS(ArgumentManager.app_id)
     _steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
@@ -81,6 +83,9 @@ class InterpWorkFlow:
         self.logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
                          self.ARGS.input)
         self.logger.info("Changing working dir to {0}".format(dname))
+
+        """Steam Validation"""
+        self.STEAM = SteamValidation(self.ARGS.is_steam, logger=self.logger)
 
         """Set FFmpeg"""
         self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "ffmpeg.exe"))
@@ -1244,19 +1249,16 @@ class InterpWorkFlow:
         self.rife_task_queue.put(None)  # bad way to end
 
     def run(self):
-        is_steam = True
-        if is_steam:
-            from steamworks.exceptions import SteamException
-            steamworks = STEAMWORKS(self.ARGS.app_id)
-            steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-            steam_64id = steamworks.Users.GetSteamID()
-            steam_level = steamworks.Users.GetPlayerSteamLevel()
-            valid_response = steamworks.Users.GetAuthSessionTicket()
-            self.logger.info(f'Steam User Logged on as {steam_64id}, level: {steam_level}, auth: {valid_response}')
-            # debug
-            # valid_response = 1
-            if valid_response != 0:
-                raise SteamException(f"Steam Validation Failed, code {valid_response}")
+        if self.ARGS.is_steam:
+            if not self.STEAM.steam_valid:
+                error = self.STEAM.steam_error
+                self.logger.error(f"Steam Validation failed\n{error}")
+                return
+            else:
+                valid_response = self.STEAM.CheckSteamAuth()
+                if valid_response != 0:
+                    self.logger.error(f"Steam Validation Failed, code {valid_response}")
+                    return
 
         if self.ARGS.concat_only:
             self.concat_all()
@@ -1415,7 +1417,7 @@ class InterpWorkFlow:
 
     def extract_only(self):
         chunk_cnt, start_frame = self.check_chunk()
-        videogen = self.generate_frame_reader(start_frame)
+        videogen = self.generate_frame_reader(start_frame).nextFrame()
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
@@ -1440,7 +1442,7 @@ class InterpWorkFlow:
 
     def render_only(self):
         chunk_cnt, start_frame = self.check_chunk()
-        videogen = self.generate_frame_reader(start_frame)
+        videogen = self.generate_frame_reader(start_frame).nextFrame()
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
