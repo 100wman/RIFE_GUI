@@ -4,13 +4,15 @@ import random
 
 from Utils.utils import ArgumentManager
 from ncnn.rife import rife_ncnn_vulkan
+from Utils.inference_template import VideoFrameInterpolation
 
 warnings.filterwarnings("ignore")
 raw = rife_ncnn_vulkan.raw
 
 
-class RifeInterpolation:
+class RifeInterpolation(VideoFrameInterpolation):
     def __init__(self, __args: ArgumentManager):
+        super().__init__()
         self.ARGS = __args
         uhd_mode = True if self.ARGS.rife_exp < 1 else False
         self.initiated = False
@@ -29,7 +31,7 @@ class RifeInterpolation:
         self.tta_mode = self.ARGS.use_rife_tta_mode
         self.model_path = ""
 
-    def initiate_rife(self, __args=None):
+    def initiate_algorithm(self, __args=None):
         if self.initiated:
             return
         self.initiated = True
@@ -64,7 +66,7 @@ class RifeInterpolation:
         else:
             return [*first_half, *second_half]
 
-    def generate_n_interp(self, img1, img2, n, scale, debug=False, test=False):
+    def generate_n_interp(self, img1, img2, n, scale, debug=False):
         if debug:
             output_gen = list()
             for i in range(n):
