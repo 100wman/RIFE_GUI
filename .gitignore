@@ -13,3 +13,5 @@
 /Utils/RealESRGAN/output/
 /Utils/RealESRGAN/
 /Auxiliary/
+/model_cpu/history/
+/steamworks/
