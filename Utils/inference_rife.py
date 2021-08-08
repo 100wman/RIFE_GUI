@@ -6,15 +6,14 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 from Utils.utils import ArgumentManager
+from Utils.inference_template import VideoFrameInterpolation
 
 warnings.filterwarnings("ignore")
 
 
-# Utils = Utils()
-
-
-class RifeInterpolation:
+class RifeInterpolation(VideoFrameInterpolation):
     def __init__(self, __args: ArgumentManager):
+        super().__init__()
         self.initiated = False
         self.ARGS = __args
 
@@ -25,9 +24,8 @@ class RifeInterpolation:
         self.model_path = ""
         self.model_version = 0
         self.tta_mode = self.ARGS.use_rife_tta_mode
-        pass
 
-    def initiate_rife(self, __args=None):
+    def initiate_algorithm(self, __args=None):
         if self.initiated:
             return
 
@@ -38,7 +36,7 @@ class RifeInterpolation:
             print("INFO - use cpu to interpolate")
         else:
             self.device = torch.device(f"cuda")
-            torch.cuda.set_device(self.ARGS.use_specific_gpu)
+            # torch.cuda.set_device(self.ARGS.use_specific_gpu)
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
 
@@ -125,7 +123,7 @@ class RifeInterpolation:
         try:
             img_torch = torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(
                 0).float() / 255.
-            if self.ARGS.use_rife_multi_cards and self.device_count > 1 :
+            if self.ARGS.use_rife_multi_cards and self.device_count > 1:
                 if self.device_count % 2 == 0:
                     batch = 2
                 else:
@@ -143,7 +141,7 @@ class RifeInterpolation:
         else:
             return F.pad(img, padding)
 
-    def generate_n_interp(self, img1, img2, n, scale, debug=False, test=False):
+    def generate_n_interp(self, img1, img2, n, scale, debug=False):
         if debug:
             output_gen = list()
             for i in range(n):

@@ -6,8 +6,6 @@ import sys
 import psutil
 import tqdm
 from skvideo.io import FFmpegWriter, FFmpegReader
-from steamworks import STEAMWORKS
-from steamworks.exceptions import SteamException
 
 from Utils.utils import *
 
@@ -55,8 +53,8 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 if int(ARGS.rife_cuda_cnt) != 0 and ARGS.use_rife_multi_cards:
     cuda_devices = [str(i) for i in range(ARGS.rife_cuda_cnt)]
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(cuda_devices)}"
-# else:
-#     os.environ["CUDA_VISIBLE_DEVICES"] = f"{ARGS.use_specific_gpu}"
+else:
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{ARGS.use_specific_gpu}"
 
 """强制使用CPU"""
 if ARGS.force_cpu:
@@ -154,7 +152,7 @@ class InterpWorkFlow:
             f"FRAMES_CNT: {self.all_frames_cnt}, EXP: {self.rife_exp}")
 
         """RIFE Core"""
-        self.rife_core = RifeInterpolation(self.ARGS)  # 用于补帧的模块
+        self.vfi_core = RifeInterpolation(self.ARGS)  # 用于补帧的模块
 
         """Guess Memory and Render System"""
         if self.ARGS.use_manual_buffer:
@@ -818,7 +816,7 @@ class InterpWorkFlow:
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
                                    np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
-            self.rife_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
+            self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
             self.logger.info(f"VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
         except Exception as e:
@@ -1289,20 +1287,20 @@ class InterpWorkFlow:
             """Load RIFE Model"""
             if self.ARGS.use_ncnn:
                 self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
-                from Utils import inference_A as inference
+                from Utils import inference_rife_ncnn as inference
             else:
                 try:
-                    from Utils import inference
+                    from Utils import inference_rife
                 except Exception:
                     self.logger.warning("Import Torch Failed, use NCNN-RIFE instead")
                     traceback.print_exc()
                     self.ARGS.use_ncnn = True
                     self.ARGS.rife_model_name = "rife-v2"
-                    from Utils import inference_A as inference
+                    from Utils import inference_rife_ncnn as inference
 
             """Update RIFE Core"""
-            self.rife_core = inference.RifeInterpolation(self.ARGS)
-            self.rife_core.initiate_rife(self.ARGS)
+            self.vfi_core = inference.RifeInterpolation(self.ARGS)
+            self.vfi_core.initiate_algorithm(self.ARGS)
 
             if not self.ARGS.use_ncnn:
                 self.nvidia_vram_test()
@@ -1371,7 +1369,7 @@ class InterpWorkFlow:
                             for i in range(n):
                                 frames_list.append(img0)
                         else:
-                            interp_list = self.rife_core.generate_n_interp(img0, img1, n=n, scale=scale, debug=debug)
+                            interp_list = self.vfi_core.generate_n_interp(img0, img1, n=n, scale=scale, debug=debug)
                             frames_list.extend(interp_list)
                     if add_scene:
                         frames_list.append(img1)
