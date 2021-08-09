@@ -606,15 +606,15 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>3</number>
+                      <number>4</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>246</width>
-                        <height>202</height>
+                        <width>503</width>
+                        <height>421</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -878,8 +878,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>349</width>
-                        <height>172</height>
+                        <width>503</width>
+                        <height>421</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1141,8 +1141,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>285</width>
-                        <height>308</height>
+                        <width>503</width>
+                        <height>421</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1209,7 +1209,7 @@
                              <bool>false</bool>
                             </property>
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;cunet模型用于动漫超分&lt;/p&gt;&lt;p&gt;photo模型用于实拍&lt;/p&gt;&lt;p&gt;style anime用于老动漫&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;“-jpg”用于处理jpg输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;GAN清晰，偏向于脑补；Net模糊，偏向于涂抹&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;cunet模型用于动漫超分&lt;/p&gt;&lt;p&gt;photo模型用于实拍&lt;/p&gt;&lt;p&gt;style anime用于老动漫&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;“-jpg”用于处理jpg输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;GAN清晰，偏向于脑补；Net模糊，偏向于涂抹&lt;/p&gt;&lt;p&gt;2x和4x模型无明显速度差异，但建议使用与输出分辨率最邻近的倍率模型&lt;br/&gt;如，输入为270p，输出为1080p，建议使用4x模型；输入为270p，输出为540p，建议使用2x模型&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>超分模型 (?)</string>
@@ -1242,7 +1242,7 @@
                           <item row="6" column="0">
                            <widget class="QLabel" name="label_10">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;算法时使用，酌情使用，6G显存设值100~200左右。该数过大会导致显存错误&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;算法时使用，酌情使用。&lt;/p&gt;&lt;p&gt;6G显存设值100~200左右。该数过大会产生显存不足错误。合适的值将提升超分速度。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>TileSize (?)</string>
@@ -1429,7 +1429,7 @@
                           <item row="0" column="0">
                            <widget class="MyComboBox" name="ResizeTemplate">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;画面分辨率预设&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;画面分辨率预设&lt;/p&gt;&lt;p&gt;当输入为图片序列，&lt;span style=&quot; font-weight:600;&quot;&gt;开启AI超分&lt;/span&gt;（专业/内测版），且未指定输出分辨率（输出文件分辨率宽高皆为0）时&lt;/p&gt;&lt;p&gt;若此项倍率小于超分模型的最低倍率（如此项为200%，但使用RealESR 4x模型）&lt;br/&gt;最终输出的分辨率是输入分辨率的最低倍率倍&lt;/p&gt;&lt;p&gt;其他情况（输入为视频，或图片序列指定输出分辨率输出），输出分辨率为指定分辨率&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <item>
                              <property name="text">
@@ -2033,8 +2033,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>273</width>
-                        <height>305</height>
+                        <width>503</width>
+                        <height>421</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2300,7 +2300,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>450</width>
+                        <width>486</width>
                         <height>460</height>
                        </rect>
                       </property>

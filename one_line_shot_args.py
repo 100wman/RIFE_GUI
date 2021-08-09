@@ -1,5 +1,6 @@
 # coding: utf-8
 import argparse
+import datetime
 import re
 import sys
 
@@ -14,10 +15,15 @@ try:
     _steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
 except:
     pass
-print("INFO - ONE LINE SHOT ARGS 6.9.3 2021/8/6")
-"""
-Update Log at 6.9.3
-1. Inherit Steam Validation Framework
+print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
+f"""
+Update Log at {ArgumentManager.ols_version}
+1. Support RealESRGAN 2x model
+2. Optimize AiSR Workflow
+3. Optimize Version Control
+4. Fix Output Extension Assignee Error (Unable to assign output ext)
+5. Optimize Resume Workflow
+6. Optimize Quick Release Logic
 """
 
 """设置环境路径"""
@@ -187,7 +193,9 @@ class InterpWorkFlow:
         if self.ARGS.use_sr:
             try:
                 input_resolution = self.video_info["size"][0] * self.video_info["size"][1]
+                # for img input, video info is updated to first img input
                 output_resolution = self.ARGS.resize_width * self.ARGS.resize_height
+                # for img output, if output_resolution not assigned(0,0), resolution_rate should be 0
                 resolution_rate = output_resolution / input_resolution
                 sr_scale = 0
                 if input_resolution and resolution_rate > 1:
@@ -195,27 +203,32 @@ class InterpWorkFlow:
                 if self.ARGS.resize_exp > 1:
                     """Compulsorily assign scale = resize_exp"""
                     sr_scale = self.ARGS.resize_exp
+                    # eventual output resolution will still be affected by assigned output resolution (if not 0,0)
                 if sr_scale > 1:
+                    resize_param = (self.ARGS.resize_width, self.ARGS.resize_height)
                     if self.ARGS.use_sr_algo == "waifu2x":
                         import Utils.SuperResolutionModule
                         self.sr_module = Utils.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
                                                                                scale=sr_scale,
-                                                                               num_threads=self.ARGS.ncnn_thread)
+                                                                               num_threads=self.ARGS.ncnn_thread,
+                                                                               resize=resize_param)
                     elif self.ARGS.use_sr_algo == "realSR":
                         import Utils.SuperResolutionModule
                         self.sr_module = Utils.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
-                                                                                scale=sr_scale)
+                                                                                scale=sr_scale,
+                                                                                resize=resize_param)
                     elif self.ARGS.use_sr_algo == "realESR":
                         import Utils.RealESRModule
-                        sr_scale = 4
                         self.sr_module = Utils.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
                                                                          gpu_id=self.ARGS.use_specific_gpu,
                                                                          scale=sr_scale, tile=self.ARGS.sr_tilesize,
-                                                                         half=self.ARGS.use_rife_fp16)
+                                                                         half=self.ARGS.use_rife_fp16,
+                                                                         resize=resize_param)
                     self.logger.info(
-                        f"Load AI SR at {self.ARGS.use_sr_algo}, {self.ARGS.use_sr_model}, scale = {sr_scale}")
+                        f"Load AI SR at {self.ARGS.use_sr_algo}, {self.ARGS.use_sr_model}, "
+                        f"scale = {sr_scale}, resize = {resize_param}")
                 else:
-                    self.logger.warning("Abort to load AI SR since Resolution Rate < 1")
+                    self.logger.warning("Abort to load AI SR since Resolution Rate <= 1")
             except ImportError:
                 self.logger.error(f"Import SR Module failed\n{traceback.format_exc()}")
 
@@ -1290,7 +1303,7 @@ class InterpWorkFlow:
                 from Utils import inference_rife_ncnn as inference
             else:
                 try:
-                    from Utils import inference_rife
+                    from Utils import inference_rife as inference
                 except Exception:
                     self.logger.warning("Import Torch Failed, use NCNN-RIFE instead")
                     traceback.print_exc()
@@ -1494,9 +1507,7 @@ class InterpWorkFlow:
                 w.write(f"file '{f}'\n")
 
         """Check Input file ext"""
-        output_ext = os.path.splitext(self.input)[-1]
-        if output_ext not in SupportFormat.vid_outputs:
-            output_ext = self.output_ext
+        output_ext = self.output_ext
         if "ProRes" in self.ARGS.render_encoder:
             output_ext = ".mov"
 
@@ -1543,7 +1554,6 @@ class InterpWorkFlow:
                 else:
                     self.logger.warning(
                         f"Input Time Section change to origianl course")
-
         else:
             map_audio = ""
 

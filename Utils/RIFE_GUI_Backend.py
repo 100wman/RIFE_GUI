@@ -538,14 +538,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def settings_update_pack(self, item_update=False):
         self.settings_initiation(item_update=item_update)
-        self.settings_update_gpu_info()
+        self.settings_update_gpu_info()  # Flush GPU Info, 1
+        self.on_UseNCNNButton_clicked(silent=True)  # G2
         self.settings_update_rife_model_info()
-        self.on_UseNCNNButton_clicked(silent=True)
-        self.on_ExpertMode_changed()
-        self.on_HwaccelSelector_currentTextChanged()  # Flush Encoder Sets
-        self.on_EncoderSelector_currentTextChanged()
-        self.on_UseEncodeThread_clicked()
-        self.on_UseAiSR_clicked()
+        self.on_HwaccelSelector_currentTextChanged()  # Flush Encoder Sets, 1
+        self.on_EncoderSelector_currentTextChanged()  # E2
+        self.on_UseEncodeThread_clicked()  # E3
         self.on_slowmotion_clicked()
         self.on_MBufferChecker_clicked()
         self.on_DupRmMode_currentTextChanged()
@@ -554,7 +552,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_AutoInterpScaleChecker_clicked()
         self.on_UseMultiCardsChecker_clicked()
         self.on_InterpExpReminder_toggled()
+        self.on_UseAiSR_clicked()
         self.on_ResizeTemplate_activated()
+        self.on_ExpertMode_changed()
         self.settings_initiation(item_update=item_update)
         pass
 
@@ -618,7 +618,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.CropWidthpSettings.setValue(appData.value("crop_width", 0, type=int))
         self.ResizeHeightSettings.setValue(appData.value("resize_height", 0, type=int))
         self.ResizeWidthSettings.setValue(appData.value("resize_width", 0, type=int))
-        self.ResizeTemplate.setCurrentIndex(0)
+        self.ResizeTemplate.setCurrentIndex(appData.value("resize_settings_index", 0, type=int))
 
         """Render Configuration"""
         self.UseCRF.setChecked(appData.value("use_crf", True, type=bool))
@@ -670,7 +670,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.on_UseAiSR_clicked()
         self.AiSrMode.setCurrentIndex(appData.value("use_sr_mode", 0, type=int))
-        self.resize_exp = appData.value("resize_exp", 1, type=int)
 
         """RIFE Configuration"""
         self.FP16Checker.setChecked(appData.value("use_rife_fp16", False, type=bool))
@@ -765,6 +764,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.SaveAudioChecker.setChecked(False)
         appData.setValue("use_deinterlace", self.DeinterlaceChecker.isChecked())
 
+        appData.setValue("resize_settings_index", self.ResizeTemplate.currentIndex())
         height, width = self.ResizeHeightSettings.value(), self.ResizeWidthSettings.value()
         appData.setValue("resize_width", width)
         appData.setValue("resize_height", height)
@@ -1437,14 +1437,17 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         folder = self.function_select_file('要输出项目的文件夹', folder=True)
         self.OutputFolder.setText(folder)
 
+    def function_select_first_input(self):
+        for it in range(len(self.function_get_input_paths())):
+            self.InputFileName.setCurrentRow(it)
+
     @pyqtSlot(bool)
     def on_AllInOne_clicked(self):
         """
         懒人式启动补帧按钮
         :return:
         """
-        for it in range(len(self.function_get_input_paths())):
-            self.InputFileName.setCurrentRow(it)
+        self.function_select_first_input()
         if not self.settings_check_args():
             return
         # self.settings_auto_set()
@@ -1492,43 +1495,11 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         自动设置启动信息按钮（点我就完事了）
         :return:
         """
+        self.function_select_first_input()
         if self.InputFileName.currentItem() is None or not len(self.OutputFolder.text()):
             self.function_send_msg("Invalid Inputs", "请检查你的输入和输出文件夹")
             return
         self.settings_auto_set()
-
-    @pyqtSlot(bool)
-    def on_ConcatButton_clicked(self):
-        """
-        快速合并音视频按钮
-        :return:
-        """
-        if not self.ConcatInputV.text():
-            self.settings_load_current()  # update settings
-            input_filename = self.function_select_file('请输入要进行音视频合并的视频文件')
-            self.ConcatInputV.setText(input_filename)
-            self.ConcatInputA.setText(input_filename)
-            self.OutputConcat.setText(
-                os.path.join(os.path.dirname(input_filename), f"{Tools.get_filename(input_filename)}_concat.mp4"))
-            return
-        self.function_quick_concat()
-        pass
-
-    @pyqtSlot(bool)
-    def on_GifButton_clicked(self):
-        """
-        快速制作GIF按钮
-        :return:
-        """
-        if not self.GifInput.text():
-            self.settings_load_current()  # update settings
-            input_filename = self.function_select_file('请输入要制作成gif的视频文件')
-            self.GifInput.setText(input_filename)
-            self.GifOutput.setText(
-                os.path.join(os.path.dirname(input_filename), f"{Tools.get_filename(input_filename)}.gif"))
-            return
-        self.function_quick_gif()
-        pass
 
     @pyqtSlot(bool)
     def on_MBufferChecker_clicked(self):
@@ -1636,7 +1607,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             width, height = 3840, 2160
         elif "8K" in current_template:
             width, height = 7680, 4320
-        elif "%" in current_template and "自定义" not in current_template:
+        elif "%" in current_template:
             ratio = int(current_template[:-1]) / 100
             width, height = width * ratio, height * ratio
             self.resize_exp = ratio
@@ -1735,11 +1706,45 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.settings_load_current()
 
     @pyqtSlot(bool)
-    def on_ConcatAllButton_clicked(self):
+    def on_GifButton_clicked(self):
         """
-
+        快速制作GIF
         :return:
         """
+        if not self.GifInput.text():
+            self.settings_load_current()  # update settings
+            input_filename = self.function_select_file('请输入要制作成gif的视频文件')
+            self.GifInput.setText(input_filename)
+            self.GifOutput.setText(
+                os.path.join(os.path.dirname(input_filename), f"{Tools.get_filename(input_filename)}.gif"))
+            return
+        self.function_quick_gif()
+        pass
+
+    @pyqtSlot(bool)
+    def on_ConcatButton_clicked(self):
+        """
+        快速合并音视频
+        :return:
+        """
+        if not self.ConcatInputV.text():
+            self.settings_load_current()  # update settings
+            input_filename = self.function_select_file('请输入要进行音视频合并的视频文件')
+            self.ConcatInputV.setText(input_filename)
+            self.ConcatInputA.setText(input_filename)
+            self.OutputConcat.setText(
+                os.path.join(os.path.dirname(input_filename), f"{Tools.get_filename(input_filename)}_concat.mp4"))
+            return
+        self.function_quick_concat()
+        pass
+
+    @pyqtSlot(bool)
+    def on_ConcatAllButton_clicked(self):
+        """
+        Only Concat Existed Chunks
+        :return:
+        """
+        self.function_select_first_input()
         self.settings_load_current()  # update settings
         self.ConcatAllButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -1757,9 +1762,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_StartExtractButton_clicked(self):
         """
-
+        Only Extract Frames from current input
         :return:
         """
+        self.function_select_first_input()
         self.settings_load_current()
         self.StartExtractButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -1777,9 +1783,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_StartRenderButton_clicked(self):
         """
-
+        Only Render Input based on current settings
         :return:
         """
+        self.function_select_first_input()
         self.settings_load_current()
         self.StartRenderButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -1797,6 +1804,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_KillProcButton_clicked(self):
         """
+        Kill Current Process
         :return:
         """
         if self.rife_thread is not None:

@@ -7,6 +7,8 @@ import torch
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from torch.nn import functional as F
 
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 class RealESRGANer:
     def __init__(self, scale, model_path, tile=0, tile_pad=10, pre_pad=10, half=False):
@@ -19,7 +21,7 @@ class RealESRGANer:
 
         # initialize model
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32)
+        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=scale)
         loadnet = torch.load(model_path)
         if 'params_ema' in loadnet:
             keyname = 'params_ema'
@@ -55,12 +57,7 @@ class RealESRGANer:
             self.img = F.pad(self.img, (0, self.mod_pad_w, 0, self.mod_pad_h), 'reflect')
 
     def process(self):
-        try:
-            # inference
-            with torch.no_grad():
-                self.output = self.model(self.img)
-        except Exception as error:
-            print('Error', error)
+        self.output = self.model(self.img)
 
     def tile_process(self):
         """Modified from: https://github.com/ata4/esrgan-launcher
@@ -135,9 +132,81 @@ class RealESRGANer:
             self.output = self.output[:, :, 0:h - self.pre_pad * self.scale, 0:w - self.pre_pad * self.scale]
         return self.output
 
+    @torch.no_grad()
+    def enhance(self, img, outscale=None, alpha_upsampler='realesrgan'):
+        h_input, w_input = img.shape[0:2]
+        # img: numpy
+        img = img.astype(np.float32)
+        if np.max(img) > 255:  # 16-bit image
+            max_range = 65535
+            print('\tInput is a 16-bit image')
+        else:
+            max_range = 255
+        img = img / max_range
+        if len(img.shape) == 2:  # gray image
+            img_mode = 'L'
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        elif img.shape[2] == 4:  # RGBA image with alpha channel
+            img_mode = 'RGBA'
+            alpha = img[:, :, 3]
+            img = img[:, :, 0:3]
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            if alpha_upsampler == 'realesrgan':
+                alpha = cv2.cvtColor(alpha, cv2.COLOR_GRAY2RGB)
+        else:
+            img_mode = 'RGB'
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        # ------------------- process image (without the alpha channel) ------------------- #
+        self.pre_process(img)
+        if self.tile_size > 0:
+            self.tile_process()
+        else:
+            self.process()
+        output_img = self.post_process()
+        output_img = output_img.data.squeeze().float().cpu().clamp_(0, 1).numpy()
+        output_img = np.transpose(output_img[[2, 1, 0], :, :], (1, 2, 0))
+        if img_mode == 'L':
+            output_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
+
+        # ------------------- process the alpha channel if necessary ------------------- #
+        if img_mode == 'RGBA':
+            if alpha_upsampler == 'realesrgan':
+                self.pre_process(alpha)
+                if self.tile_size > 0:
+                    self.tile_process()
+                else:
+                    self.process()
+                output_alpha = self.post_process()
+                output_alpha = output_alpha.data.squeeze().float().cpu().clamp_(0, 1).numpy()
+                output_alpha = np.transpose(output_alpha[[2, 1, 0], :, :], (1, 2, 0))
+                output_alpha = cv2.cvtColor(output_alpha, cv2.COLOR_BGR2GRAY)
+            else:
+                h, w = alpha.shape[0:2]
+                output_alpha = cv2.resize(alpha, (w * self.scale, h * self.scale), interpolation=cv2.INTER_LINEAR)
+
+            # merge the alpha channel
+            output_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2BGRA)
+            output_img[:, :, 3] = output_alpha
+
+        # ------------------------------ return ------------------------------ #
+        if max_range == 65535:  # 16-bit image
+            output = (output_img * 65535.0).round().astype(np.uint16)
+        else:
+            output = (output_img * 255.0).round().astype(np.uint8)
+
+        if outscale is not None and outscale != float(self.scale):
+            output = cv2.resize(
+                output, (
+                    int(w_input * outscale),
+                    int(h_input * outscale),
+                ), interpolation=cv2.INTER_LANCZOS4)
+
+        return output, img_mode
+
 
 class SvfiRealESR:
-    def __init__(self, model="", gpu_id=0, precent=90, scale=4, tile=100, half=False):
+    def __init__(self, model="", gpu_id=0, precent=90, scale=4, tile=100, resize=(0, 0), half=False):
         # TODO optimize auto detect tilesize
         # const_model_memory_usage = 0.6
         # const_pixel_memory_usage = 0.9 / 65536
@@ -147,83 +216,60 @@ class SvfiRealESR:
         # tile_size = int(math.sqrt(available_memory / const_pixel_memory_usage)) / scale * 2
         # padding = (scale ** 2) * tile_size
         app_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        self.resize_param = resize
+        self.scale_exp = 4
         self.scale = scale
-        self.available_scales = [4]
+        # self.scale = 4
+
+        # Clarify Model Scale
+        if "x4plus" in model:
+            self.scale_exp = 4
+        elif "x2plus" in model:
+            self.scale_exp = 2
+
+        self.available_scales = [2, 4]
         self.alpha = None
         model_path = os.path.join(app_dir, "ncnn", "sr", "realESR", "models", model)
-        self.upscaler = RealESRGANer(scale=scale, model_path=model_path, tile=tile, half=half)
-        # super().__init__(scale=scale, model_path=model,tile=tile_size)
+        self.upscaler = RealESRGANer(scale=self.scale_exp, model_path=model_path, tile=tile, half=half)
         pass
 
+    def resize_esr_img(self, img):
+        """
+        # RealESR 2x, 4x目标分辨率转化
+
+        :param img:
+        :return: resized img
+        """
+        w, h = self.resize_param
+        resize_width = int(w / self.scale_exp)
+        resize_height = int(h / self.scale_exp)
+        if int(resize_width) % 2:
+            resize_width += 1
+        if int(resize_height) % 2:
+            resize_height += 1
+        img = cv2.resize(img, (resize_width, resize_height), interpolation=cv2.INTER_LANCZOS4)
+        return img
+
     def svfi_process(self, img):
+        if all(self.resize_param):
+            img = self.resize_esr_img(img)
         if self.scale > 1:
             cur_scale = 1
             while cur_scale < self.scale:
                 img = self.process(img)
-                cur_scale *= 4
+                cur_scale *= self.scale_exp
+        if all(self.resize_param):
+            img = cv2.resize(img, self.resize_param, interpolation=cv2.INTER_LANCZOS4)
         return img
 
     def process(self, img):
-        if np.max(img) > 255:  # 16-bit image
-            max_range = 65535
-            print('\tInput is a 16-bit image')
-        else:
-            max_range = 255
-        img = img.astype(np.float32) / max_range
-
-        # TODO Internal various channels Support in Utils.img_io module
-        if len(img.shape) == 2:  # gray image
-            img_mode = 'L'
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-        elif img.shape[2] == 4:  # RGBA image with alpha channel
-            img_mode = 'RGBA'
-            alpha = img[:, :, 3]
-            img = img[:, :, 0:3]
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            self.alpha = cv2.cvtColor(alpha, cv2.COLOR_GRAY2RGB)
-        else:
-            img_mode = 'RGB'
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        # ------------------- process image (without the alpha channel) ------------------- #
-        self.upscaler.pre_process(img)
-        if self.upscaler.tile_size:
-            self.upscaler.tile_process()
-        else:
-            self.upscaler.process()
-        output_img = self.upscaler.post_process()
-        output_img = output_img.data.squeeze().float().cpu().clamp_(0, 1).numpy()
-        output_img = np.transpose(output_img[[2, 1, 0], :, :], (1, 2, 0))
-        if img_mode == 'L':
-            output_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
-
-        # ------------------- process the alpha channel if necessary ------------------- #
-        if img_mode == 'RGBA':
-            self.upscaler.pre_process(self.alpha)
-            if self.upscaler.tile_size:
-                self.upscaler.tile_process()
-            else:
-                self.upscaler.process()
-            output_alpha = self.upscaler.post_process()
-            output_alpha = output_alpha.data.squeeze().float().cpu().clamp_(0, 1).numpy()
-            output_alpha = np.transpose(output_alpha[[2, 1, 0], :, :], (1, 2, 0))
-            output_alpha = cv2.cvtColor(output_alpha, cv2.COLOR_BGR2GRAY)
-
-            # merge the alpha channel
-            output_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2BGRA)
-            output_img[:, :, 3] = output_alpha
-
-        # ------------------------------ save image ------------------------------ #
-        if max_range == 65535:  # 16-bit image
-            output = (output_img * 65535.0).round().astype(np.uint16)
-        else:
-            output = (output_img * 255.0).round().astype(np.uint8)
+        output, img_mode = self.upscaler.enhance(img)
         return output
 
 
 if __name__ == '__main__':
-    test = SvfiRealESR(model="./RealESRGAN/models/RealESRGAN_x4plus.pth", )
+    test = SvfiRealESR(model="RealESRGAN_x2plus.pth", )
     # test.svfi_process(cv2.imread(r"D:\60-fps-Project\Projects\RIFE GUI\Utils\RealESRGAN\input\used\input.png"))
     o = test.svfi_process(
-        cv2.imread(r"D:\60-fps-Project\Projects\RIFE GUI\Utils\RealESRGAN\input\00000105.png", cv2.IMREAD_UNCHANGED))
+        cv2.imread(r"D:\60-fps-Project\Projects\RIFE GUI\test\images\0.png", cv2.IMREAD_UNCHANGED))
     cv2.imwrite("out2.png", o)
