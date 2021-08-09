@@ -9,9 +9,6 @@
 /Configs/
 /Utils/Auxiliary/
 /ncnn/sr/realESR/models/
-/Utils/RealESRGAN/input/
-/Utils/RealESRGAN/output/
-/Utils/RealESRGAN/
 /Auxiliary/
 /model_cpu/history/
 /steamworks/

@@ -382,7 +382,7 @@ class ImgSeqIO:
 
         self.use_imdecode = False
         self.resize = resize
-        self.resize_flag = self.resize[0] != 0 and self.resize[1] != 0
+        self.resize_flag = all(self.resize)
         self.is_esr = is_esr
 
         self.exp = exp
@@ -433,29 +433,10 @@ class ImgSeqIO:
         """
         return len(self.img_list) * 2 ** self.exp
 
-    def resize_esr_img(self, img):
-        """
-        # RealESR 4x 特判
-
-        :param img:
-        :return: resized img
-        """
-        w, h = self.resize[0], self.resize[1]
-        resize_width = int(w / 4)
-        resize_height = int(h / 4)
-        if int(resize_width) % 2:
-            resize_width += 1
-        if int(resize_height) % 2:
-            resize_height += 1
-        img = cv2.resize(img, (resize_width, resize_height), interpolation=cv2.INTER_LANCZOS4)
-        return img
-
     def read_frame(self, path):
         img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), 1)[:, :, ::-1].copy()
         if self.resize_flag:
             img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_LANCZOS4)
-            if self.is_esr:
-                img = self.resize_esr_img(img)
         return img
 
     def write_frame(self, img, path):
@@ -615,9 +596,11 @@ class ArgumentManager:
     pro_dlc_id = 1718750
 
     """Release Version Control"""
-    is_steam = True
-    is_free = True
-    version_tag = "3.5.1 alpha"
+    is_steam = False
+    is_free = False
+    gui_version = "3.5.2"
+    version_tag = f"{gui_version} alpha [Professional][No Steam]"
+    ols_version = "6.9.4"
     """ 发布前改动以上参数即可 """
 
     def __init__(self, args: dict):
