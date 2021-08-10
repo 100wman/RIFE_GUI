@@ -20,7 +20,6 @@ from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFi
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager
 from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamValidation
-from steamworks import STEAMWORKS
 
 MAC = True
 try:
