@@ -1,11 +1,12 @@
 # coding: utf-8
 import argparse
-import datetime
 import re
 import sys
 
 import psutil
 import tqdm
+# profile line
+# from line_profiler_pycharm import profile
 from skvideo.io import FFmpegWriter, FFmpegReader
 
 from Utils.utils import *
@@ -68,6 +69,7 @@ if ARGS.force_cpu:
 
 
 class InterpWorkFlow:
+    # @profile
     def __init__(self, __args: ArgumentManager, **kwargs):
         self.ARGS = __args
 
@@ -558,6 +560,7 @@ class InterpWorkFlow:
 
         return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
 
+    # @profile
     def check_chunk(self, del_chunk=False):
         """
         Get Chunk Start
@@ -614,6 +617,7 @@ class InterpWorkFlow:
             return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
         return chunk_cnt + 1, last_frame + 1
 
+    # @profile
     def render(self, chunk_cnt, start_frame):
         """
         Render thread
@@ -652,6 +656,7 @@ class InterpWorkFlow:
                 if os.path.exists(chunk_info_path):
                     os.remove(chunk_info_path)
 
+        # @profile
         def check_audio_concat():
             """Check Input file ext"""
             if not self.ARGS.is_save_audio:
@@ -728,6 +733,7 @@ class InterpWorkFlow:
                 frame_writer = self.generate_frame_renderer(chunk_tmp_path, start_frame)
         return
 
+    # @profile
     def feed_to_render(self, frames_list: list, is_end=False):
         """
         维护输出帧数组的输入（往输出渲染线程喂帧
@@ -750,6 +756,7 @@ class InterpWorkFlow:
                     return
         pass
 
+    # @profile
     def feed_to_rife(self, now_frame: int, img0, img1, n=0, exp=0, is_end=False, add_scene=False, ):
         """
         创建任务，输出到补帧任务队列消费者
@@ -793,6 +800,7 @@ class InterpWorkFlow:
             {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "exp": exp, "scale": scale,
              "is_end": is_end, "add_scene": add_scene})
 
+    # @profile
     def crop_read_img(self, img):
         """
         Crop using self.crop parameters
@@ -808,6 +816,7 @@ class InterpWorkFlow:
             return img
         return img[self.crop_param[1]:h - self.crop_param[1], self.crop_param[0]:w - self.crop_param[0]]
 
+    # @profile
     def nvidia_vram_test(self):
         """
         显存测试
@@ -836,6 +845,7 @@ class InterpWorkFlow:
             self.logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc())
             raise e
 
+    # @profile
     def remove_duplicate_frames(self, videogen_check: FFmpegReader.nextFrame, init=False) -> (list, list, dict):
         """
         获得新除重预处理帧数序列
@@ -1026,6 +1036,7 @@ class InterpWorkFlow:
         check_frame_list = [i for i in check_frame_list if i > -1]
         return check_frame_list, scene_frame_list, input_frame_data
 
+    # @profile
     def rife_run(self):
         """
         Go through all procedures to produce interpolation result
@@ -1138,6 +1149,7 @@ class InterpWorkFlow:
         self.rife_task_queue.put(None)  # bad way to end
         """Wait for Rife and Render Thread to finish"""
 
+    # @profile
     def rife_run_any_fps(self):
         """
         Go through all procedures to produce interpolation result
@@ -1259,6 +1271,7 @@ class InterpWorkFlow:
 
         self.rife_task_queue.put(None)  # bad way to end
 
+    # @profile
     def run(self):
         if self.ARGS.is_steam:
             if not self.STEAM.steam_valid:
@@ -1306,7 +1319,7 @@ class InterpWorkFlow:
                     from Utils import inference_rife as inference
                 except Exception:
                     self.logger.warning("Import Torch Failed, use NCNN-RIFE instead")
-                    traceback.print_exc()
+                    self.logger.error(traceback.format_exc())
                     self.ARGS.use_ncnn = True
                     self.ARGS.rife_model_name = "rife-v2"
                     from Utils import inference_rife_ncnn as inference
@@ -1325,9 +1338,8 @@ class InterpWorkFlow:
                 self.rife_thread = threading.Thread(target=self.rife_run, name="[ARGS] RifeTaskThread", )
             self.rife_thread.start()
 
-            chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-
             """Get Renderer"""
+            chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
             self.render_thread = threading.Thread(target=self.render, name="[ARGS] RenderThread",
                                                   args=(chunk_cnt, start_frame,))
             self.render_thread.start()
@@ -1360,7 +1372,6 @@ class InterpWorkFlow:
                 img0 = task["img0"]
                 img1 = task["img1"]
                 n = task["n"]
-                exp = task["exp"]
                 scale = task["scale"]
                 is_end = task["is_end"]
                 add_scene = task["add_scene"]
@@ -1479,6 +1490,7 @@ class InterpWorkFlow:
 
         renderer.close()
 
+    # @profile
     def concat_all(self):
         """
         Concat all the chunks
@@ -1585,5 +1597,9 @@ class InterpWorkFlow:
 
 
 interpworkflow = InterpWorkFlow(ARGS)
+# debug
 interpworkflow.run()
 sys.exit(0)
+# if __name__ == "__main__":
+#     interpworkflow.run()
+#     sys.exit(0)

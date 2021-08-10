@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from torch.nn import functional as F
-
+# from line_profiler_pycharm import profile
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -250,6 +250,7 @@ class SvfiRealESR:
         img = cv2.resize(img, (resize_width, resize_height), interpolation=cv2.INTER_LANCZOS4)
         return img
 
+    # @profile
     def svfi_process(self, img):
         if all(self.resize_param):
             img = self.resize_esr_img(img)
