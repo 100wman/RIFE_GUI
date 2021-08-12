@@ -1,4 +1,5 @@
 import datetime
+import glob
 import html
 import json
 import math
@@ -348,10 +349,12 @@ class SVFI_Run(QThread):
                 """Finish Normally"""
                 if appData.value("after_mission", type=int) == 1:
                     logger.info("Task Finished Normally, User Request to Shutdown")
-                    os.system("shutdown -s -t 120")
+                    pp = Tools.popen("shutdown -s -t 120")
+                    pp.wait()
                 elif appData.value("after_mission", type=int) == 2:
                     logger.info("Task Finished Normally, User Request to Hibernate")
-                    os.system("shutdown -h")
+                    pp = Tools.popen("shutdown -h")
+                    pp.wait()
         except Exception:
             logger.error("Task Badly Finished", traceback.format_exc())
             self.update_status(True, returncode=1)
@@ -437,6 +440,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """Initiate and Check GPU"""
         self.hasNVIDIA = True
         self.settings_update_pack()
+        # self.function_load_all_tasks_settings()
 
         """Initiate Beautiful Layout and Signals"""
         self.AdvanceSettingsArea.setVisible(False)
@@ -452,6 +456,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if self.is_free:
             self.settings_free_hide()
         self.settings_dilapidation_hide()
+        self.settings_load_settings_templates()
 
         self.STEAM = SteamValidation(self.is_steam, logger=logger)
         if self.is_steam:
@@ -565,6 +570,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         :item_update: if inputs' current item changed, activate this
         :return:
         """
+        global appData
         if not item_update:
             """New Initiation of GUI"""
             try:
@@ -624,7 +630,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.CRFSelector.setValue(appData.value("render_crf", 16, type=int))
         self.UseTargetBitrate.setChecked(appData.value("use_bitrate", False, type=bool))
         self.BitrateSelector.setValue(appData.value("render_bitrate", 90, type=float))
-        # self.PresetSelector.setCurrentText(appData.value("render_encoder_preset", "slow"))
         self.HwaccelSelector.setCurrentText(appData.value("render_hwaccel_mode", "CPU", type=str))
         self.HwaccelPresetSelector.setCurrentText(appData.value("render_hwaccel_preset", "None"))
         self.HwaccelDecode.setChecked(appData.value("use_hwaccel_decode", True, type=bool))
@@ -1024,7 +1029,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         for m in os.listdir(model_dir):
             if not os.path.isfile(os.path.join(model_dir, m)):
                 rife_model_list.append(m)
-        rife_model_list.reverse()
+        # rife_model_list.reverse()
         self.ModuleSelector.clear()
         for mod in rife_model_list:
             self.ModuleSelector.addItem(f"{mod}")
@@ -1240,6 +1245,11 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if path_type == 1:
             return os.path.join(sr_ncnn_dir, key_word, "models")
 
+    def function_load_all_tasks_settings(self):
+        for it in range(len(self.function_get_input_paths())):
+            self.InputFileName.setCurrentRow(it)
+            self.on_InputFileName_currentItemChanged()
+
     def process_update_rife(self, json_data):
         """
         Communicate with RIFE Thread
@@ -1379,8 +1389,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if current_item is None:
             item_count = len(self.InputFileName.getItems())
             if item_count:
-                # self.InputFileName.setCurrentRow(item_count - 1)
-                # TODO check impact
                 current_item = self.InputFileName.currentItem()
             else:
                 return
@@ -1389,8 +1397,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if self.InputFileName.itemWidget(current_item) is None:  # check if exists this item in InputFileName
             return
         widget_data = self.InputFileName.getWidgetData(current_item)
-        # previous_config_manager = SVFI_Config_Manager(widget_data, dname, logger)
-        # if self.last_item != widget_data or previous_config_manager.FetchConfig() is None:
         if widget_data is not None:
             self.settings_maintain_item_settings(widget_data)  # 保存当前设置，并准备跳转到新任务的历史设置（可能没有）
         input_path = widget_data.get('input_path')
@@ -1436,17 +1442,13 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         folder = self.function_select_file('要输出项目的文件夹', folder=True)
         self.OutputFolder.setText(folder)
 
-    def function_select_first_input(self):
-        for it in range(len(self.function_get_input_paths())):
-            self.InputFileName.setCurrentRow(it)
-
     @pyqtSlot(bool)
     def on_AllInOne_clicked(self):
         """
         懒人式启动补帧按钮
         :return:
         """
-        self.function_select_first_input()
+        self.function_load_all_tasks_settings()
         if not self.settings_check_args():
             return
         # self.settings_auto_set()
@@ -1494,11 +1496,78 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         自动设置启动信息按钮（点我就完事了）
         :return:
         """
-        self.function_select_first_input()
+        self.function_load_all_tasks_settings()
         if self.InputFileName.currentItem() is None or not len(self.OutputFolder.text()):
             self.function_send_msg("Invalid Inputs", "请检查你的输入和输出文件夹")
             return
         self.settings_auto_set()
+
+    def function_get_templates(self):
+        templates = [self.SettingsTemplateSelector.itemText(i) for i in range(self.SettingsTemplateSelector.count())]
+        return templates
+
+    @pyqtSlot(bool)
+    def on_AddTemplateButton_clicked(self):
+        template_name = self.EditTemplateName.text()
+        if not len(template_name):
+            self.function_send_msg("Invalid Template Name", "预设名不能为空~")
+            return
+        if template_name in self.function_get_templates():
+            self.function_send_msg("Invalid Template Name", "预设名不能与已有预设重复~")
+            return
+        self.settings_load_config(appDataPath)  # appoint appData to root
+        self.settings_load_current()  # update appData to current Settings
+        template_config = SVFI_Config_Manager({'input_path': 'Template', 'task_id': f'Template_{template_name}'}, dname,
+                                              logger)
+        template_config.DuplicateConfig()  # write template settings
+        self.SettingsTemplateSelector.addItem(template_name)
+        self.function_send_msg("New Template Saved", f"已保存指定预设：{template_name}", 2)
+
+    @pyqtSlot(bool)
+    def on_RemoveTemplateButton_clicked(self):
+        if not self.SettingsTemplateSelector.count():
+            self.function_send_msg("No Templates", "预设为空~")
+            return
+        template_config = SVFI_Config_Manager({'input_path': 'Template',
+                                               'task_id': f'Template_{self.SettingsTemplateSelector.currentText()}'},
+                                              dname, logger)
+        self.SettingsTemplateSelector.removeItem(self.SettingsTemplateSelector.currentIndex())
+        template_config.RemoveConfig()
+        self.function_send_msg("Remove Template", "已移除指定预设~", 2)
+
+    @pyqtSlot(bool)
+    def on_UseTemplateButton_clicked(self):
+        if not self.SettingsTemplateSelector.count():
+            self.function_send_msg("No Templates", "预设为空~")
+            return
+        template_name = self.SettingsTemplateSelector.currentText()
+        if template_name is None:
+            self.function_send_msg("Invalid Template", "请先指定预设~")
+            return
+        template_config = SVFI_Config_Manager({'input_path': 'Template', 'task_id': f'Template_{template_name}'}, dname,
+                                              logger)
+        config_path = template_config.FetchConfig()
+        if config_path is None:
+            self.function_send_msg("Invalid Config", "指定预设不见啦~")
+            return
+        self.settings_load_config(config_path)
+        self.settings_initiation(True)
+        self.function_send_msg("Config Loaded", "已载入指定预设~", 2)
+        if not self.is_gui_quiet:
+            SVFI_preview_args_form = SVFI_Preview_Args_Dialog(self)
+            SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
+            SVFI_preview_args_form.exec_()
+        self.settings_load_config(appDataPath)  # 将appData指针指回root
+
+    @pyqtSlot(bool)
+    def settings_load_settings_templates(self):
+        config_dir = os.path.join(dname, 'Configs', "SVFI_Config_Template_*.ini")
+        template_paths = glob.glob(config_dir)
+        self.SettingsTemplateSelector.clear()
+        for tp in template_paths:
+            template_name = re.findall('SVFI_Config_Template_(.*?)\.ini', tp)
+            if len(template_name):
+                self.SettingsTemplateSelector.addItem(template_name[0])
 
     @pyqtSlot(bool)
     def on_MBufferChecker_clicked(self):
@@ -1578,8 +1647,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         current_item = self.InputFileName.currentItem()
         if current_item is None:
-            self.InputFileName.setCurrentRow(0)
-            current_item = self.InputFileName.currentItem()
+            return
+            # self.InputFileName.setCurrentRow(0)
+            # current_item = self.InputFileName.currentItem()
         row = self.InputFileName.getWidgetData(current_item)['row']
         input_files = self.function_get_input_paths()
         sample_file = input_files[row]
@@ -1743,7 +1813,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Concat Existed Chunks
         :return:
         """
-        self.function_select_first_input()
+        self.function_load_all_tasks_settings()
         self.settings_load_current()  # update settings
         self.ConcatAllButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -1764,7 +1834,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Extract Frames from current input
         :return:
         """
-        self.function_select_first_input()
+        self.function_load_all_tasks_settings()
         self.settings_load_current()
         self.StartExtractButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -1785,7 +1855,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Render Input based on current settings
         :return:
         """
-        self.function_select_first_input()
+        self.function_load_all_tasks_settings()
         self.settings_load_current()
         self.StartRenderButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -1823,6 +1893,16 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.pause = False
                 self.PauseProcess.setText("暂停补帧！")
 
+    def settings_load_config(self, config_path: str):
+        """
+
+        :param config_path:
+        :return:
+        """
+        global appData
+        appData = QSettings(config_path, QSettings.IniFormat)
+        appData.setIniCodec("UTF-8")
+
     def settings_maintain_item_settings(self, widget_data: dict):
         global appData
         self.settings_load_current()  # 保存跳转前设置
@@ -1835,8 +1915,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if config_path is None:
             config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
             config_path = config_maintainer.FetchConfig()
-        appData = QSettings(config_path, QSettings.IniFormat)
-        appData.setIniCodec("UTF-8")
+        self.settings_load_config(config_path)
+        # appData = QSettings(config_path, QSettings.IniFormat)
+        # appData.setIniCodec("UTF-8")
         self.settings_update_pack(True)
         self.last_item = widget_data
 
@@ -1900,6 +1981,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_RefreshStartInfo_clicked(self):
         self.settings_set_start_info(-1, -1)
+        self.StartPoint.setTime(QTime(0, 0, 0))
+        self.EndPoint.setTime(QTime(0, 0, 0))
         pass
 
     @pyqtSlot(bool)
@@ -2011,11 +2094,14 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.function_send_msg("Load Success", "已载入默认设置", 3)
 
     def closeEvent(self, event):
+        global appData
         if not self.STEAM.steam_valid:
             event.ignore()
             return
         reply = self.function_send_msg("Quit", "是否保存当前设置？", 3)
         if reply == QMessageBox.Yes:
+            self.function_load_all_tasks_settings()
+            self.settings_load_config(appDataPath)
             self.settings_load_current()
             event.accept()
         else:

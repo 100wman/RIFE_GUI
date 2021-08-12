@@ -597,11 +597,11 @@ class ArgumentManager:
 
     """Release Version Control"""
     is_steam = True
-    is_free = False
-    gui_version = "3.5.2"
+    is_free = True
+    gui_version = "3.5.3"
     version_tag = f"{gui_version} alpha " \
-                  f"[{'Professional' if not is_free else 'Community'}][{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.4"
+                  f"[{'Professional' if not is_free else 'Community'}] [{'Steam' if is_steam else 'No Steam'}]"
+    ols_version = "6.9.5"
     """ 发布前改动以上参数即可 """
 
     def __init__(self, args: dict):
@@ -624,6 +624,10 @@ class ArgumentManager:
         self.is_save_audio = args.get("is_save_audio", True)
         self.input_start_point = args.get("input_start_point", None)
         self.input_end_point = args.get("input_end_point", None)
+        if self.input_start_point == "00:00:00":
+            self.input_start_point = None
+        if self.input_end_point == "00:00:00":
+            self.input_end_point = None
         self.output_chunk_cnt = args.get("output_chunk_cnt", 0)
         self.interp_start = args.get("interp_start", 0)
 
