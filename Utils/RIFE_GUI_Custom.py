@@ -14,6 +14,7 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(os.path.dirname(abspath))
 ddname = os.path.dirname(abspath)
 
+
 class MyListWidgetItem(QWidget):
     dupSignal = pyqtSignal(dict)
     remSignal = pyqtSignal(dict)
@@ -116,6 +117,7 @@ class MyListWidgetItem(QWidget):
         emit_data.update({"previous_task_id": previous_task_id, "action": 3})
         self.dupSignal.emit(emit_data)  # update
 
+
 class MyLineWidget(QtWidgets.QLineEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -132,20 +134,34 @@ class MyLineWidget(QtWidgets.QLineEdit):
 
 class MyListWidget(QListWidget):
     addSignal = pyqtSignal(int)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.task_dict = list()
-        # self.setDragDropMode(QAbstractItemView.InternalMove)
+
+    def checkTaskId(self, input_path, task_id):
+        """
+        Check Task Id Availability
+        :param input_path:
+        :param task_id:
+        :return: bool
+        """
+        potential_config = SVFI_Config_Manager({'input_path': input_path, "task_id": task_id}, dname)
+        if potential_config.FetchConfig() is not None:
+            return False
+        if task_id in self.task_dict:
+            return False
+        self.task_dict.append(task_id)
+        return True
 
     def generateTaskId(self, input_path: str):
         path_md5 = Tools.md5(input_path)[:6]
         while True:
             path_id = random.randrange(100000, 999999)
-            if path_id not in self.task_dict:
-                self.task_dict.append(path_id)
+            task_id = f"{path_md5}_{path_id}"
+            if self.checkTaskId(input_path, task_id):
                 break
-        task_id = f"{path_md5}_{path_id}"
         return task_id
 
     def saveTasks(self):
@@ -202,7 +218,7 @@ class MyListWidget(QListWidget):
         self.clear()
         try:
             for item in items:
-                new_item_data = self.addFileItem(item['input_path'], item['task_id'])
+                new_item_data = self.addFileItem(item['input_path'])  # do not use previous task id
                 config_maintainer = SVFI_Config_Manager(new_item_data, dname)
                 config_maintainer.DuplicateConfig(item)  # use previous item data to establish config file
 
@@ -239,8 +255,9 @@ class MyListWidget(QListWidget):
         """
         task_id = e.get('task_id')
         target_item = None
+        # find target task
         for item in self.getItems():
-            task_data = self.itemWidget(item).get_task_info()
+            task_data = self.itemWidget(item).get_task_info()  # if modify, get task info from new item
             if task_data['task_id'] == task_id:
                 target_item = item
                 break
@@ -249,12 +266,12 @@ class MyListWidget(QListWidget):
         if e.get("action") == 1:  # dupSignal
             input_path = self.itemWidget(target_item).input_path
             new_item_data = self.addFileItem(input_path)
-            config_maintainer = SVFI_Config_Manager(new_item_data, dname)
+            config_maintainer = SVFI_Config_Manager(new_item_data, dname)  # use new id
             config_maintainer.DuplicateConfig(self.getWidgetData(target_item))
             pass
-        elif e.get("action") == 0:
+        elif e.get("action") == 0:  # removeSignal
             self.takeItem(self.row(target_item))
-        elif e.get("action") == 3:
+        elif e.get("action") == 3:  # modifySignal
             item_data = self.getWidgetData(target_item)
             config_maintainer = SVFI_Config_Manager(item_data, dname)
             previous_item_data = {"input_path": item_data['input_path'], "task_id": e.get("previous_task_id")}
@@ -318,7 +335,7 @@ class SVFI_Config_Manager:
         self.SVFI_config_path = os.path.join(app_dir, "SVFI.ini")
         self.config_path = self.__generate_config_path()
         if _logger is None:
-            self.logger = Tools.get_logger("ConfigManager","")
+            self.logger = Tools.get_logger("ConfigManager", "")
         else:
             self.logger = _logger
         pass

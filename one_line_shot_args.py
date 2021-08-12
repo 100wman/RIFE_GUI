@@ -1,5 +1,6 @@
 # coding: utf-8
 import argparse
+import datetime
 import re
 import sys
 
@@ -19,12 +20,11 @@ except:
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 f"""
 Update Log at {ArgumentManager.ols_version}
-1. Support RealESRGAN 2x model
-2. Optimize AiSR Workflow
-3. Optimize Version Control
-4. Fix Output Extension Assignee Error (Unable to assign output ext)
-5. Optimize Resume Workflow
-6. Optimize Quick Release Logic
+1. Optimize Task Queue
+2. Add DIY Presets Templates
+3. Optimize Output Path Naming
+4. Optimize -ss -to
+5. Optimize RefreshInputSection
 """
 
 """设置环境路径"""
@@ -292,13 +292,27 @@ class InterpWorkFlow:
         input_dict = {"-vsync": "0", }
         if self.ARGS.use_hwaccel_decode:
             input_dict.update({"-hwaccel": "auto"})
-        if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
-            """任意时段补帧"""
+
+        if self.ARGS.input_start_point or self.ARGS.input_end_point:
+            """任意时段任务"""
             time_fmt = "%H:%M:%S"
-            start_point = datetime.datetime.strptime(self.ARGS.input_start_point, time_fmt)
-            end_point = datetime.datetime.strptime(self.ARGS.input_end_point, time_fmt)
+            start_point = datetime.datetime.strptime("00:00:00", time_fmt)
+            end_point = datetime.datetime.strptime("00:00:00", time_fmt)
+            if self.ARGS.input_start_point is not None:
+                start_point = datetime.datetime.strptime(self.ARGS.input_start_point, time_fmt) - start_point
+                input_dict.update({"-ss": self.ARGS.input_start_point})
+            else:
+                start_point = start_point - start_point
+            if self.ARGS.input_end_point is not None:
+                end_point = datetime.datetime.strptime(self.ARGS.input_end_point, time_fmt) - end_point
+                input_dict.update({"-to": self.ARGS.input_end_point})
+            elif self.video_info['duration']:
+                # no need to care about img input
+                end_point = datetime.datetime.fromtimestamp(self.video_info['duration']) - datetime.datetime.fromtimestamp(0.0)
+            else:
+                end_point = end_point - end_point
+
             if end_point > start_point:
-                input_dict.update({"-ss": self.ARGS.input_start_point, "-to": self.ARGS.input_end_point})
                 start_frame = -1
                 clip_duration = end_point - start_point
                 clip_fps = self.target_fps
@@ -306,7 +320,14 @@ class InterpWorkFlow:
                 self.logger.info(
                     f"Update Input Range: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, all_frames_cnt -> {self.all_frames_cnt}")
             else:
-                self.logger.warning(f"Input Time Section change to original course")
+                if '-ss' in input_dict:
+                    input_dict.pop('-ss')
+                if '-to' in input_dict:
+                    input_dict.pop('-to')
+                self.logger.warning(
+                    f"Invalid Input Section, change to original course")
+        else:
+            self.logger.info(f"Input Time Section is original course")
 
         output_dict = {
             "-vframes": str(10 ** 10), }  # use read frames cnt to avoid ffprobe, fuck
@@ -1471,8 +1492,7 @@ class InterpWorkFlow:
             raise OSError(f"Input file not valid: {self.input}, "
                           f"Please Check Your Input Settings(Start Point, Start Frame)")
 
-        render_path = os.path.join(self.output, Tools.get_filename(self.input) +
-                                   f"_{self.ARGS.task_id}_SVFI_Render{self.output_ext}")
+        render_path, _ = self.get_output_path()
         renderer = self.generate_frame_renderer(render_path)
         pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
         pbar.update(n=start_frame)
@@ -1489,6 +1509,53 @@ class InterpWorkFlow:
             img1 = self.crop_read_img(Tools.gen_next(videogen))
 
         renderer.close()
+
+    def get_output_path(self):
+        """
+        Get Output Path for Process
+        :return:
+        """
+        """Check Input file ext"""
+        output_ext = self.output_ext
+        if "ProRes" in self.ARGS.render_encoder:
+            output_ext = ".mov"
+
+        output_filepath = f"{os.path.join(self.output, Tools.get_filename(self.input))}"
+        if self.ARGS.render_only:
+            output_filepath += "_SVFI_Render"  # 仅渲染
+        else:
+            output_filepath += f"_{int(self.target_fps)}fps"  # 补帧
+
+        if self.ARGS.is_render_slow_motion:  # 慢动作
+            output_filepath += f"_[SLM_{self.ARGS.render_slow_motion_fps}fps]"
+        if self.ARGS.use_deinterlace:
+            output_filepath += f"_[DI]"
+        if self.ARGS.use_fast_denoise:
+            output_filepath += f"_[DN]"
+
+        if not self.ARGS.render_only:
+            if self.ARGS.use_rife_auto_scale:
+                output_filepath += f"_[SA]"
+            else:
+                output_filepath += f"_[S-{self.ARGS.rife_scale}]"  # 全局光流尺度
+            if self.ARGS.use_ncnn:
+                output_filepath += "_[NCNN]"
+            output_filepath += f"_[{os.path.basename(self.ARGS.rife_model_name)}]"  # 添加模型信息
+            if self.ARGS.use_rife_fp16:
+                output_filepath += "_[FP16]"
+            if self.ARGS.is_rife_reverse:
+                output_filepath += "_[RR]"
+            if self.ARGS.use_rife_forward_ensemble:
+                output_filepath += "_[RFE]"
+            if self.ARGS.use_rife_tta_mode:
+                output_filepath += "_[TTA]"
+            if self.ARGS.remove_dup_mode:  # 去重模式
+                output_filepath += f"_[RD-{self.ARGS.remove_dup_mode}]"
+        if self.ARGS.use_sr:  # 使用超分
+            output_filepath += f"_[SR-{self.ARGS.use_sr_algo}-{self.ARGS.use_sr_model}]"
+        output_filepath += f"_{self.ARGS.task_id[-6:]}"
+        output_filepath += output_ext  # 添加后缀名
+        return output_filepath, output_ext
 
     # @profile
     def concat_all(self):
@@ -1518,59 +1585,22 @@ class InterpWorkFlow:
             for f in concat_list:
                 w.write(f"file '{f}'\n")
 
-        """Check Input file ext"""
-        output_ext = self.output_ext
-        if "ProRes" in self.ARGS.render_encoder:
-            output_ext = ".mov"
-
-        concat_filepath = f"{os.path.join(self.output, Tools.get_filename(self.input))}"
-        concat_filepath += f"_{int(self.target_fps)}fps"  # 输出帧率
-        if self.ARGS.is_render_slow_motion:  # 慢动作
-            concat_filepath += f"_[SLM_{self.ARGS.render_slow_motion_fps}fps]"
-        if self.ARGS.use_deinterlace:
-            concat_filepath += f"_[DI]"
-        if self.ARGS.use_fast_denoise:
-            concat_filepath += f"_[DN]"
-        if self.ARGS.use_rife_auto_scale:
-            concat_filepath += f"_[SA]"
-        else:
-            concat_filepath += f"_[S-{self.ARGS.rife_scale}]"  # 全局光流尺度
-        if self.ARGS.use_ncnn:
-            concat_filepath += "_[NCNN]"
-        concat_filepath += f"_[{os.path.basename(self.ARGS.rife_model_name)}]"  # 添加模型信息
-        if self.ARGS.use_rife_fp16:
-            concat_filepath += "_[FP16]"
-        if self.ARGS.is_rife_reverse:
-            concat_filepath += "_[RR]"
-        if self.ARGS.use_rife_forward_ensemble:
-            concat_filepath += "_[RFE]"
-        if self.ARGS.use_rife_tta_mode:
-            concat_filepath += "_[TTA]"
-        if self.ARGS.use_sr:  # 使用超分
-            concat_filepath += f"_[SR-{self.ARGS.use_sr_algo}-{self.ARGS.use_sr_model}]"
-        if self.ARGS.remove_dup_mode:  # 去重模式
-            concat_filepath += f"_[RD-{self.ARGS.remove_dup_mode}]"
-        concat_filepath += output_ext  # 添加后缀名
+        concat_filepath, output_ext = self.get_output_path()
 
         if self.ARGS.is_save_audio and not self.ARGS.is_img_input:
             audio_path = self.input
             map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy '
-            if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
-                time_fmt = "%H:%M:%S"
-                start_point = datetime.datetime.strptime(self.ARGS.input_start_point, time_fmt)
-                end_point = datetime.datetime.strptime(self.ARGS.input_end_point, time_fmt)
-                if end_point > start_point:
-                    self.logger.info(
-                        f"Update Concat Audio Range: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}")
-                    map_audio = f'-ss {self.ARGS.input_start_point} -to {self.ARGS.input_end_point} -i "{audio_path}" -map 0:v:0 -map 1:a? -c:a aac -ab 640k '
-                else:
-                    self.logger.warning(
-                        f"Input Time Section change to origianl course")
+            if self.ARGS.input_start_point or self.ARGS.input_end_point:
+                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -c:a aac -ab 640k '
+                if self.ARGS.input_end_point is not None:
+                    map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
+                if self.ARGS.input_start_point is not None:
+                    map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
         else:
             map_audio = ""
 
         ffmpeg_command = f'{self.ffmpeg} -hide_banner -f concat -safe 0 -i "{concat_path}" {map_audio} -c:v copy ' \
-                         f'{Tools.fillQuotation(concat_filepath)} -metadata title="Made By SVFI {self.ARGS.version}" -y'
+                         f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" -y'
         self.logger.debug(f"Concat command: {ffmpeg_command}")
         sp = Tools.popen(ffmpeg_command)
         sp.wait()

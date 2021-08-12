@@ -606,7 +606,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>4</number>
+                      <number>5</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -614,7 +614,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>503</width>
-                        <height>421</height>
+                        <height>395</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -879,7 +879,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>503</width>
-                        <height>421</height>
+                        <height>395</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1142,7 +1142,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>503</width>
-                        <height>421</height>
+                        <height>395</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2034,7 +2034,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>503</width>
-                        <height>421</height>
+                        <height>395</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2289,6 +2289,84 @@
                              <string>输出文件名将带有反映上述设置的缩写</string>
                             </property>
                            </widget>
+                          </item>
+                         </layout>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                     <widget class="QWidget" name="page">
+                      <attribute name="label">
+                       <string>自定义预设栏</string>
+                      </attribute>
+                      <layout class="QGridLayout" name="gridLayout_37">
+                       <item row="0" column="0">
+                        <widget class="QGroupBox" name="groupBox_9">
+                         <property name="title">
+                          <string/>
+                         </property>
+                         <layout class="QGridLayout" name="gridLayout_39">
+                          <item row="2" column="0">
+                           <spacer name="verticalSpacer_8">
+                            <property name="orientation">
+                             <enum>Qt::Vertical</enum>
+                            </property>
+                            <property name="sizeHint" stdset="0">
+                             <size>
+                              <width>20</width>
+                              <height>40</height>
+                             </size>
+                            </property>
+                           </spacer>
+                          </item>
+                          <item row="0" column="0">
+                           <layout class="QGridLayout" name="gridLayout_38">
+                            <item row="2" column="0">
+                             <widget class="MyComboBox" name="SettingsTemplateSelector">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="0" column="0">
+                             <layout class="QHBoxLayout" name="horizontalLayout_15">
+                              <item>
+                               <widget class="QPushButton" name="AddTemplateButton">
+                                <property name="text">
+                                 <string>基于当前设置新建预设</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QPushButton" name="RemoveTemplateButton">
+                                <property name="text">
+                                 <string>移除当前预设</string>
+                                </property>
+                               </widget>
+                              </item>
+                             </layout>
+                            </item>
+                            <item row="1" column="0">
+                             <widget class="MyLineWidget" name="EditTemplateName">
+                              <property name="alignment">
+                               <set>Qt::AlignCenter</set>
+                              </property>
+                              <property name="placeholderText">
+                               <string>给预设起个好听的名字~</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="3" column="0">
+                             <widget class="QPushButton" name="UseTemplateButton">
+                              <property name="text">
+                               <string>应用指定预设</string>
+                              </property>
+                             </widget>
+                            </item>
+                           </layout>
                           </item>
                          </layout>
                         </widget>

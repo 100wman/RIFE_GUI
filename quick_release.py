@@ -5,8 +5,10 @@ import time
 from Utils.utils import ArgumentManager
 root = r"D:\60-fps-Project\Projects\RIFE GUI"
 ico_path = os.path.join(root, "svfi-i.ico")
-tag_version = f"{ArgumentManager.gui_version}.alpha-{'community' if ArgumentManager.is_free else 'professional'}"
-tag_version = f"{'Community' if ArgumentManager.is_free else 'Professional'}"
+
+tag_version = f"{ArgumentManager.gui_version}-{'community' if ArgumentManager.is_free else 'professional'}"
+tag_version = f"{'Community' if ArgumentManager.is_free else 'Professional'}  " \
+              f"[{'Steam' if ArgumentManager.is_steam else 'No Steam'}]"
 compile_ols = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports                                      --plugin-enable=qt-plugins                                   --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI CLI" --windows-product-version={ArgumentManager.ols_version} --windows-file-description="SVFI Interpolation CLI"             --windows-company-name="Jeanna-SVFI"  --follow-import-to=Utils,steamworks --output-dir=release --windows-disable-console .\one_line_shot_args.py'
 compile_gui = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports --include-qt-plugins=sensible,styles --plugin-enable=qt-plugins  --include-package=QCandyUi,PyQt5 --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI"     --windows-product-version={ArgumentManager.gui_version} --windows-file-description="Squirrel Video Frame Interpolation" --windows-company-name="SVFI"         --follow-import-to=Utils,steamworks --output-dir=release --windows-disable-console .\RIFE_GUI_Start.py'
 # debug
