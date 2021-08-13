@@ -606,7 +606,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>5</number>
+                      <number>2</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -1311,7 +1311,7 @@
                             <item row="5" column="0">
                              <widget class="QLabel" name="CropReminder">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;视频宽和高的黑边像素个数&lt;/p&gt;&lt;p&gt;注意，这里的黑边长度相对于&lt;span style=&quot; font-weight:600;&quot;&gt;输出文件分辨率&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;视频宽和高的黑边像素个数，上下-高，左右-宽分别对称&lt;/p&gt;&lt;p&gt;注意，这里的黑边长度相对于&lt;span style=&quot; font-weight:600;&quot;&gt;输出文件分辨率&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>黑边长度 (?)</string>
@@ -2296,12 +2296,23 @@
                       </layout>
                      </widget>
                      <widget class="QWidget" name="page">
+                      <property name="geometry">
+                       <rect>
+                        <x>0</x>
+                        <y>0</y>
+                        <width>503</width>
+                        <height>395</height>
+                       </rect>
+                      </property>
                       <attribute name="label">
                        <string>自定义预设栏</string>
                       </attribute>
                       <layout class="QGridLayout" name="gridLayout_37">
                        <item row="0" column="0">
-                        <widget class="QGroupBox" name="groupBox_9">
+                        <widget class="QGroupBox" name="SettingsPresetBox">
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;保存设置预设&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
                          <property name="title">
                           <string/>
                          </property>
@@ -2377,7 +2388,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-65</y>
                         <width>486</width>
                         <height>460</height>
                        </rect>
@@ -2389,7 +2400,10 @@
                        <item row="2" column="0">
                         <layout class="QGridLayout" name="gridLayout_16">
                          <item row="0" column="0">
-                          <widget class="QGroupBox" name="GifMaker">
+                          <widget class="QGroupBox" name="GifBox">
+                           <property name="enabled">
+                            <bool>true</bool>
+                           </property>
                            <property name="title">
                             <string/>
                            </property>
@@ -2584,27 +2598,36 @@
                            <verstretch>0</verstretch>
                           </sizepolicy>
                          </property>
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;生成高质量GIF图&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
                          <property name="text">
-                          <string>视频转GIF动图</string>
+                          <string>视频转GIF动图(?)</string>
                          </property>
                         </widget>
                        </item>
                        <item row="5" column="0">
                         <widget class="QLabel" name="label">
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对于专业版/内测版，设置超分选项可以对输入内容超分&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
                          <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对输入使用&lt;span style=&quot; font-weight:600;&quot;&gt;输出质量设置&lt;/span&gt;内的指定参数压制&lt;span style=&quot; font-weight:600;&quot;&gt;（可以顺便超分）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对输入使用&lt;span style=&quot; font-weight:600;&quot;&gt;输出质量设置&lt;/span&gt;内的指定参数压制 (?)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                          </property>
                         </widget>
                        </item>
                        <item row="3" column="0">
                         <widget class="QLabel" name="ExtractLabel">
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;拆帧&lt;span style=&quot; font-weight:600;&quot;&gt;选中输入&lt;/span&gt;到输出文件夹（可用于GIF拆帧）&lt;span style=&quot; font-weight:600;&quot;&gt;（请先勾选“输出图片序列”）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
                          <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;拆帧&lt;span style=&quot; font-weight:600;&quot;&gt;选中输入&lt;/span&gt;到输出文件夹（可用于GIF拆帧）&lt;span style=&quot; font-weight:600;&quot;&gt;（请先勾选“输出图片序列”）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;拆帧&lt;span style=&quot; font-weight:600;&quot;&gt;选中输入&lt;/span&gt;到输出文件夹 (?)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                          </property>
                         </widget>
                        </item>
                        <item row="6" column="0">
-                        <widget class="QGroupBox" name="groupBox_5">
+                        <widget class="QGroupBox" name="RenderBox">
                          <property name="title">
                           <string/>
                          </property>
@@ -2620,7 +2643,7 @@
                         </widget>
                        </item>
                        <item row="4" column="0">
-                        <widget class="QGroupBox" name="groupBox_8">
+                        <widget class="QGroupBox" name="ExtractBox">
                          <property name="title">
                           <string/>
                          </property>
