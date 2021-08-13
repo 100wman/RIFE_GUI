@@ -744,6 +744,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("is_output_only", not self.KeepChunksChecker.isChecked())
         appData.setValue("is_save_audio", self.SaveAudioChecker.isChecked())
         appData.setValue("output_ext", self.ExtSelector.currentText())
+        appData.setValue("task_id", self)
 
         """Input Time Stamp"""
         appData.setValue("input_start_point", self.StartPoint.time().toString("HH:mm:ss"))
@@ -1386,7 +1387,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.AllInOne.setEnabled(True)
             self.InputFileName.setEnabled(True)
             self.current_failed = False
-            self.InputFileName.refreshTasks()
+            # self.InputFileName.refreshTasks()
             self.on_InputFileName_currentItemChanged()
 
             if self.use_clear_inputs:
