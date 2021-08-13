@@ -596,9 +596,9 @@ class ArgumentManager:
     pro_dlc_id = 1718750
 
     """Release Version Control"""
-    is_steam = False
-    is_free = False
-    gui_version = "3.5"
+    is_steam = True
+    is_free = True
+    gui_version = "3.5.4"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
     ols_version = "6.9.6"

@@ -2,6 +2,7 @@
 import json
 import os
 import random
+import re
 import shutil
 
 from PyQt5 import QtWidgets
@@ -225,11 +226,29 @@ class MyListWidget(QListWidget):
         except RuntimeError:
             pass
 
+    def addConfigItem(self, input_config: str, input_task_id):
+        task_id = re.findall("SVFI_Config_(.*?).ini", os.path.basename(input_config))
+        if not len(task_id):
+            return input_config, input_task_id
+        task_id = task_id[0]
+        appData = QSettings(input_config, QSettings.IniFormat)
+        appData.setIniCodec("UTF-8")
+        try:
+            input_list_data = json.loads(appData.value("gui_inputs", "{}"))
+        except json.decoder.JSONDecodeError:
+            return input_config, input_task_id
+        for item_data in input_list_data['inputs']:
+            if item_data['task_id'] == task_id:
+                input_path = item_data['input_path']
+                return input_path, task_id
+        return None, None
+
     def addFileItem(self, input_path: str, task_id=None) -> dict:
         input_path = input_path.strip('"')
-        taskListItem = MyListWidgetItem()
+        # input_path, task_id = self.addConfigItem(input_path, task_id)
         if task_id is None:
             task_id = self.generateTaskId(input_path)
+        taskListItem = MyListWidgetItem()
         taskListItem.setTask(input_path, task_id)
         taskListItem.dupSignal.connect(self.itemActionResponse)
         taskListItem.remSignal.connect(self.itemActionResponse)
