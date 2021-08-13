@@ -596,12 +596,12 @@ class ArgumentManager:
     pro_dlc_id = 1718750
 
     """Release Version Control"""
-    is_steam = True
-    is_free = True
-    gui_version = "3.5.3"
-    version_tag = f"{gui_version} alpha " \
-                  f"[{'Professional' if not is_free else 'Community'}] [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.5"
+    is_steam = False
+    is_free = False
+    gui_version = "3.5"
+    version_tag = f"{gui_version} " \
+                  f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
+    ols_version = "6.9.6"
     """ 发布前改动以上参数即可 """
 
     def __init__(self, args: dict):

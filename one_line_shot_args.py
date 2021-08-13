@@ -21,10 +21,6 @@ print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.t
 f"""
 Update Log at {ArgumentManager.ols_version}
 1. Optimize Task Queue
-2. Add DIY Presets Templates
-3. Optimize Output Path Naming
-4. Optimize -ss -to
-5. Optimize RefreshInputSection
 """
 
 """设置环境路径"""
@@ -308,7 +304,8 @@ class InterpWorkFlow:
                 input_dict.update({"-to": self.ARGS.input_end_point})
             elif self.video_info['duration']:
                 # no need to care about img input
-                end_point = datetime.datetime.fromtimestamp(self.video_info['duration']) - datetime.datetime.fromtimestamp(0.0)
+                end_point = datetime.datetime.fromtimestamp(
+                    self.video_info['duration']) - datetime.datetime.fromtimestamp(0.0)
             else:
                 end_point = end_point - end_point
 

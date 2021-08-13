@@ -449,12 +449,11 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """Link InputFileName Event"""
         # self.InputFileName.clicked.connect(self.on_InputFileName_currentItemChanged)
         # self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
-        self.InputFileName.currentItemChanged.connect(self.on_InputFileName_currentItemChanged)
+        self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
         self.InputFileName.addSignal.connect(self.on_InputFileName_currentItemChanged)
 
         """Dilapidation and Free Version Maintainer"""
-        if self.is_free:
-            self.settings_free_hide()
+        self.settings_free_hide()
         self.settings_dilapidation_hide()
         self.settings_load_settings_templates()
 
@@ -512,6 +511,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         ST only
         :return:
         """
+        if not self.is_free:
+            return
         # self.DupRmChecker.setVisible(False)
         self.DupFramesTSelector.setVisible(False)
         self.DupFramesTSelector.setValue(0.2)
@@ -534,14 +535,26 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         # self.RenderOnlyGroupbox.setVisible(False)
         self.UseMultiCardsChecker.setVisible(False)
         self.TtaModeChecker.setVisible(False)
+        self.AutoInterpScaleChecker.setVisible(False)
+        self.ReverseChecker.setVisible(False)
+
         self.DeinterlaceChecker.setVisible(False)
         self.FastDenoiseChecker.setVisible(False)
         self.HwaccelDecode.setVisible(False)
         self.EncodeThreadField.setVisible(False)
         self.HwaccelEncodeBox.setEnabled(False)
+        self.HwaccelPresetLabel.setVisible(False)
+        self.HwaccelPresetSelector.setVisible(False)
 
-    def settings_update_pack(self, item_update=False):
-        self.settings_initiation(item_update=item_update)
+        self.GifBox.setEnabled(False)
+        self.RenderBox.setEnabled(False)
+        self.ExtractBox.setEnabled(False)
+        self.SettingsPresetBox.setEnabled(False)
+
+        self.DebugChecker.setVisible(False)
+
+    def settings_update_pack(self, item_update=False, template_update=False):
+        self.settings_initiation(item_update=item_update, template_update=False)
         self.settings_update_gpu_info()  # Flush GPU Info, 1
         self.on_UseNCNNButton_clicked(silent=True)  # G2
         self.settings_update_rife_model_info()
@@ -559,10 +572,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_UseAiSR_clicked()
         self.on_ResizeTemplate_activated()
         self.on_ExpertMode_changed()
-        self.settings_initiation(item_update=item_update)
+        self.settings_initiation(item_update=item_update, template_update=False)
         pass
 
-    def settings_initiation(self, item_update=False):
+    def settings_initiation(self, item_update=False, template_update=False):
         """
         初始化用户选项载入
         从配置文件中读取上一次设置并初始化页面
@@ -601,21 +614,33 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             appData.setValue("ffmpeg", "ffmpeg")
             logger.info("Change to Debug Path")
 
-        """Basic Configuration"""
-        self.OutputFolder.setText(appData.value("output_dir"))
-        self.InputFPS.setText(appData.value("input_fps", "0"))
-        self.OutputFPS.setText(appData.value("target_fps", ""))
-        self.InterpExpReminder.setChecked(appData.value("is_exp_prior", False, type=bool))
-        self.OutputFPSReminder.setChecked(not appData.value("is_exp_prior", False, type=bool))
-        self.ExpSelecter.setCurrentText("x" + str(2 ** int(appData.value("rife_exp", "1"))))
-        self.ImgOutputChecker.setChecked(appData.value("is_img_output", False, type=bool))
-        appData.setValue("is_img_input", appData.value("is_img_input", False))
-        appData.setValue("batch", False)
-        self.KeepChunksChecker.setChecked(not appData.value("is_output_only", True, type=bool))
-        self.StartPoint.setTime(QTime.fromString(appData.value("input_start_point", "00:00:00"), "HH:mm:ss"))
-        self.EndPoint.setTime(QTime.fromString(appData.value("input_end_point", "00:00:00"), "HH:mm:ss"))
-        self.StartChunk.setValue(appData.value("output_chunk_cnt", -1, type=int))
-        self.StartFrame.setValue(appData.value("interp_start", -1, type=int))
+        if not template_update:
+            """Basic Configuration"""
+            self.OutputFolder.setText(appData.value("output_dir"))
+            self.InputFPS.setText(appData.value("input_fps", "0"))
+            self.OutputFPS.setText(appData.value("target_fps", ""))
+            self.InterpExpReminder.setChecked(appData.value("is_exp_prior", False, type=bool))
+            self.OutputFPSReminder.setChecked(not appData.value("is_exp_prior", False, type=bool))
+            self.ExpSelecter.setCurrentText("x" + str(2 ** int(appData.value("rife_exp", "1"))))
+            self.ImgOutputChecker.setChecked(appData.value("is_img_output", False, type=bool))
+            appData.setValue("is_img_input", appData.value("is_img_input", False))
+            appData.setValue("batch", False)
+            self.KeepChunksChecker.setChecked(not appData.value("is_output_only", True, type=bool))
+            self.StartPoint.setTime(QTime.fromString(appData.value("input_start_point", "00:00:00"), "HH:mm:ss"))
+            self.EndPoint.setTime(QTime.fromString(appData.value("input_end_point", "00:00:00"), "HH:mm:ss"))
+            self.StartChunk.setValue(appData.value("output_chunk_cnt", -1, type=int))
+            self.StartFrame.setValue(appData.value("interp_start", -1, type=int))
+
+            """Multi Task Configuration"""
+            self.multi_task_rest = appData.value("multi_task_rest", False, type=bool)
+            self.multi_task_rest_interval = appData.value("multi_task_rest_interval", False, type=bool)
+            self.after_mission = appData.value("after_mission", 0, type=int)
+            self.force_cpu = appData.value("rife_use_cpu", False, type=bool)
+            self.expert_mode = appData.value("expert_mode", True, type=bool)
+            self.preview_args = appData.value("is_preview_args", False, type=bool)
+            self.is_gui_quiet = appData.value("is_gui_quiet", False, type=bool)
+            self.use_clear_inputs = appData.value("use_clear_inputs", False, type=bool)
+
         self.DebugChecker.setChecked(appData.value("debug", False, type=bool))
 
         """Output Resize Configuration"""
@@ -694,16 +719,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if appData.value("rife_model_name", "") in rife_model_list:
             self.ModuleSelector.setCurrentText(appData.value("rife_model_name", ""))
 
-        """Multi Task Configuration"""
-        self.multi_task_rest = appData.value("multi_task_rest", False, type=bool)
-        self.multi_task_rest_interval = appData.value("multi_task_rest_interval", False, type=bool)
-        self.after_mission = appData.value("after_mission", 0, type=int)
-        self.force_cpu = appData.value("rife_use_cpu", False, type=bool)
-        self.expert_mode = appData.value("expert_mode", True, type=bool)
-        self.preview_args = appData.value("is_preview_args", False, type=bool)
-        self.is_gui_quiet = appData.value("is_gui_quiet", False, type=bool)
-        self.use_clear_inputs = appData.value("use_clear_inputs", False, type=bool)
-
         """REM Management Configuration"""
         self.MBufferChecker.setChecked(appData.value("use_manual_buffer", False, type=bool))
         self.BufferSizeSelector.setValue(appData.value("manual_buffer_size", 1, type=int))
@@ -716,10 +731,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         添加新选项/变量 2/3 Options -> appData
         :return:
         """
-        # """Restore AppData to root config"""
-        # global appData
-        # appData = QSettings(appDataPath, QSettings.IniFormat)
-        # appData.setIniCodec("UTF-8")
 
         """Input Basic Input Information"""
         appData.setValue("version", self.version)
@@ -1451,7 +1462,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.function_load_all_tasks_settings()
         if not self.settings_check_args():
             return
-        # self.settings_auto_set()
         self.settings_load_current()  # update settings
 
         if self.preview_args and not self.is_gui_quiet:
@@ -1551,7 +1561,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_send_msg("Invalid Config", "指定预设不见啦~")
             return
         self.settings_load_config(config_path)
-        self.settings_initiation(True)
+        self.settings_initiation(item_update=True, template_update=True)
         self.function_send_msg("Config Loaded", "已载入指定预设~", 2)
         if not self.is_gui_quiet:
             SVFI_preview_args_form = SVFI_Preview_Args_Dialog(self)
@@ -1648,8 +1658,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         current_item = self.InputFileName.currentItem()
         if current_item is None:
             return
-            # self.InputFileName.setCurrentRow(0)
-            # current_item = self.InputFileName.currentItem()
         row = self.InputFileName.getWidgetData(current_item)['row']
         input_files = self.function_get_input_paths()
         sample_file = input_files[row]
@@ -1707,8 +1715,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetUseMix.setVisible(bool_result)
         self.ScdetOutput.setVisible(bool_result)
         self.on_ExpertMode_changed()
-        if self.is_free:
-            self.settings_free_hide()
+        self.settings_free_hide()
 
     @pyqtSlot(str)
     def on_DupRmMode_currentTextChanged(self):
@@ -1764,6 +1771,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.PresetSelector.addItem(preset)
         self.HwaccelPresetLabel.setVisible("NVENC" in currentHwaccel)
         self.HwaccelPresetSelector.setVisible("NVENC" in currentHwaccel)
+        self.settings_free_hide()
 
     @pyqtSlot(int)
     def on_tabWidget_currentChanged(self, tabIndex):
@@ -1916,16 +1924,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
             config_path = config_maintainer.FetchConfig()
         self.settings_load_config(config_path)
-        # appData = QSettings(config_path, QSettings.IniFormat)
-        # appData.setIniCodec("UTF-8")
         self.settings_update_pack(True)
         self.last_item = widget_data
 
     @pyqtSlot(bool)
     def on_ShowAdvance_clicked(self):
         bool_result = self.AdvanceSettingsArea.isVisible()
-
-        # self.settings_maintain_item_settings()
 
         self.AdvanceSettingsArea.setVisible(not bool_result)
         if not bool_result:
@@ -1936,37 +1940,14 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def SaveInputSettingsProcess(self, current_filename):
         return
-        # config_maintainer = SVFI_Config_Manager()
-        # config_maintainer.DuplicateConfig(current_filename)
 
     @pyqtSlot(bool)
     def on_SaveCurrentSettings_clicked(self):
         pass
-        # self.settings_load_current()
-        # try:
-        #     self.SaveInputSettingsProcess(self.InputFileName.currentItem().text())
-        #     self.function_send_msg("Success", "当前输入设置保存成功，可直接补帧", 3)
-        # except Exception:
-        #     self.function_send_msg("Save Failed", "请在输入列表选中要保存设置的条目")
-        # pass
 
     @pyqtSlot(bool)
     def on_LoadCurrentSettings_clicked(self):
         return
-        # global appData
-        # config_maintainer = SVFI_Config_Manager()
-        # try:
-        #     current_filename = self.InputFileName.currentItem().text()
-        #     if not config_maintainer.MaintainConfig(current_filename):
-        #         self.function_send_msg("Not Found Config", "未找到与当前输入匹配的设置文件")
-        #         return
-        # except Exception:
-        #     self.function_send_msg("Load Failed", "请在输入列表选中要加载设置的条目")
-        # appData = QSettings(appDataPath, QSettings.IniFormat)
-        # appData.setIniCodec("UTF-8")
-        # self.settings_initiation()
-        # self.function_send_msg("Success", "已载入与当前输入匹配的设置", 3)
-        # pass
 
     @pyqtSlot(bool)
     def on_ClearInputButton_clicked(self):
@@ -2027,6 +2008,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.is_gui_quiet = preference_dict["is_gui_quiet"]
         self.use_clear_inputs = preference_dict["use_clear_inputs"]
         self.on_ExpertMode_changed()
+        self.settings_load_current()
 
     def on_ExpertMode_changed(self):
         self.UseFixedScdet.setVisible(self.expert_mode)
@@ -2047,8 +2029,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.FastDenoiseChecker.setVisible(self.expert_mode)
         self.EncodeThreadField.setVisible(self.expert_mode)
 
-        if self.is_free:
-            self.settings_free_hide()
+        self.settings_free_hide()
         self.settings_dilapidation_hide()
 
     @pyqtSlot(bool)
