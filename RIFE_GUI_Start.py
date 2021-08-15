@@ -49,5 +49,3 @@ try:
         app.exec_()
 except Exception:
     app_backend_module.logger.critical(traceback.format_exc())
-
-# TODO Optimize SVFI Launch Option bundled with DLC
