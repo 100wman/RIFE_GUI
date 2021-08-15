@@ -36,19 +36,21 @@ class SupportFormat:
 class EncodePresetAssemply:
     encoder = {
         "CPU": {
-            "H264, 8bit": ["slow", "ultrafast", "fast", "medium", "veryslow", "placebo", ],
-            "H264, 10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
-            "H265, 8bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
-            "H265, 10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
-            "ProRes, 422": ["hq", "4444", "4444xq"],
-            "ProRes, 444": ["hq", "4444", "4444xq"],
+            "H264,8bit": ["slow", "ultrafast", "fast", "medium", "veryslow", "placebo", ],
+            "H264,10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
+            "H265,8bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
+            "H265,10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
+            "ProRes,422": ["hq", "4444", "4444xq"],
+            "ProRes,444": ["hq", "4444", "4444xq"],
         },
-        "NVENC": {"H264, 8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
-                  "H265, 8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
-                  "H265, 10bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"], },
-        "QSV": {"H264, 8bit": ["slow", "fast", "medium", "veryslow", ],
-                "H265, 8bit": ["slow", "fast", "medium", "veryslow", ],
-                "H265, 10bit": ["slow", "fast", "medium", "veryslow", ], },
+        "NVENC":
+            {"H264,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
+             "H265,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
+             "H265,10bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"], },
+        "QSV":
+            {"H264,8bit": ["slow", "fast", "medium", "veryslow", ],
+             "H265,8bit": ["slow", "fast", "medium", "veryslow", ],
+             "H265,10bit": ["slow", "fast", "medium", "veryslow", ], },
 
     }
     preset = {
@@ -151,11 +153,13 @@ class Tools:
         logger = logging.getLogger(name)
         logger.setLevel(logging.INFO)
         logger_formatter = logging.Formatter(f'%(asctime)s - %(module)s - %(lineno)s - %(levelname)s - %(message)s')
+        if ArgumentManager.is_release:
+            logger_formatter = logging.Formatter(f'%(asctime)s - %(module)s - %(levelname)s - %(message)s')
         log_path = os.path.join(log_path, "log")  # private dir for logs
         if not os.path.exists(log_path):
             os.mkdir(log_path)
         logger_path = os.path.join(log_path,
-                                   f"{datetime.datetime.now().date()}.txt")
+                                   f"{datetime.datetime.now().date()}.log")
         txt_handler = logging.FileHandler(logger_path)
 
         txt_handler.setFormatter(logger_formatter)
@@ -598,10 +602,12 @@ class ArgumentManager:
     """Release Version Control"""
     is_steam = True
     is_free = True
-    gui_version = "3.5.4"
+    is_release = True
+    traceback_limit = 0 if is_release else None
+    gui_version = "3.5.5"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.6"
+    ols_version = "6.9.7"
     """ 发布前改动以上参数即可 """
 
     def __init__(self, args: dict):
@@ -630,6 +636,7 @@ class ArgumentManager:
             self.input_end_point = None
         self.output_chunk_cnt = args.get("output_chunk_cnt", 0)
         self.interp_start = args.get("interp_start", 0)
+        self.risk_resume_mode = args.get("risk_resume_mode", True)
 
         self.is_no_scdet = args.get("is_no_scdet", False)
         self.is_scdet_mix = args.get("is_scdet_mix", False)
@@ -1247,10 +1254,10 @@ class SteamValidation:
         return valid_response
 
     def CheckProDLC(self) -> bool:
-        if self.is_steam:
-            return True
+        if not self.is_steam:
+            return False
         purchase_pro = self.steamworks.Apps.IsDLCInstalled(ArgumentManager.pro_dlc_id)
-        self.logger.info(f'Steam User Purchase Pro Version: {purchase_pro}')
+        self.logger.info(f'Steam User Purchase Pro DLC Status: {purchase_pro}')
         return purchase_pro
 
     def __init__(self, is_steam, logger=None):
@@ -1273,7 +1280,7 @@ class SteamValidation:
                 self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
             except Exception:
                 self.steam_valid = False
-                self.steam_error = "\n".join(traceback.format_exc().splitlines()[-2:])
+                self.steam_error = traceback.format_exc(limit=ArgumentManager.traceback_limit)
         os.chdir(original_cwd)
 
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 import glob
 import html
@@ -11,15 +12,16 @@ import subprocess as sp
 import sys
 import time
 import traceback
-
+import lxml
 import cv2
 import psutil
 import torch
 from PyQt5.QtCore import QSettings, pyqtSignal, pyqtSlot, QThread, QTime, QVariant, QPoint, QSize
+from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtGui import QIcon, QTextCursor
 from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
-from Utils.RIFE_GUI_Custom import SVFI_Config_Manager
+from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator
 from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamValidation
 
 MAC = True
@@ -41,12 +43,21 @@ logger = Utils.get_logger("GUI", dname)
 ols_potential = os.path.join(dname, "one_line_shot_args.exe")
 ico_path = os.path.join(dname, "svfi.ico")
 
+translator = SVFITranslator()
+
+
+def _translate(from_where='@default', input_text=""):
+    return QCoreApplication.translate('@default', input_text)
+
 
 class SVFI_Help_Dialog(QDialog, SVFI_help.Ui_Dialog):
     def __init__(self, parent=None):
         super(SVFI_Help_Dialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
+        _app = QApplication.instance()  # 获取app实例
+        _app.installTranslator(translator)  # 重新翻译主界面
+        self.retranslateUi(self)
 
 
 class SVFI_About_Dialog(QDialog, SVFI_about.Ui_Dialog):
@@ -54,6 +65,9 @@ class SVFI_About_Dialog(QDialog, SVFI_about.Ui_Dialog):
         super(SVFI_About_Dialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
+        _app = QApplication.instance()  # 获取app实例
+        _app.installTranslator(translator)  # 重新翻译主界面
+        self.retranslateUi(self)
 
 
 class SVFI_Preview_Args_Dialog(QDialog, SVFI_preview_args.Ui_Dialog):
@@ -61,6 +75,9 @@ class SVFI_Preview_Args_Dialog(QDialog, SVFI_preview_args.Ui_Dialog):
         super(SVFI_Preview_Args_Dialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
+        _app = QApplication.instance()  # 获取app实例
+        _app.installTranslator(translator)  # 重新翻译主界面
+        self.retranslateUi(self)
         self.default_args = self.ArgsLabel.text()
         self.args_list = re.findall("\{(.*?)\}", self.default_args)
         self.ArgumentsPreview()
@@ -91,6 +108,9 @@ class SVFI_Preference_Dialog(QDialog, SVFI_preference.Ui_Dialog):
         super(SVFI_Preference_Dialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
+        _app = QApplication.instance()  # 获取app实例
+        _app.installTranslator(translator)  # 重新翻译主界面
+        self.retranslateUi(self)
         self.preference_dict = preference_dict
         self.update_preference()
         self.ExpertModeChecker.clicked.connect(self.request_preference)
@@ -284,7 +304,9 @@ class SVFI_Run(QThread):
 
             if not self.task_cnt:
                 logger.info("Task List Empty, Please Check Your Settings! (input fps for example)")
-                self.update_status(True, "\nTask List is Empty!\n请点击输入条目以更新设置并确认输入输出帧率不为0", returncode=404)
+                _msg = _translate('', '请点击输入条目以更新设置，并确认输入输出帧率不为0')
+                self.update_status(True, f"\nTask List is Empty!\n{_msg}",
+                                   returncode=404)
                 return
 
             interval_time = time.time()
@@ -305,18 +327,21 @@ class SVFI_Run(QThread):
                             pid = self.current_proc.pid
                             pause = psutil.Process(pid)  # 传入子进程的pid
                             pause.suspend()  # 暂停子进程
-                            self.update_status(False, notice=f"\n\nWARNING, 补帧已被手动暂停", returncode=0)
+                            _msg = _translate('', '补帧已被手动暂停')
+                            self.update_status(False, notice=f"\n\nWARNING, {_msg}", returncode=0)
 
                             while True:
                                 if self.kill:
                                     break
                                 elif not self.pause:
                                     pause.resume()
-                                    self.update_status(False, notice=f"\n\nWARNING, 补帧已继续",
+                                    _msg = _translate('', '补帧已继续')
+                                    self.update_status(False, notice=f"\n\nWARNING, {_msg}",
                                                        returncode=0)
                                     break
                                 time.sleep(0.2)
                         else:
+                            # line = self.current_proc.stdout.readline().encode('utf-8').decode('unicode_escape')
                             line = self.current_proc.stdout.readline()
                             self.current_proc.stdout.flush()
 
@@ -336,12 +361,14 @@ class SVFI_Run(QThread):
                     self.update_status(False, sp_status=f"{flush_lines}")  # emit last possible infos
 
                     self.current_step += 1
-                    self.update_status(False, f"\nINFO - {datetime.datetime.now()} {input_path} 完成\n\n")
+                    _msg = _translate('', '完成')
+                    self.update_status(False,
+                                       f"\nINFO - {datetime.datetime.now()} {input_path} {_msg}\n\n")
                     self.maintain_multitask()
                     # self.config_maintainer.RemoveConfig()
 
             except Exception:
-                logger.error(traceback.format_exc())
+                logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
 
             self.update_status(True, returncode=self.current_proc.returncode)
             logger.info("Tasks Finished")
@@ -356,7 +383,7 @@ class SVFI_Run(QThread):
                     pp = Tools.popen("shutdown -h")
                     pp.wait()
         except Exception:
-            logger.error("Task Badly Finished", traceback.format_exc())
+            logger.error("Task Badly Finished", traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self.update_status(True, returncode=1)
         pass
 
@@ -364,7 +391,8 @@ class SVFI_Run(QThread):
         self.kill = True
         if self.current_proc is not None:
             self.current_proc.terminate()
-            self.update_status(False, notice=f"\n\nWARNING, 补帧已被强制结束", returncode=-1)
+            _msg = _translate('', '补帧已被强制结束')
+            self.update_status(False, notice=f"\n\nWARNING, {_msg}", returncode=-1)
             logger.info("Kill Process")
         else:
             logger.warning("There's no Process to kill")
@@ -400,6 +428,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         super(RIFE_GUI_BACKEND, self).__init__()
         self.setupUi(self)
+        _app = QApplication.instance()  # 获取app实例
+        _app.installTranslator(translator)  # 重新翻译主界面
+        self.retranslateUi(self)
+
         self.rife_thread = None
         self.chores_thread = None
         self.version = ArgumentManager.version_tag
@@ -412,9 +444,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.ffmpeg = f'"{os.path.join(appData.value("ffmpeg", ""), "ffmpeg.exe")}"'
         else:
             self.ffmpeg = appData.value("ffmpeg", "")
-
-        # debug
-        # self.ffmpeg = '"D:/60-fps-Project/Projects/RIFE GUI/release/SVFI.Env/神威 SVFI 3.2/Package/ffmpeg.exe"'
 
         if os.path.exists(appDataPath):
             logger.info("Previous Settings Found")
@@ -460,7 +489,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.STEAM = SteamValidation(self.is_steam, logger=logger)
         if self.is_steam:
             if not self.STEAM.steam_valid:
-                warning_title = "Steam认证出错！SVFI用不了啦！"
+                warning_title = _translate('', "Steam认证出错！SVFI用不了啦！")
                 error = self.STEAM.steam_error
                 logger.error(f"Steam Validation failed\n{error}")
                 self.function_send_msg(warning_title, error)
@@ -470,18 +499,21 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 # valid_response = 1
                 if valid_response != 0:
                     self.STEAM.steam_valid = False
-                    warning_title = "Steam认证失败！SVFI用不了啦！"
-                    warning_msg = f"错误代码：{valid_response}"
+                    warning_title = _translate('', "Steam认证失败！SVFI用不了啦！")
+                    warning_code_msg = _translate('', '错误代码：')
+                    warning_msg = f"{warning_code_msg}{valid_response}"
+                    _bpg_msg = _translate('', '白嫖怪爬呀！')
                     if valid_response == 1:
-                        warning_msg = "Ticket is not valid.\n白嫖党爬呀！"
+                        warning_msg = f"Ticket is not valid.\n{_bpg_msg}"
                     elif valid_response == 2:
                         warning_msg = "A ticket has already been submitted for this steamID"
                     elif valid_response == 3:
                         warning_msg = "Ticket is from an incompatible interface version"
                     elif valid_response == 4:
-                        warning_msg = "Ticket is not for this game\n白嫖怪爬呀！"
+                        warning_msg = f"Ticket is not for this game\n{_bpg_msg}"
                     elif valid_response == 5:
-                        warning_msg = "Ticket has expired\n购买的凭证过期"
+                        _expired_msg = _translate('', '购买的凭证过期')
+                        warning_msg = f"Ticket has expired\n{_expired_msg}"
                     self.function_send_msg(warning_title, warning_msg)
                     return
 
@@ -489,12 +521,19 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                     valid_response = self.STEAM.CheckProDLC()
                     if not valid_response:
                         self.STEAM.steam_valid = False
-                        warning_title = "未购买专业版！SVFI用不了啦！"
-                        warning_msg = f"请确保专业版DLC已安装"
+                        warning_title = _translate('', "未购买专业版！SVFI用不了啦！")
+                        warning_msg = _translate('', "请确保专业版DLC已安装")
                         self.function_send_msg(warning_title, warning_msg)
                         return
 
         os.chdir(dname)
+
+    def settings_change_lang(self, lang: str):
+        logger.debug(f"Translate To Lang = {lang}")
+        translator.change_lang(lang)
+        _app = QApplication.instance()  # 获取app实例
+        _app.installTranslator(translator)  # 重新翻译主界面
+        self.retranslateUi(self)
 
     def settings_dilapidation_hide(self):
         """Hide Dilapidated Options"""
@@ -517,7 +556,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.DupFramesTSelector.setVisible(False)
         self.DupFramesTSelector.setValue(0.2)
         self.DupRmMode.clear()
-        ST_RmMode = ["不去除重复帧", "单一识别", "去除一拍二", "去除一拍三"]
+        ST_RmMode = [_translate('', "不去除重复帧"),
+                     _translate('', "单一识别")]
         for m in ST_RmMode:
             self.DupRmMode.addItem(m)
 
@@ -630,6 +670,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.EndPoint.setTime(QTime.fromString(appData.value("input_end_point", "00:00:00"), "HH:mm:ss"))
             self.StartChunk.setValue(appData.value("output_chunk_cnt", -1, type=int))
             self.StartFrame.setValue(appData.value("interp_start", -1, type=int))
+            self.ResumeRiskChecker.setChecked(appData.value("risk_resume_mode", True, type=bool))
 
             """Multi Task Configuration"""
             self.multi_task_rest = appData.value("multi_task_rest", False, type=bool)
@@ -744,7 +785,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("is_output_only", not self.KeepChunksChecker.isChecked())
         appData.setValue("is_save_audio", self.SaveAudioChecker.isChecked())
         appData.setValue("output_ext", self.ExtSelector.currentText())
-        appData.setValue("task_id", self)
+        appData.setValue("risk_resume_mode", self.ResumeRiskChecker.isChecked())
 
         """Input Time Stamp"""
         appData.setValue("input_start_point", self.StartPoint.time().toString("HH:mm:ss"))
@@ -876,7 +917,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         output_dir = self.OutputFolder.text()
 
         if not len(input_paths) or not len(output_dir):
-            self.function_send_msg("Empty Input", "请输入要补帧的文件和输出文件夹")
+            self.function_send_msg("Empty Input", _translate('', "请输入要补帧的文件和输出文件夹"))
             return False
 
         if len(input_paths) > 1:
@@ -886,7 +927,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if not os.path.exists(output_dir):
             logger.info("Not Exists OutputFolder")
-            self.function_send_msg("Output Folder Not Found", "输入文件或输出文件夹不存在！请确认输入")
+            self.function_send_msg("Output Folder Not Found", _translate('', "输入文件或输出文件夹不存在！请确认输入"))
             return False
 
         if os.path.isfile(output_dir):
@@ -896,21 +937,23 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         for path in input_paths:
             if not os.path.exists(path):
                 logger.info(f"Not Exists Input Source: {path}")
-                self.function_send_msg("Input Source Not Found", f"输入文件:\n{path}\n不存在！请确认输入!")
+                _msg1 = _translate('', '输入文件:')
+                _msg2 = _translate('', '不存在！请确认输入!')
+                self.function_send_msg("Input Source Not Found", f"{_msg1}\n{path}\n{_msg2}")
                 return False
 
         try:
             float(self.InputFPS.text())
             float(self.OutputFPS.text())
         except Exception:
-            self.function_send_msg("Wrong Inputs", "请确认输入和输出帧率为有效数据")
+            self.function_send_msg("Wrong Inputs", _translate('', "请确认输入和输出帧率为有效数据"))
             return False
 
         try:
             if self.slowmotion.isChecked():
                 float(self.SlowmotionFPS.text())
         except Exception:
-            self.function_send_msg("Wrong Inputs", "请确认慢动作输入帧率")
+            self.function_send_msg("Wrong Inputs", _translate('', "请确认慢动作输入帧率"))
             return False
 
         return True
@@ -941,7 +984,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         current_item = self.InputFileName.currentItem()
         if current_item is None:
-            self.function_send_msg(f"恢复进度？", f"正在使用队列的第一个任务进行进度检测")
+            self.function_send_msg(f"恢复进度？", _translate('', "正在使用队列的第一个任务进行进度检测"))
             self.InputFileName.setCurrentRow(0)
             current_item = self.InputFileName.currentItem()
         output_dir = self.OutputFolder.text()
@@ -953,7 +996,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                                    f"{Tools.get_filename(input_path)}_{task_id}")
         if not os.path.exists(project_dir):
             os.mkdir(project_dir)
-            self.function_send_msg(f"恢复进度", f"未找到与第{widget_data['row']}个任务相关的进度信息", 3)
+            _msg1 = _translate('', '未找到与第')
+            _msg2 = _translate('', '个任务相关的进度信息')
+            self.function_send_msg(f"Resume Workflow?", f"{_msg1}{widget_data['row']}{_msg2}", 3)
             self.settings_set_start_info(0, 1, True)  # start from zero
             return
 
@@ -962,7 +1007,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             img_io = ImgSeqIO(logger=logger, folder=output_dir, is_tool=True, output_ext=self.ExtSelector.currentText())
             last_img = img_io.get_start_frame()  # output_dir
             if last_img:
-                reply = self.function_send_msg(f"恢复进度？", f"检测到未完成的图片序列补帧任务，载入进度？", 3)
+                reply = self.function_send_msg(f"Resume Workflow?", _translate('', "检测到未完成的图片序列补帧任务，载入进度？"), 3)
                 if reply == QMessageBox.No:
                     self.settings_set_start_info(0, 1, False)  # start from zero
                     logger.info("User Abort Auto Set")
@@ -973,7 +1018,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         chunk_info_path = os.path.join(project_dir, "chunk.json")
 
         if not os.path.exists(chunk_info_path):
-            self.function_send_msg(f"恢复进度", f"未找到与第{widget_data['row']}个任务相关的进度信息", 3)
+            _msg1 = _translate('', '未找到与第')
+            _msg2 = _translate('', '个任务相关的进度信息')
+            self.function_send_msg(f"Resume Workflow?", f"{_msg1}{widget_data['row']}{_msg2}", 3)
             logger.info("AutoSet find None to resume interpolation")
             self.settings_set_start_info(0, 1, True)
             return
@@ -986,7 +1033,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         chunk_cnt = chunk_info["chunk_cnt"]
         last_frame = chunk_info["last_frame"]
         if chunk_cnt > 0:
-            reply = self.function_send_msg(f"恢复进度？", f"检测到未完成的补帧任务，载入进度？", 3)
+            reply = self.function_send_msg(f"Resume Workflow?", _translate('', "检测到未完成的补帧任务，载入进度？"), 3)
             if reply == QMessageBox.No:
                 self.settings_set_start_info(0, 1, False)
                 logger.info("User Abort Auto Set")
@@ -1005,7 +1052,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if not len(cuda_infos):
             self.hasNVIDIA = False
-            self.function_send_msg("No NVIDIA Card Found", "未找到N卡，将使用A卡或核显")
+            self.function_send_msg("No NVIDIA Card Found", _translate('', "未找到N卡，将使用A卡或核显"))
             appData.setValue("use_ncnn", True)
             self.UseNCNNButton.setChecked(True)
             self.UseNCNNButton.setEnabled(False)
@@ -1035,7 +1082,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if not os.path.exists(model_dir):
             logger.info(f"Not find Module dir at {model_dir}")
-            self.function_send_msg("Model Dir Not Found", "未找到补帧模型路径，请检查！")
+            self.function_send_msg("Model Dir Not Found", _translate('', "未找到补帧模型路径，请检查！"))
             return
         rife_model_list = list()
         for m in os.listdir(model_dir):
@@ -1051,7 +1098,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if not os.path.exists(sr_ncnn_dir):
             logger.info(f"Not find SR Algorithm dir at {sr_ncnn_dir}")
-            self.function_send_msg("Model Dir Not Found", "未找到补帧模型路径，请检查！")
+            self.function_send_msg("Model Dir Not Found", _translate('', "未找到补帧模型路径，请检查！"))
             return
 
         algo_list = list()
@@ -1076,7 +1123,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if not os.path.exists(sr_algo_ncnn_dir):
             logger.info(f"Not find SR Algorithm dir at {sr_algo_ncnn_dir}")
-            self.function_send_msg("Model Dir Not Found", "未找到超分模型，请检查！")
+            self.function_send_msg("Model Dir Not Found", _translate('', "未找到超分模型，请检查！"))
             return
 
         model_list = list()
@@ -1099,11 +1146,13 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         preview_args = SVFI_Preview_Args_Dialog(self).ArgsLabel.text()
         preview_args = html.unescape("\n".join(re.findall('">(.*?)</span>', preview_args)))
-        status_check = f"[导出设置预览]\n\n{preview_args}\n\n"
+        _msg1 = _translate('', '[导出设置预览]')
+        status_check = f"{_msg1}\n\n{preview_args}\n\n"
         for key in appData.allKeys():
             status_check += f"{key} => {appData.value(key)}\n"
         if mode == 0:
-            status_check += "\n\n[设置信息]\n\n"
+            _msg1 = _translate('', '[设置信息]')
+            status_check += f"\n\n{_msg1}\n\n"
             status_check += self.OptionCheck.toPlainText()
             log_path = os.path.join(self.OutputFolder.text(), "log", f"{datetime.datetime.now().date()}.error.log")
         else:  # 1
@@ -1172,12 +1221,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         if folder:
-            directory = QFileDialog.getExistingDirectory(None, caption="选取文件夹")
+            directory = QFileDialog.getExistingDirectory(None, caption=_translate('', "选取文件夹"))
             return directory
         if multi:
-            files = QFileDialog.getOpenFileNames(None, caption=f"选择{filename}", filter=_filter)
+            files = QFileDialog.getOpenFileNames(None, caption=f"Select {filename}", filter=_filter)
             return files[0]
-        directory = QFileDialog.getOpenFileName(None, caption=f"选择{filename}", filter=_filter)
+        directory = QFileDialog.getOpenFileName(None, caption=f"Select {filename}", filter=_filter)
         return directory[0]
 
     def function_quick_concat(self):
@@ -1190,7 +1239,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         output_v = self.OutputConcat.text()
         self.settings_load_current()
         if not input_v or not input_a or not output_v:
-            self.function_send_msg("Parameters unfilled", "请填写输入或输出视频路径！")
+            self.function_send_msg("Parameters unfilled", _translate('', "请填写输入或输出视频路径！"))
             return
 
         ffmpeg_command = f"""
@@ -1205,7 +1254,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def function_update_chores_finish(self, data: dict):
         mission_type = data['data']['type']
-        self.function_send_msg("Chores Mission", f"{mission_type}任务完成", msg_type=2)
+        _msg1 = _translate('', '任务完成')
+        self.function_send_msg("Chores Mission", f"{mission_type}{_msg1}", msg_type=2)
         self.ConcatButton.setEnabled(True)
         self.GifButton.setEnabled(True)
 
@@ -1218,7 +1268,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         output_v = self.GifOutput.text()
         self.settings_load_current()
         if not input_v or not output_v:
-            self.function_send_msg("Parameters unfilled", "请填写输入或输出视频路径！")
+            self.function_send_msg("Parameters unfilled", _translate('', "请填写输入或输出视频路径！"))
             return
         if not appData.value("target_fps"):
             appData.setValue("target_fps", 50)
@@ -1284,36 +1334,40 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             if self.current_failed:
                 return
             if "Input File not valid" in now_text:
-                self.function_send_msg("Inputs Failed", "你的输入文件有问题！请检查输入文件是否能播放，路径有无特殊字符", )
+                self.function_send_msg("Inputs Failed", _translate('', "你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符"), )
                 self.current_failed = True
                 return
             elif "JSON" in now_text:
-                self.function_send_msg("Input File Failed", "文件信息读取失败，请确保软件和视频文件路径均为纯英文、无空格且无特殊字符", )
+                self.function_send_msg("Input File Failed", _translate('', "文件读取失败，请确保软件有足够权限且输入文件未被其他软件占用"), )
                 self.current_failed = True
                 return
             elif "ascii" in now_text:
-                self.function_send_msg("Software Path Failure", "请把软件所在文件夹移到纯英文、无中文、无空格路径下", )
+                self.function_send_msg("Software Path Failure", _translate('', "请把软件所在文件夹移到纯英文、无中文、无空格路径下"), )
                 self.current_failed = True
                 return
             elif "CUDA out of memory" in now_text:
-                self.function_send_msg("CUDA Failed", "你的显存不够啦！去清一下后台占用显存的程序，或者去'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型~", )
+                self.function_send_msg("CUDA Failed",
+                                       _translate('', "你的显存不够啦！去清一下后台占用显存的程序，或者去'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型~"), )
                 self.current_failed = True
                 return
             elif "cudnn" in now_text.lower() and "fail" in now_text.lower():
-                self.function_send_msg("CUDA Failed", "请前往官网更新驱动www.nvidia.cn/Download/index.aspx", )
+                self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx"), )
                 self.current_failed = True
                 return
             elif "Concat Test Error" in now_text:
-                self.function_send_msg("Concat Failed", "区块合并音轨测试失败，请检查输出文件格式是否支持源文件音频", )
+                self.function_send_msg("Concat Failed", _translate('', "区块合并音轨测试失败，请检查输出文件格式是否支持源文件音频"), )
                 self.current_failed = True
                 return
             elif "Broken Pipe" in now_text:
-                self.function_send_msg("Render Failed", "请检查渲染设置，确保输出分辨率为偶数，尝试关闭硬件编码以解决问题", )
+                self.function_send_msg("Render Failed", _translate('', "请检查渲染设置，确保输出分辨率宽高为偶数，尝试关闭硬件编码以解决问题"), )
                 self.current_failed = True
                 return
             elif "error" in data.get("subprocess", "").lower():
                 logger.error(f"[At the end of One Line Shot]: \n {data.get('subprocess')}")
-                self.function_send_msg("Something Went Wrong", f"程序运行出现错误！\n{data.get('subprocess')}\n联系开发人员解决", )
+                _msg1 = _translate('', '程序运行出现错误！')
+                _msg2 = _translate('', '联系开发人员解决')
+                self.function_send_msg("Something Went Wrong",
+                                       f"{_msg1}\n{data.get('subprocess')}\n{_msg2}", )
                 self.current_failed = True
                 return
 
@@ -1368,19 +1422,20 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if data["finished"]:
             """Error Handle"""
             returncode = data["returncode"]
-            complete_msg = f"共 {data['cnt']} 个补帧任务\n"
+            complete_msg = f"For {data['cnt']} Tasks:\n"
             if returncode == 0 or "Program Finished" in self.OptionCheck.toPlainText() or (
                     returncode is not None and returncode > 3000):
                 """What the fuck is SWIG?"""
-                complete_msg += '成功！'
+                complete_msg += _translate('', '成功！')
                 os.startfile(self.OutputFolder.text())
             else:
-                complete_msg += f'失败, 返回码：{returncode}\n请将弹出的文件夹内error.txt发送至交流群排疑，' \
-                                f'并尝试前往高级设置恢复补帧进度'
+                _msg1 = _translate('', '失败, 返回码：')
+                _msg2 = _translate('', '请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度')
+                complete_msg += f"{_msg1}{returncode}\n{_msg2}"
                 error_handle()
                 generate_error_log()
 
-            self.function_send_msg("任务完成", complete_msg, 2)
+            self.function_send_msg(_translate('', "任务完成"), complete_msg, 2)
             self.ConcatAllButton.setEnabled(True)
             self.StartExtractButton.setEnabled(True)
             self.StartRenderButton.setEnabled(True)
@@ -1433,7 +1488,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def on_InputButton_clicked(self):
-        input_files = self.function_select_file('要补帧的视频', multi=True)
+        input_files = self.function_select_file(_translate('', '要补帧的视频'), multi=True)
         if not len(input_files):
             return
         for f in input_files:
@@ -1443,7 +1498,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def on_InputDirButton_clicked(self):
-        input_directory = self.function_select_file("要补帧的图片序列文件夹", folder=True)
+        input_directory = self.function_select_file(_translate('', "要补帧的图片序列文件夹"), folder=True)
         self.InputFileName.addFileItem(input_directory)
         if not len(self.OutputFolder.text()):
             self.OutputFolder.setText(os.path.dirname(input_directory))
@@ -1451,7 +1506,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def on_OutputButton_clicked(self):
-        folder = self.function_select_file('要输出项目的文件夹', folder=True)
+        folder = self.function_select_file(_translate('', '要输出项目的文件夹'), folder=True)
         self.OutputFolder.setText(folder)
 
     @pyqtSlot(bool)
@@ -1470,9 +1525,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
             # SVFI_preview_args_form.setWindowModality(Qt.ApplicationModal)
             SVFI_preview_args_form.exec_()
-        reply = self.function_send_msg("Confirm Start Info", f"补帧将会从区块[{self.StartChunk.text()}], "
-                                                             f"起始帧[{self.StartFrame.text()}]启动。\n请确保上述两者皆不为空。"
-                                                             f"是否执行补帧？", 3)
+        _msg1 = _translate('', '补帧将会从区块')
+        _msg2 = _translate('', '起始帧')
+        msg_3 = _translate('', '启动。请确保上述两者皆不为空。是否执行补帧？')
+        reply = self.function_send_msg("Confirm Start Info",
+                                       f"{_msg1}[{self.StartChunk.text()}], {_msg2}[{self.StartFrame.text()}]{msg_3}",
+                                       3)
         if reply == QMessageBox.No:
             return
         self.AllInOne.setEnabled(False)
@@ -1483,20 +1541,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         RIFE_thread.start()
 
         self.rife_thread = RIFE_thread
-        update_text = f"""
-                    [SVFI {self.version} 补帧操作启动]
-                    显示“Program finished”则任务完成
-                    如果遇到任何问题，请将基础设置、输出窗口截全图，不要录屏，并导出当前设置为settings.log文件并联系开发人员解决，
-                    群号在首页说明\n
-                    
-                    参数说明：
-                    R: 当前渲染的帧数，C: 当前处理的帧数，S: 最近识别到的转场，SC：识别到的转场数量，
-                    TAT：Task Acquire Time， 单帧任务获取时间，即任务阻塞时间，如果该值过大，请考虑增加虚拟内存
-                    PT：Process Time，单帧任务处理时间，单帧补帧（+超分）花费时间
-                    QL：Queue Length，任务队列长度
-
-                    如果遇到卡顿或软件卡死，请直接右上角强制终止
-                """
+        _msg1 = _translate('', '补帧操作启动')
+        update_text = f"""[SVFI {self.version} {_msg1}]"""
         self.OptionCheck.setText(update_text)
         self.current_failed = False
         self.tabWidget.setCurrentIndex(1)  # redirect to info page
@@ -1509,7 +1555,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         self.function_load_all_tasks_settings()
         if self.InputFileName.currentItem() is None or not len(self.OutputFolder.text()):
-            self.function_send_msg("Invalid Inputs", "请检查你的输入和输出文件夹")
+            self.function_send_msg("Invalid Inputs", _translate('', "请检查你的输入和输出文件夹"))
             return
         self.settings_auto_set()
 
@@ -1521,10 +1567,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_AddTemplateButton_clicked(self):
         template_name = self.EditTemplateName.text()
         if not len(template_name):
-            self.function_send_msg("Invalid Template Name", "预设名不能为空~")
+            self.function_send_msg("Invalid Template Name", _translate('', "预设名不能为空~"))
             return
         if template_name in self.function_get_templates():
-            self.function_send_msg("Invalid Template Name", "预设名不能与已有预设重复~")
+            self.function_send_msg("Invalid Template Name", _translate('', "预设名不能与已有预设重复~"))
             return
         self.settings_load_config(appDataPath)  # appoint appData to root
         self.settings_load_current()  # update appData to current Settings
@@ -1532,38 +1578,39 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                                               logger)
         template_config.DuplicateConfig()  # write template settings
         self.SettingsTemplateSelector.addItem(template_name)
-        self.function_send_msg("New Template Saved", f"已保存指定预设：{template_name}", 2)
+        _msg1 = _translate('', '已保存指定预设：')
+        self.function_send_msg("New Template Saved", f"{_msg1}{template_name}", 2)
 
     @pyqtSlot(bool)
     def on_RemoveTemplateButton_clicked(self):
         if not self.SettingsTemplateSelector.count():
-            self.function_send_msg("No Templates", "预设为空~")
+            self.function_send_msg("No Templates", _translate('', "预设为空~"))
             return
         template_config = SVFI_Config_Manager({'input_path': 'Template',
                                                'task_id': f'Template_{self.SettingsTemplateSelector.currentText()}'},
                                               dname, logger)
         self.SettingsTemplateSelector.removeItem(self.SettingsTemplateSelector.currentIndex())
         template_config.RemoveConfig()
-        self.function_send_msg("Remove Template", "已移除指定预设~", 2)
+        self.function_send_msg("Remove Template", _translate('', "已移除指定预设~"), 2)
 
     @pyqtSlot(bool)
     def on_UseTemplateButton_clicked(self):
         if not self.SettingsTemplateSelector.count():
-            self.function_send_msg("No Templates", "预设为空~")
+            self.function_send_msg("No Templates", _translate('', "预设为空~"))
             return
         template_name = self.SettingsTemplateSelector.currentText()
         if template_name is None:
-            self.function_send_msg("Invalid Template", "请先指定预设~")
+            self.function_send_msg("Invalid Template", _translate('', "请先指定预设~"))
             return
         template_config = SVFI_Config_Manager({'input_path': 'Template', 'task_id': f'Template_{template_name}'}, dname,
                                               logger)
         config_path = template_config.FetchConfig()
         if config_path is None:
-            self.function_send_msg("Invalid Config", "指定预设不见啦~")
+            self.function_send_msg("Invalid Config", _translate('', "指定预设不见啦~"))
             return
         self.settings_load_config(config_path)
         self.settings_initiation(item_update=True, template_update=True)
-        self.function_send_msg("Config Loaded", "已载入指定预设~", 2)
+        self.function_send_msg("Config Loaded", _translate('', "已载入指定预设~"), 2)
         if not self.is_gui_quiet:
             SVFI_preview_args_form = SVFI_Preview_Args_Dialog(self)
             SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
@@ -1598,7 +1645,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             try:
                 self.OutputFPS.setText(f"{float(input_fps) * int(self.ExpSelecter.currentText()[1:]):.5f}")
             except Exception:
-                self.function_send_msg("帧率输入有误", "请确认输入输出帧率为有效数据")
+                self.function_send_msg(_translate('', "帧率输入有误"),
+                                       _translate('', "请确认输入输出帧率为有效数据"))
 
     @pyqtSlot(bool)
     def on_InterpExpReminder_toggled(self):
@@ -1610,7 +1658,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_UseNCNNButton_clicked(self, clicked=True, silent=False):
         if self.hasNVIDIA and self.UseNCNNButton.isChecked() and not silent:
-            reply = self.function_send_msg(f"确定使用NCNN？", f"你有N卡，确定使用A卡/核显？", 3)
+            reply = self.function_send_msg(_translate('', f"确定使用NCNN？"),
+                                           _translate('', f"你有N卡，确定使用A卡/核显？"), 3)
             if reply == QMessageBox.Yes:
                 logger.info("Switch To NCNN Mode: %s" % self.UseNCNNButton.isChecked())
             else:
@@ -1632,7 +1681,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_UseMultiCardsChecker_clicked(self):
         bool_result = self.UseMultiCardsChecker.isChecked()
         self.DiscreteCardSelector.setEnabled(not bool_result)
-        self.SelectedGpuLabel.setText("选择的GPU" if not bool_result else "（使用A卡或核显）拥有的GPU个数")
+        self.SelectedGpuLabel.setText(_translate('', "选择的GPU") if not bool_result else
+                                      _translate('', "（使用A卡或核显）拥有的GPU个数"))
 
     @pyqtSlot(bool)
     def on_UseAiSR_clicked(self):
@@ -1674,7 +1724,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 width = input_stream.get(cv2.CAP_PROP_FRAME_WIDTH)
                 height = input_stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
         except Exception:
-            logger.error(traceback.format_exc())
             height, width = 0, 0
 
         if "SD" in current_template:
@@ -1791,7 +1840,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         if not self.GifInput.text():
             self.settings_load_current()  # update settings
-            input_filename = self.function_select_file('请输入要制作成gif的视频文件')
+            input_filename = self.function_select_file(_translate('', '请输入要制作成gif的视频文件'))
             self.GifInput.setText(input_filename)
             self.GifOutput.setText(
                 os.path.join(os.path.dirname(input_filename), f"{Tools.get_filename(input_filename)}.gif"))
@@ -1807,7 +1856,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         if not self.ConcatInputV.text():
             self.settings_load_current()  # update settings
-            input_filename = self.function_select_file('请输入要进行音视频合并的视频文件')
+            input_filename = self.function_select_file(_translate('', '请输入要进行音视频合并的视频文件'))
             self.ConcatInputV.setText(input_filename)
             self.ConcatInputA.setText(input_filename)
             self.OutputConcat.setText(
@@ -1831,11 +1880,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
-        self.OptionCheck.setText(f"""
-                    [SVFI {self.version} 仅合并操作启动，请移步命令行查看进度详情]
-                    显示“Program finished”则任务完成
-                    如果遇到任何问题，请将软件运行界面截图并联系开发人员解决，
-                    \n\n\n\n\n""")
+        _msg1 = _translate('', '仅合并操作启动')
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]\n\n\n")
 
     @pyqtSlot(bool)
     def on_StartExtractButton_clicked(self):
@@ -1852,11 +1898,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
-        self.OptionCheck.setText(f"""
-                            [SVFI {self.version} 仅拆帧操作启动，请移步命令行查看进度详情]
-                            显示“Program finished”则任务完成
-                            如果遇到任何问题，请将软件运行界面截图并联系开发人员解决，
-                            \n\n\n\n\n""")
+        _msg1 = _translate('', '仅拆帧操作启动')
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]\n\n\n")
 
     @pyqtSlot(bool)
     def on_StartRenderButton_clicked(self):
@@ -1873,11 +1916,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
-        self.OptionCheck.setText(f"""
-                            [SVFI {self.version} 仅渲染操作启动，请移步命令行查看进度详情]
-                            显示“Program finished”则任务完成
-                            如果遇到任何问题，请将软件运行界面截图并联系开发人员解决，
-                            \n\n\n\n\n""")
+        _msg1 = _translate('', '仅渲染操作启动')
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]\n\n\n")
 
     @pyqtSlot(bool)
     def on_KillProcButton_clicked(self):
@@ -1897,10 +1937,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.rife_thread.pause_proc_exec()
             if not self.pause:
                 self.pause = True
-                self.PauseProcess.setText("继续补帧！")
+                self.PauseProcess.setText(_translate('', "继续补帧！"))
             else:
                 self.pause = False
-                self.PauseProcess.setText("暂停补帧！")
+                self.PauseProcess.setText(_translate('', "暂停补帧！"))
 
     def settings_load_config(self, config_path: str):
         """
@@ -1934,9 +1974,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         self.AdvanceSettingsArea.setVisible(not bool_result)
         if not bool_result:
-            self.ShowAdvance.setText("隐藏高级设置")
+            self.ShowAdvance.setText(_translate('', "隐藏高级设置"))
         else:
-            self.ShowAdvance.setText("显示高级设置")
+            self.ShowAdvance.setText(_translate('', "显示高级设置"))
         self.splitter.moveSplitter(10000000, 1)
 
     def SaveInputSettingsProcess(self, current_filename):
@@ -1957,7 +1997,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_OutputSettingsButton_clicked(self):
         self.function_generate_log(1)
-        self.function_send_msg("Generate Settings Log Success", "设置导出成功！settings.log即为设置快照", 3)
+        self.function_send_msg("Generate Settings Log Success", _translate('', "设置导出成功！settings.log即为设置快照"), 3)
         pass
 
     @pyqtSlot(bool)
@@ -2040,7 +2080,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_actionStartProcess_triggered(self):
         if not self.AllInOne.isEnabled():
-            self.function_send_msg("Invalid Operation", "已有任务在执行")
+            self.function_send_msg("Invalid Operation", _translate('', "已有任务在执行"))
             return
         self.on_AllInOne_clicked()
 
@@ -2054,7 +2094,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             currentIndex = self.InputFileName.currentRow()
             self.InputFileName.takeItem(currentIndex)
         except Exception:
-            self.function_send_msg("Fail to Clear Video", "未选中输入项")
+            self.function_send_msg("Fail to Clear Video", _translate('', "未选中输入项"))
 
     @pyqtSlot(bool)
     def on_actionQuit_triggered(self):
@@ -2073,14 +2113,22 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_actionLoadDefaultSettings_triggered(self):
         appData.clear()
         self.settings_update_pack()
-        self.function_send_msg("Load Success", "已载入默认设置", 3)
+        self.function_send_msg("Load Success", _translate('', "已载入默认设置"), 3)
+
+    @pyqtSlot(bool)
+    def on_actionLangZH_triggered(self):
+        self.settings_change_lang('zh')
+
+    @pyqtSlot(bool)
+    def on_actionLangEN_triggered(self):
+        self.settings_change_lang('en')
 
     def closeEvent(self, event):
         global appData
         if not self.STEAM.steam_valid:
             event.ignore()
             return
-        reply = self.function_send_msg("Quit", "是否保存当前设置？", 3)
+        reply = self.function_send_msg("Quit", _translate('', "是否保存当前设置？"), 3)
         if reply == QMessageBox.Yes:
             self.function_load_all_tasks_settings()
             self.settings_load_config(appDataPath)

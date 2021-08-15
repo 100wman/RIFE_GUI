@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import locale
 import os
 import random
 import re
@@ -15,6 +16,24 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(os.path.dirname(abspath))
 ddname = os.path.dirname(abspath)
 
+class SVFITranslator(QTranslator):
+    def __init__(self):
+        super().__init__()
+        self.app_name = "SVFI"
+        try:
+            lang = locale.getdefaultlocale()[0].split('_')[0]
+            lang_file = self.get_lang_file(lang)
+            self.load(lang_file)
+        except Exception as e:
+            print(e)
+
+    def get_lang_file(self, lang:str):
+        lang_file = os.path.join(dname, 'lang', f'SVFI_UI.{lang}.qm')
+        return lang_file
+
+    def change_lang(self, lang: str):
+        lang_file = self.get_lang_file(lang)
+        self.load(lang_file)
 
 class MyListWidgetItem(QWidget):
     dupSignal = pyqtSignal(dict)

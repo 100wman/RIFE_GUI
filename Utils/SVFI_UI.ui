@@ -606,7 +606,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>5</number>
+                      <number>0</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -863,6 +863,19 @@
                              <widget class="QPushButton" name="RefreshStartInfo">
                               <property name="text">
                                <string>复原至起点</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="7" column="2">
+                             <widget class="QCheckBox" name="ResumeRiskChecker">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅针对视频素材&lt;/span&gt;&lt;/p&gt;&lt;p&gt;开启此项，将能够较快地恢复工作进度，但并不保证精确，也不保证输出结果音画同步；&lt;/p&gt;&lt;p&gt;精确度视具体视频素材的压缩率而定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>风险模式 (?)</string>
+                              </property>
+                              <property name="checked">
+                               <bool>true</bool>
                               </property>
                              </widget>
                             </item>
@@ -1743,7 +1756,7 @@
                           <item row="2" column="1">
                            <widget class="MyComboBox" name="HwaccelSelector">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string/>
                             </property>
                             <item>
                              <property name="text">
@@ -2129,7 +2142,7 @@
                             <item row="3" column="1">
                              <widget class="MyComboBox" name="ModuleSelector">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string/>
                               </property>
                              </widget>
                             </item>
@@ -2947,9 +2960,17 @@ p, li { white-space: pre-wrap; }
     <addaction name="actionManualGuide"/>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menu_3">
+    <property name="title">
+     <string>Language</string>
+    </property>
+    <addaction name="actionLangZH"/>
+    <addaction name="actionLangEN"/>
+   </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
    <addaction name="menuAboutSVFI"/>
+   <addaction name="menu_3"/>
   </widget>
   <action name="actionImportVideos">
    <property name="text">
@@ -3036,6 +3057,16 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="shortcut">
     <string>Ctrl+End</string>
+   </property>
+  </action>
+  <action name="actionLangZH">
+   <property name="text">
+    <string>简体中文</string>
+   </property>
+  </action>
+  <action name="actionLangEN">
+   <property name="text">
+    <string>English</string>
    </property>
   </action>
  </widget>

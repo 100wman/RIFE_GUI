@@ -11,6 +11,7 @@ import tqdm
 from skvideo.io import FFmpegWriter, FFmpegReader
 
 from Utils.utils import *
+from steamworks.exceptions import *
 
 try:
     _steamworks = STEAMWORKS(ArgumentManager.app_id)
@@ -21,6 +22,10 @@ print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.t
 f"""
 Update Log at {ArgumentManager.ols_version}
 1. Optimize Task Queue
+2. Initiate i18n Framework
+3. Add Risk Resume Mode to accelerate Resume of Workflow (SVFI 3.4)
+4. Fix DLC Authorization
+5. Optimize Traceback Feedback
 """
 
 """设置环境路径"""
@@ -228,7 +233,7 @@ class InterpWorkFlow:
                 else:
                     self.logger.warning("Abort to load AI SR since Resolution Rate <= 1")
             except ImportError:
-                self.logger.error(f"Import SR Module failed\n{traceback.format_exc()}")
+                self.logger.error(f"Import SR Module failed\n{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
 
         self.frame_reader = None  # 读帧的迭代器／帧生成器
         self.render_gap = self.ARGS.render_gap  # 每个chunk的帧数
@@ -347,7 +352,11 @@ class InterpWorkFlow:
         vf_args += f",minterpolate=fps={self.target_fps}:mi_mode=dup"
         if start_frame not in [-1, 0]:
             # not start from the beginning
-            output_dict.update({"-ss": f"{start_frame / self.target_fps:.3f}"})
+            if self.ARGS.risk_resume_mode:
+                """Quick Locate"""
+                input_dict.update({"-ss": f"{start_frame / self.target_fps:.3f}"})
+            else:
+                output_dict.update({"-ss": f"{start_frame / self.target_fps:.3f}"})
 
         """Quick Extraction"""
         if not self.ARGS.is_quick_extract:
@@ -596,6 +605,9 @@ class InterpWorkFlow:
             else:
                 if self.ARGS.interp_start not in [-1, ] or self.ARGS.output_chunk_cnt not in [-1, 0]:
                     return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)  # Manually Prioritized
+
+        if self.ARGS.interp_start not in [-1, ] or self.ARGS.output_chunk_cnt not in [-1, ]:
+            return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
 
         chunk_regex = rf"chunk-[\d+].*?\{self.output_ext}"
 
@@ -860,7 +872,7 @@ class InterpWorkFlow:
             self.logger.info(f"VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
         except Exception as e:
-            self.logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc())
+            self.logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(limit=ArgumentManager.traceback_limit))
             raise e
 
     # @profile
@@ -1036,7 +1048,7 @@ class InterpWorkFlow:
                         i += queue_size - 3
                     i += 1
             except:
-                self.logger.error(traceback.format_exc())
+                self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             for x in Current:
                 if x not in opt:  # 优化:该轮一拍N不可能出现在上一轮中
                     for t in range(queue_size - 3):
@@ -1293,14 +1305,27 @@ class InterpWorkFlow:
     def run(self):
         if self.ARGS.is_steam:
             if not self.STEAM.steam_valid:
-                error = self.STEAM.steam_error
-                self.logger.error(f"Steam Validation failed\n{error}")
+                error = self.STEAM.steam_error.split('\n')[-1]
+                self.logger.error(f"Steam Validation Failed: {error}")
                 return
             else:
                 valid_response = self.STEAM.CheckSteamAuth()
                 if valid_response != 0:
                     self.logger.error(f"Steam Validation Failed, code {valid_response}")
                     return
+            steam_dlc_check = self.STEAM.CheckProDLC()
+            if not steam_dlc_check:
+                _msg = "SVFI - Pro DLC Not Purchased,"
+                if self.ARGS.extract_only or self.ARGS.render_only:
+                    raise GenericSteamException(f"{_msg} Extract/Render ToolBox Unavailable")
+                if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
+                    raise GenericSteamException(f"{_msg} Manual Input Section Unavailable")
+                if self.ARGS.is_scdet_output or self.ARGS.is_scdet_mix:
+                    raise GenericSteamException(f"{_msg} Scdet Output/Mix Unavailable")
+                if self.ARGS.use_sr:
+                    raise GenericSteamException(f"{_msg} Super Resolution Module Unavailable")
+                if self.ARGS.use_rife_multi_cards:
+                    raise GenericSteamException(f"{_msg} Multi Video Cards Work flow Unavailable")
 
         if self.ARGS.concat_only:
             self.concat_all()
@@ -1337,7 +1362,7 @@ class InterpWorkFlow:
                     from Utils import inference_rife as inference
                 except Exception:
                     self.logger.warning("Import Torch Failed, use NCNN-RIFE instead")
-                    self.logger.error(traceback.format_exc())
+                    self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
                     self.ARGS.use_ncnn = True
                     self.ARGS.rife_model_name = "rife-v2"
                     from Utils import inference_rife_ncnn as inference
