@@ -1,6 +1,5 @@
 # coding: utf-8
 import argparse
-import datetime
 import re
 import sys
 
@@ -8,7 +7,7 @@ import psutil
 import tqdm
 # profile line
 # from line_profiler_pycharm import profile
-from skvideo.io import FFmpegWriter, FFmpegReader
+from skvideo.io import FFmpegWriter, FFmpegReader, NVenccWriter
 
 from Utils.utils import *
 from steamworks.exceptions import *
@@ -21,11 +20,10 @@ except:
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 f"""
 Update Log at {ArgumentManager.ols_version}
-1. Optimize Task Queue
-2. Initiate i18n Framework
-3. Add Risk Resume Mode to accelerate Resume of Workflow (SVFI 3.4)
-4. Fix DLC Authorization
-5. Optimize Traceback Feedback
+1. Optimize High DPI Support
+2. Optimize H264/HEVC Encode Params
+3. Fix Settings not saved in quiet mode
+4. Update English i18n
 """
 
 """设置环境路径"""
@@ -233,7 +231,8 @@ class InterpWorkFlow:
                 else:
                     self.logger.warning("Abort to load AI SR since Resolution Rate <= 1")
             except ImportError:
-                self.logger.error(f"Import SR Module failed\n{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
+                self.logger.error(
+                    f"Import SR Module failed\n{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
 
         self.frame_reader = None  # 读帧的迭代器／帧生成器
         self.render_gap = self.ARGS.render_gap  # 每个chunk的帧数
@@ -269,7 +268,7 @@ class InterpWorkFlow:
             self.output_ext = ".mov"
 
         self.main_error = None
-        self.first_hdr_check_report = True
+        self.first_hdr_check_report = 0  # no hdr at default, 1 checked, 2 hdr10, 3 hlg
 
     def generate_frame_reader(self, start_frame=-1, frame_check=False):
         """
@@ -374,18 +373,51 @@ class InterpWorkFlow:
         :param output_path:
         :return:
         """
-        params_265 = ("ref=3:rd=3:no-rect=1:no-amp=1:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:"
-                      "weightb=1:no-strong-intra-smoothing=1:psy-rd=2.0:psy-rdoq=1.0:no-open-gop=1:"
-                      f"keyint={int(self.target_fps * 3)}:min-keyint=1:rc-lookahead=50:bframes=6:"
-                      f"aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
-                      f"deblock=-1:no-sao=1")
-        params_265_fast = ("ref=2:rd=1:ctu=32:no-rect=1:no-amp=1:early-skip=1:fast-intra=1:b-intra=1:"
-                           "rdoq-level=0:limit-tu=4:me=2:subme=3:merange=25:weightb=1:no-strong-intra-smoothing=1:"
-                           "no-open-gop=1:keyint=250:min-keyint=1:rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:"
-                           "qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:no-sao=1:repeat-headers=1")
+        # TODO preset ~ different params
+        params_265s = {
+            "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
+                    "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
+                    "min-keyint=1:rc-lookahead=25:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
+                    "crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1",
+            "8bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
+                    "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
+                    "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
+                    "qcomp=0.65:deblock=-1:sao=0",
+            "10bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
+                     "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
+                     "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
+                     "deblock=-1:sao=0",
+            "hdr10": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
+                     'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
+                     'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
+                     'deblock=-1:sao=0:'
+                     'range=limited:colorprim=9:transfer=16:colormatrix=9:'
+                     'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
+                     'max-cll="1000,100":hdr10-opt=1:repeat-headers=1'
+        }
+
+        params_264s = {
+            "fast": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=4:deblock='-1:-1':"
+                    "rc-lookahead=30:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:me=hex:merange=16:"
+                    "subme=7:psy-rd='1:0.1':mixed-refs=1:trellis=1",
+            "8bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+                    "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
+                    "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
+            "10bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
+                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
+            "hdr10": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
+                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
+                     "range=tv:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:"
+                     "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
+                     "cll='1000,100'"
+        }
+        params_264 = ""
+        params_265 = ""
 
         def HDRChecker():
-            nonlocal params_265
+            nonlocal params_265, params_264
             if self.ARGS.is_img_input:
                 return
 
@@ -394,34 +426,36 @@ class InterpWorkFlow:
                 return
 
             if "color_transfer" not in self.video_info["video_info"]:
-                if self.first_hdr_check_report:
+                if self.first_hdr_check_report == 0:
                     self.logger.warning("Not Find Color Transfer\n%s" % str(self.video_info["video_info"]))
                 return
 
             color_trc = self.video_info["video_info"]["color_transfer"]
 
             if "smpte2084" in color_trc or "bt2020" in color_trc:
-                hdr = True
-                self.ARGS.render_encoder = "H265, 10bit"
-                self.ARGS.render_encoder_preset = "slow"
+                """should be 10bit encoding"""
                 self.ARGS.render_hwaccel_mode = "CPU"
-                if "master-display" in str(self.video_info["video_info"]):
-                    self.ARGS.render_hwaccel_mode = "CPU"
-                    params_265 += ":hdr10-opt=1:repeat-headers=1"
-                    if self.first_hdr_check_report:
-                        self.logger.warning("\nDetect HDR10+ Content, Switch to CPU Render Compulsorily")
-                else:
-                    if self.first_hdr_check_report:
-                        self.logger.warning(
-                            "\nPQ or BT2020 Content Detected, Switch to CPU Render Compulsorily")
+                self.first_hdr_check_report = 2  # hdr
+                if 'fast' in self.ARGS.render_encoder_preset:
+                    self.ARGS.render_encoder_preset = "medium"
+                if "H265" in self.ARGS.render_encoder:
+                    self.ARGS.render_encoder = "H265, 10bit"
+                    params_265 = params_265s["10bit"]
+                    if "master-display" in str(self.video_info["video_info"]):
+                        params_265 = params_265s["hdr10"]
+                        self.logger.warning("Detect HDR10+ Content, Switch to CPU HEVC Render Compulsorily")
+                elif "H264" in self.ARGS.render_encoder:
+                    self.ARGS.render_encoder = "H264, 10bit"
+                    params_264 = params_264s["10bit"]
+                    if "master-display" in str(self.video_info["video_info"]):
+                        params_264 = params_264s["hdr10"]
+                        self.logger.warning("Detect HDR10+ Content, Switch to CPU H264 Render Compulsorily")
 
             elif "arib-std-b67" in color_trc:
-                hdr = True
                 self.ARGS.render_encoder = "H265, 10bit"
-                self.ARGS.render_encoder_preset = "slow"
                 self.ARGS.render_hwaccel_mode = "CPU"
-                if self.first_hdr_check_report:
-                    self.logger.warning("\nHLG Content Detected, Switch to CPU Render Compulsorily")
+                self.first_hdr_check_report = 3  # HLG
+                self.logger.warning("HLG Content Detected, Switch to CPU HEVC Render Compulsorily")
             pass
 
         """If output is sequence of frames"""
@@ -432,9 +466,10 @@ class InterpWorkFlow:
             return img_io
 
         """HDR Check"""
-        if self.first_hdr_check_report:
+        if self.first_hdr_check_report == 0:
             HDRChecker()
-            self.first_hdr_check_report = False
+            if self.first_hdr_check_report == 0:
+                self.first_hdr_check_report = 1
 
         """Output Video"""
         input_dict = {"-vsync": "cfr"}
@@ -472,34 +507,30 @@ class InterpWorkFlow:
                 output_dict.update({"-c:v": "libx264", "-preset:v": self.ARGS.render_encoder_preset})
                 if "8bit" in self.ARGS.render_encoder:
                     output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "high",
-                                        "-weightb": "1", "-weightp": "2", "-mbtree": "1", "-forced-idr": "1",
-                                        "-coder": "1",
-                                        "-x264-params": "keyint=200:min-keyint=1:bframes=6:b-adapt=2:no-open-gop=1:"
-                                                        "ref=8:deblock='-1:-1':rc-lookahead=50:chroma-qp-offset=-2:"
-                                                        "aq-mode=1:aq-strength=0.8:qcomp=0.75:me=umh:merange=24:"
-                                                        "subme=10:psy-rd='1:0.1'",
-                                        })
+                                        "-x264-params": params_264s["8bit"]})
                 else:
                     """10bit"""
                     output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "high10",
-                                        "-weightb": "1", "-weightp": "2", "-mbtree": "1", "-forced-idr": "1",
-                                        "-coder": "1",
-                                        "-x264-params": "keyint=200:min-keyint=1:bframes=6:b-adapt=2:no-open-gop=1:"
-                                                        "ref=8:deblock='-1:-1':rc-lookahead=50:chroma-qp-offset=-2:"
-                                                        "aq-mode=1:aq-strength=0.8:qcomp=0.75:me=umh:merange=24:"
-                                                        "subme=10:psy-rd='1:0.1'",
-                                        })
+                                        "-x264-params": params_264s["10bit"]})
+                if 'fast' in self.ARGS.render_encoder_preset:
+                    output_dict.update({"-x264-params": params_264s["fast"]})
+                if self.first_hdr_check_report not in [0, 1]:
+                    """HDR Detected Before"""
+                    output_dict.update({"-x264-params": params_264})
             elif "H265" in self.ARGS.render_encoder:
                 output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
                 if "8bit" in self.ARGS.render_encoder:
                     output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main",
-                                        "-x265-params": params_265})
+                                        "-x265-params": params_265s["8bit"]})
                 else:
                     """10bit"""
                     output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "main10",
-                                        "-x265-params": params_265})
-                if any([i in self.ARGS.render_encoder_preset for i in ['fast']]):
-                    output_dict.update({"-x265-params": params_265_fast})
+                                        "-x265-params": params_265s["10bit"]})
+                if 'fast' in self.ARGS.render_encoder_preset:
+                    output_dict.update({"-x265-params": params_265s["fast"]})
+                if self.first_hdr_check_report not in [0, 1]:
+                    """HDR Detected Before"""
+                    output_dict.update({"-x265-params": params_265})
             else:
                 """ProRes"""
                 if "-preset" in output_dict:
@@ -536,6 +567,27 @@ class InterpWorkFlow:
             else:
                 output_dict.update({"-preset": "10", })
 
+        elif self.ARGS.render_hwaccel_mode == "NVENCC":
+            _input_dict = {'--avsw': '',
+                           '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                           "-pix_fmt": "rgb24"}
+            if '-s' in output_dict:
+                _input_dict.update({'--output-res': output_dict['-s']})
+            if "10bit" in self.ARGS.render_encoder:
+                _input_dict.update({"--output-depth": "10"})
+            if "H264" in self.ARGS.render_encoder:
+                _input_dict.update({f"-c": f"h264"})
+            elif "H265" in self.ARGS.render_encoder:
+                _input_dict.update({"-c": "hevc"})
+
+            if self.ARGS.render_encoder_preset != "loseless":
+                hwacccel_preset = self.ARGS.render_hwaccel_preset
+            else:
+                _input_dict.update({"--lossless": "", })
+            input_dict = _input_dict
+            output_dict = {}
+            pass
+
         else:
             """QSV"""
             output_dict.update({"-pix_fmt": "yuv420p"})
@@ -560,16 +612,22 @@ class InterpWorkFlow:
                         output_dict.update({"-cq:v": str(self.ARGS.render_crf)})
                     elif hwaccel_mode == "QSV":
                         output_dict.update({"-q": str(self.ARGS.render_crf)})
+                    elif hwaccel_mode == "NVENCC":
+                        output_dict.update({"--cqp": str(self.ARGS.render_crf)})
                 else:  # CPU
                     output_dict.update({"-crf": str(self.ARGS.render_crf)})
 
             if self.ARGS.render_bitrate and self.ARGS.use_bitrate:
+                # TODO Support Specific Bitrate Encoding for NVENCC
                 output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
                 if self.ARGS.render_hwaccel_mode == "QSV":
                     output_dict.update({"-maxrate": "200M"})
 
         if self.ARGS.use_manual_encode_thread:
             output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
+            if self.ARGS.render_hwaccel_mode == "NVENCC":
+                output_dict.update({"--output-thread": f"{self.ARGS.render_encode_thread}"})
+                output_dict.pop('-threads')
 
         self.logger.debug(f"writer: {output_dict}, {input_dict}")
 
@@ -584,7 +642,8 @@ class InterpWorkFlow:
                     ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
         self.logger.debug(ffmpeg_customized_command)
         output_dict.update(ffmpeg_customized_command)
-
+        if self.ARGS.render_hwaccel_mode == "NVENCC":
+            return NVenccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
         return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
 
     # @profile
@@ -872,7 +931,8 @@ class InterpWorkFlow:
             self.logger.info(f"VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
         except Exception as e:
-            self.logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self.logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
+                limit=ArgumentManager.traceback_limit))
             raise e
 
     # @profile

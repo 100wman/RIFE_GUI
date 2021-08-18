@@ -5,8 +5,9 @@ import warnings
 import numpy as np
 import torch
 from torch.nn import functional as F
-from Utils.utils import ArgumentManager
+
 from Utils.inference_template import VideoFrameInterpolation
+from Utils.utils import ArgumentManager
 
 warnings.filterwarnings("ignore")
 
@@ -120,6 +121,13 @@ class RifeInterpolation(VideoFrameInterpolation):
         :param padding:
         :return:
         """
+
+        """
+        Multi Cards Optimization:
+        OLS: send several imgs pair according to device_count (2 to be specific)
+        HERE: Concat [i1, i2] [i3, i4] and send to rife
+        """
+
         try:
             img_torch = torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(
                 0).float() / 255.

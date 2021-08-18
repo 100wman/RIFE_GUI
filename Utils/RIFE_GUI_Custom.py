@@ -10,7 +10,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-from Utils.utils import Tools
+from Utils.utils import Tools, ArgumentManager
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(os.path.dirname(abspath))
@@ -199,6 +199,10 @@ class MyListWidget(QListWidget):
     def dropEvent(self, e):
         if e.mimeData().hasText():  # 是否文本文件格式
             for url in e.mimeData().urls():
+                if ArgumentManager.is_free:  # in free version, only one task available
+                    if self.count() >= 1:
+                        e.ignore()
+                        return
                 item = url.toLocalFile()
                 self.addFileItem(item)
         else:

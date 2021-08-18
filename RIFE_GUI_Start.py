@@ -2,10 +2,13 @@ import os
 import sys
 import traceback
 
-import QCandyUi
+import win32gui
+import win32print
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
+from win32.lib import win32con
 
+import QCandyUi
 from Utils.utils import ArgumentManager
 
 version_title = f"Squirrel Video Frame Interpolation {ArgumentManager.version_tag}"
@@ -22,10 +25,6 @@ if ArgumentManager.is_steam:
         pass
     os.chdir(original_cwd)
 
-"""SVFI High Resolution Support"""
-if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-
 # if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
 #     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
@@ -36,6 +35,14 @@ except ImportError as e:
     print("Not Find RIFE GUI Backend, please contact developers for support")
     input("Press Any Key to Quit")
     exit()
+
+"""SVFI High Resolution Support"""
+if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+    hDC = win32gui.GetDC(0)
+    w = win32print.GetDeviceCaps(hDC, win32con.DESKTOPHORZRES)
+    h = win32print.GetDeviceCaps(hDC, win32con.DESKTOPVERTRES)
+    if w * h >= 3840 * 2160:
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 
 """Initiate APP"""
 app = QApplication(sys.argv)
