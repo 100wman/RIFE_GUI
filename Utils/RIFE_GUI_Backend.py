@@ -12,14 +12,15 @@ import subprocess as sp
 import sys
 import time
 import traceback
-import lxml
+
 import cv2
 import psutil
 import torch
-from PyQt5.QtCore import QSettings, pyqtSignal, pyqtSlot, QThread, QTime, QVariant, QPoint, QSize
 from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtCore import QSettings, pyqtSignal, pyqtSlot, QThread, QTime, QVariant, QPoint, QSize
 from PyQt5.QtGui import QIcon, QTextCursor
 from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog
+
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator
 from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamValidation
@@ -47,7 +48,7 @@ translator = SVFITranslator()
 
 
 def _translate(from_where='@default', input_text=""):
-    return QCoreApplication.translate('@default', input_text)
+    return QCoreApplication.translate('', input_text)  # TODO When finished Translating, Remove All Translate Name to ''
 
 
 class SVFI_Help_Dialog(QDialog, SVFI_help.Ui_Dialog):
@@ -155,6 +156,7 @@ class SVFI_Preference_Dialog(QDialog, SVFI_preference.Ui_Dialog):
         preference_dict["is_preview_args"] = self.PreviewArgsModeChecker.isChecked()
         preference_dict["is_gui_quiet"] = self.QuietModeChecker.isChecked()
         preference_dict["use_clear_inputs"] = self.OneWayModeChecker.isChecked()
+
         self.preference_signal.emit(preference_dict)
 
 
@@ -474,9 +476,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """Initiate Beautiful Layout and Signals"""
         self.AdvanceSettingsArea.setVisible(False)
         self.ProgressBarVisibleControl.setVisible(False)
+        self.settings_link_shortcut()
 
         """Link InputFileName Event"""
-        # self.InputFileName.clicked.connect(self.on_InputFileName_currentItemChanged)
         # self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
         self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
         self.InputFileName.addSignal.connect(self.on_InputFileName_currentItemChanged)
@@ -543,6 +545,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SaveCurrentSettings.setVisible(False)
         self.LoadCurrentSettings.setVisible(False)
         self.SettingsPresetGroup.setVisible(False)
+        self.ShortCutGroup.setVisible(False)
         self.LockWHChecker.setVisible(False)
 
     def settings_free_hide(self):
@@ -1183,14 +1186,14 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     def function_send_msg(self, title, string, msg_type=1):
         """
         标准化输出界面提示信息
-        TODO: Localization
+
         :param title:
         :param string:
         :param msg_type: 1 warning 2 info 3 question
         :return:
         """
         if self.is_gui_quiet:
-            return
+            return QMessageBox.Yes
         QMessageBox.setWindowIcon(self, QIcon(ico_path))
         if msg_type == 1:
             reply = QMessageBox.warning(self,
@@ -1476,7 +1479,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 ext = os.path.splitext(input_path)[1]
                 if ext in SupportFormat.vid_outputs:
                     # self.ExtSelector.setCurrentText(ext.strip("."))
-                    # TODO Check lock here
+                    # Locked here
                     pass
         if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
             try:
@@ -2137,6 +2140,26 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             event.ignore()
         pass
+
+    def settings_link_shortcut(self):
+        self.homeActionButton.setShortcut("ctrl+1")
+        self.outputActionButton.setShortcut("ctrl+2")
+        self.resumeActionButton.setShortcut("ctrl+3")
+        self.scdetActionButton.setShortcut("ctrl+4")
+        self.resolutionActionButton.setShortcut("ctrl+5")
+        self.renderActionButton.setShortcut("ctrl+6")
+        self.rifeActionButton.setShortcut("ctrl+7")
+        self.presetActionButton.setShortcut("ctrl+8")
+        self.toolboxActionButton.setShortcut("ctrl+9")
+        self.homeActionButton.clicked.connect(lambda i=0: self.tabWidget.setCurrentIndex(i))
+        self.outputActionButton.clicked.connect(lambda i=1: self.tabWidget.setCurrentIndex(i))
+        self.resumeActionButton.clicked.connect(lambda i=0: self.toolBox.setCurrentIndex(i))
+        self.scdetActionButton.clicked.connect(lambda i=1: self.toolBox.setCurrentIndex(i))
+        self.resolutionActionButton.clicked.connect(lambda i=2: self.toolBox.setCurrentIndex(i))
+        self.renderActionButton.clicked.connect(lambda i=3: self.toolBox.setCurrentIndex(i))
+        self.rifeActionButton.clicked.connect(lambda i=4: self.toolBox.setCurrentIndex(i))
+        self.presetActionButton.clicked.connect(lambda i=5: self.toolBox.setCurrentIndex(i))
+        self.toolboxActionButton.clicked.connect(lambda i=6: self.toolBox.setCurrentIndex(i))
 
 
 if __name__ == "__main__":

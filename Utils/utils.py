@@ -19,6 +19,7 @@ import cv2
 import numpy as np
 from sklearn import linear_model
 from skvideo.utils import check_output
+
 from steamworks import STEAMWORKS
 
 
@@ -47,6 +48,10 @@ class EncodePresetAssemply:
             {"H264,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
              "H265,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
              "H265,10bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"], },
+        "NVENCC":
+            {"H264,8bit": ["slow", "medium", "fast", "loseless"],
+             "H265,8bit": ["slow", "medium", "fast", "loseless"],
+             "H265,10bit": ["slow", "medium", "fast", "loseless"], },
         "QSV":
             {"H264,8bit": ["slow", "fast", "medium", "veryslow", ],
              "H265,8bit": ["slow", "fast", "medium", "veryslow", ],
@@ -447,7 +452,7 @@ class ImgSeqIO:
         if self.resize_flag:
             img = cv2.resize(img, (self.resize[0], self.resize[1]))
         cv2.imencode(self.output_ext, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))[1].tofile(path)
-        # TODO: 用回imwrite以支持tiff的无损编码，做中文路径警告
+        # good
 
     def nextFrame(self):
         for p in self.img_list:
@@ -600,14 +605,14 @@ class ArgumentManager:
     pro_dlc_id = 1718750
 
     """Release Version Control"""
-    is_steam = True
-    is_free = True
+    is_steam = False
+    is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.5"
+    gui_version = "3.5.6"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.7"
+    ols_version = "6.9.8"
     """ 发布前改动以上参数即可 """
 
     def __init__(self, args: dict):
@@ -874,7 +879,7 @@ class TransitionDetection_ST:
         return reg.coef_, reg.intercept_
 
     def __check_var(self):
-        coef, intercept = self.__check_coef()  # TODO 简化为numpy
+        coef, intercept = self.__check_coef()
         coef_array = coef * np.array(range(len(self.absdiff_queue))).reshape(-1, 1) + intercept
         diff_array = np.array(self.absdiff_queue)
         sub_array = diff_array - coef_array
