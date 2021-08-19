@@ -20,10 +20,10 @@ except:
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 f"""
 Update Log at {ArgumentManager.ols_version}
-1. Optimize High DPI Support
-2. Optimize H264/HEVC Encode Params
-3. Fix Settings not saved in quiet mode
-4. Update English i18n
+1. Enhance Security Level (remove steam_appid.txt)
+2. Optimize Settings Checked Display
+3. Add Basic Tutorial (alpha) and link button
+4. Optimize Settings Evisceration
 """
 
 """设置环境路径"""

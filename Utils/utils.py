@@ -605,8 +605,8 @@ class ArgumentManager:
     pro_dlc_id = 1718750
 
     """Release Version Control"""
-    is_steam = False
-    is_free = False
+    is_steam = True
+    is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
     gui_version = "3.5.6"

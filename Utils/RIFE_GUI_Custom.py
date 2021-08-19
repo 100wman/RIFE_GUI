@@ -51,10 +51,15 @@ class MyListWidgetItem(QWidget):
         self.horizontalLayout = QtWidgets.QHBoxLayout(self)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.filename = QtWidgets.QLabel(self)
+        self.iniCheck = QtWidgets.QCheckBox(self)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.filename.sizePolicy().hasHeightForWidth())
+        # self.iniCheck.setSizePolicy(sizePolicy)
+        # self.ini_checkbox.setMinimumSize(QSize(200, 0))
+        self.iniCheck.setObjectName("ini_checkbox")
+        self.horizontalLayout.addWidget(self.iniCheck)
         self.filename.setSizePolicy(sizePolicy)
         self.filename.setMinimumSize(QSize(400, 0))
         self.filename.setObjectName("filename")
@@ -89,6 +94,7 @@ class MyListWidgetItem(QWidget):
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
         self.RemoveItemButton.setText("    -    ")
         self.DuplicateItemButton.setText("    +    ")
+        self.iniCheck.setEnabled(False)
         self.RemoveItemButton.clicked.connect(self.on_RemoveItemButton_clicked)
         self.DuplicateItemButton.clicked.connect(self.on_DuplicateItemButton_clicked)
         self.TaskIdDisplay.editingFinished.connect(self.on_TaskIdDisplay_editingFinished)
@@ -136,6 +142,9 @@ class MyListWidgetItem(QWidget):
         emit_data = self.get_task_info()  # update task id by the way
         emit_data.update({"previous_task_id": previous_task_id, "action": 3})
         self.dupSignal.emit(emit_data)  # update
+
+    def on_iniCheck_toggled(self):
+        self.iniCheck.setChecked(True)
 
 
 class MyLineWidget(QtWidgets.QLineEdit):
@@ -199,10 +208,6 @@ class MyListWidget(QListWidget):
     def dropEvent(self, e):
         if e.mimeData().hasText():  # 是否文本文件格式
             for url in e.mimeData().urls():
-                if ArgumentManager.is_free:  # in free version, only one task available
-                    if self.count() >= 1:
-                        e.ignore()
-                        return
                 item = url.toLocalFile()
                 self.addFileItem(item)
         else:
@@ -219,6 +224,7 @@ class MyListWidget(QListWidget):
         """
         try:
             widget = self.itemWidget(item)
+            widget.on_iniCheck_toggled()
             item_data = widget.get_task_info()
             item_data.update({"row": self.row(item)})
         except AttributeError:
@@ -268,6 +274,9 @@ class MyListWidget(QListWidget):
 
     def addFileItem(self, input_path: str, task_id=None) -> dict:
         input_path = input_path.strip('"')
+        if ArgumentManager.is_free:  # in free version, only one task available
+            if self.count() >= 1:
+                return {"input_path": input_path, "task_id": task_id}
         # input_path, task_id = self.addConfigItem(input_path, task_id)
         if task_id is None:
             task_id = self.generateTaskId(input_path)
