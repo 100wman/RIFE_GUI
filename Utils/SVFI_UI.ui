@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1292</width>
+    <width>1297</width>
     <height>846</height>
    </rect>
   </property>
@@ -108,7 +108,7 @@
                  <layout class="QGridLayout" name="gridLayout_14">
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_9">
-                    <item row="4" column="0">
+                    <item row="1" column="1">
                      <widget class="QCheckBox" name="UseNCNNButton">
                       <property name="sizePolicy">
                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -124,7 +124,26 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="0">
+                    <item row="1" column="3">
+                     <widget class="QLabel" name="label_12">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="toolTip">
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                      </property>
+                      <property name="text">
+                       <string>输出文件格式 (?)</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
                      <widget class="QCheckBox" name="SaveAudioChecker">
                       <property name="sizePolicy">
                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -140,7 +159,7 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="1">
+                    <item row="1" column="2">
                      <widget class="QCheckBox" name="ImgOutputChecker">
                       <property name="sizePolicy">
                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -156,59 +175,40 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="4" column="1">
+                    <item row="5" column="2">
                      <layout class="QHBoxLayout" name="horizontalLayout_6">
                       <property name="sizeConstraint">
                        <enum>QLayout::SetMaximumSize</enum>
                       </property>
-                      <item>
-                       <widget class="QLabel" name="label_12">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                          <horstretch>0</horstretch>
-                          <verstretch>0</verstretch>
-                         </sizepolicy>
-                        </property>
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="text">
-                         <string>输出文件格式 (?)</string>
-                        </property>
-                        <property name="alignment">
-                         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="MyComboBox" name="ExtSelector">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                          <horstretch>0</horstretch>
-                          <verstretch>0</verstretch>
-                         </sizepolicy>
-                        </property>
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出&lt;span style=&quot; font-weight:600;&quot;&gt;（这种情况请改为mov）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <item>
-                         <property name="text">
-                          <string>mp4</string>
-                         </property>
-                        </item>
-                        <item>
-                         <property name="text">
-                          <string>mkv</string>
-                         </property>
-                        </item>
-                        <item>
-                         <property name="text">
-                          <string>mov</string>
-                         </property>
-                        </item>
-                       </widget>
-                      </item>
                      </layout>
+                    </item>
+                    <item row="1" column="4">
+                     <widget class="MyComboBox" name="ExtSelector">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="toolTip">
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出&lt;span style=&quot; font-weight:600;&quot;&gt;（这种情况请改为mov）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                      </property>
+                      <item>
+                       <property name="text">
+                        <string>mp4</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>mkv</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>mov</string>
+                       </property>
+                      </item>
+                     </widget>
                     </item>
                    </layout>
                   </item>
@@ -411,6 +411,12 @@
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;“-”&lt;/span&gt;号为删除当前任务条目（Remove）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;“+”&lt;/span&gt;号为以当前任务条目为基础复制生成相同任务（Duplicate）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
+                 <property name="midLineWidth">
+                  <number>-6</number>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustIgnored</enum>
+                 </property>
                  <property name="tabKeyNavigation">
                   <bool>true</bool>
                  </property>
@@ -457,8 +463,18 @@
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;条目勾亮说明设置已保存&lt;/p&gt;&lt;p&gt;点击条目以保存设置&lt;span style=&quot; font-weight:600;&quot;&gt;（无需点勾）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;内测/专业版支持任务队列&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
                    <property name="text">
-                    <string>输入文件或文件夹，切换条目以保存设置</string>
+                    <string>输入文件或文件夹 (?)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="tutorialLinkButton">
+                   <property name="text">
+                    <string>查看SVFI使用教程</string>
                    </property>
                   </widget>
                  </item>
@@ -477,21 +493,7 @@
                   <string/>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_35">
-                  <item row="0" column="3">
-                   <widget class="MyComboBox" name="SettingsPresetsSQ">
-                    <item>
-                     <property name="text">
-                      <string>速度优先</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>质量优先</string>
-                     </property>
-                    </item>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
+                  <item row="0" column="0">
                    <widget class="QLabel" name="SettingsPresetLabel">
                     <property name="layoutDirection">
                      <enum>Qt::LeftToRight</enum>
@@ -504,7 +506,21 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="2">
+                  <item row="0" column="3">
+                   <widget class="MyComboBox" name="SettingsPresetsEncode">
+                    <item>
+                     <property name="text">
+                      <string>CPU可以</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>GPU比CPU强</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
                    <widget class="MyComboBox" name="SettingsPresetsInputs">
                     <item>
                      <property name="text">
@@ -518,35 +534,19 @@
                     </item>
                    </widget>
                   </item>
-                  <item row="0" column="4">
-                   <widget class="MyComboBox" name="SettingsPresetsEncode">
+                  <item row="0" column="2">
+                   <widget class="MyComboBox" name="SettingsPresetsSQ">
                     <item>
                      <property name="text">
-                      <string>软件编码</string>
+                      <string>速度优先</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>硬件编码</string>
+                      <string>质量优先</string>
                      </property>
                     </item>
                    </widget>
-                  </item>
-                  <item row="0" column="0">
-                   <spacer name="horizontalSpacer_2">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeType">
-                     <enum>QSizePolicy::Minimum</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>40</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                   </spacer>
                   </item>
                  </layout>
                 </widget>
@@ -667,7 +667,7 @@
                 <widget class="QScrollArea" name="AdvanceSettingsArea">
                  <property name="minimumSize">
                   <size>
-                   <width>450</width>
+                   <width>400</width>
                    <height>0</height>
                   </size>
                  </property>
@@ -688,7 +688,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>459</width>
+                    <width>448</width>
                     <height>724</height>
                    </rect>
                   </property>
@@ -702,14 +702,14 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>6</number>
+                      <number>4</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>441</width>
+                        <width>430</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -987,7 +987,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>441</width>
+                        <width>430</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -1250,7 +1250,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>441</width>
+                        <width>430</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -1612,7 +1612,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>424</width>
+                        <width>413</width>
                         <height>468</height>
                        </rect>
                       </property>
@@ -2057,10 +2057,10 @@
                             <item>
                              <widget class="QLabel" name="HwaccelPresetLabel">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅在使用NVENC编码器时生效&lt;/span&gt;&lt;/p&gt;&lt;p&gt;右为编码器辈数（请自行查阅自己显卡的NVENC辈数）&lt;/p&gt;&lt;p&gt;辈数越高，压缩率越好&lt;/p&gt;&lt;p&gt;如果使用此项报Broken Pipe错误，请尝试降级（如7th改为6th）或关闭（调为None）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;恰当选择此项有望显著提高N卡硬编压制质量&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅在使用NVENC编码器时生效&lt;/span&gt;&lt;/p&gt;&lt;p&gt;右为编码器辈数（请自行查阅自己显卡的NVENC辈数）&lt;/p&gt;&lt;p&gt;辈数越高，压缩率越好&lt;/p&gt;&lt;p&gt;如果使用此项报Broken Pipe错误，请尝试降级（如7th改为6th）或关闭（调为None）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;恰当选择此项有望显著提高N卡硬编压制质量&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;选择方案请看附赠的NVIDIA NVENC Gen.pdf&lt;/span&gt;&lt;/p&gt;&lt;p&gt;GTX 1050+ 请选5th&lt;/p&gt;&lt;p&gt;GTX 1650+ 请选7th&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
-                               <string>N卡硬编预设：（老黄送的福利！） (?)</string>
+                               <string>N卡硬编预设：(?)</string>
                               </property>
                              </widget>
                             </item>
@@ -2142,7 +2142,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>441</width>
+                        <width>430</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -2169,7 +2169,7 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_31">
-                          <item row="4" column="0">
+                          <item row="5" column="0">
                            <widget class="QCheckBox" name="TtaModeChecker">
                             <property name="toolTip">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;N卡A卡通用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;用4倍的时间缓解2%的物体消失问题，具体效果视不同输入而定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -2179,13 +2179,89 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="5" column="0">
+                          <item row="6" column="0">
                            <widget class="QCheckBox" name="UseMultiCardsChecker">
                             <property name="toolTip">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用所有能检测到的显卡进行补帧&lt;/p&gt;&lt;p&gt;使用A卡模式（左侧“使用A卡或核显”）将同时调用能识别到的A卡和N卡&lt;/p&gt;&lt;p&gt;不适用A卡模式则只能使用检测到的N卡&lt;/p&gt;&lt;p&gt;速度较单卡慢&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>使用多卡 (?)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="7" column="0">
+                           <widget class="QLabel" name="label_2">
+                            <property name="text">
+                             <string>输出文件名将带有反映上述设置的缩写</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="4" column="0">
+                           <layout class="QGridLayout" name="gridLayout_11">
+                            <item row="0" column="1">
+                             <widget class="MySpinBox" name="ncnnInterpThreadCnt">
+                              <property name="enabled">
+                               <bool>false</bool>
+                              </property>
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="value">
+                               <number>4</number>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="0" column="0">
+                             <widget class="QLabel" name="label_34">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="text">
+                               <string>补帧线程数</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="1" column="0">
+                             <widget class="QLabel" name="SelectedGpuLabel">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="text">
+                               <string>选择的GPU</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="1" column="1">
+                             <widget class="MySpinBox" name="ncnnSelectGPU">
+                              <property name="enabled">
+                               <bool>false</bool>
+                              </property>
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="value">
+                               <number>0</number>
+                              </property>
+                             </widget>
+                            </item>
+                           </layout>
+                          </item>
+                          <item row="2" column="0">
+                           <widget class="Line" name="line_6">
+                            <property name="orientation">
+                             <enum>Qt::Horizontal</enum>
                             </property>
                            </widget>
                           </item>
@@ -2312,90 +2388,24 @@
                               <property name="text">
                                <string>双向光流 (?)</string>
                               </property>
+                              <property name="checked">
+                               <bool>true</bool>
+                              </property>
                              </widget>
                             </item>
                            </layout>
                           </item>
                           <item row="3" column="0">
-                           <layout class="QGridLayout" name="gridLayout_11">
-                            <item row="0" column="1">
-                             <widget class="MySpinBox" name="ncnnInterpThreadCnt">
-                              <property name="enabled">
-                               <bool>false</bool>
-                              </property>
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="value">
-                               <number>4</number>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="0" column="0">
-                             <widget class="QLabel" name="label_34">
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="text">
-                               <string>补帧线程数</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="1" column="0">
-                             <widget class="QLabel" name="SelectedGpuLabel">
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="text">
-                               <string>选择的GPU</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="1" column="1">
-                             <widget class="MySpinBox" name="ncnnSelectGPU">
-                              <property name="enabled">
-                               <bool>false</bool>
-                              </property>
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="value">
-                               <number>0</number>
-                              </property>
-                             </widget>
-                            </item>
-                           </layout>
-                          </item>
-                          <item row="1" column="0">
-                           <widget class="Line" name="line_6">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="2" column="0">
                            <widget class="QLabel" name="AMDSettingsLabel">
                             <property name="text">
                              <string>使用A卡进行补帧的参数</string>
                             </property>
                            </widget>
                           </item>
-                          <item row="6" column="0">
-                           <widget class="QLabel" name="label_2">
+                          <item row="1" column="0">
+                           <widget class="QLabel" name="ProAdLabel_1">
                             <property name="text">
-                             <string>输出文件名将带有反映上述设置的缩写</string>
+                             <string>专业版可使用TTA及动态光流功能以大幅度提升动漫补帧质量</string>
                             </property>
                            </widget>
                           </item>
@@ -2409,7 +2419,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>441</width>
+                        <width>430</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -2498,7 +2508,7 @@
                        <rect>
                         <x>0</x>
                         <y>-65</y>
-                        <width>424</width>
+                        <width>413</width>
                         <height>460</height>
                        </rect>
                       </property>
@@ -3023,7 +3033,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1292</width>
+     <width>1297</width>
      <height>23</height>
     </rect>
    </property>
@@ -3278,8 +3288,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>ShowAdvance</tabstop>
   <tabstop>SaveAudioChecker</tabstop>
   <tabstop>ImgOutputChecker</tabstop>
-  <tabstop>UseNCNNButton</tabstop>
-  <tabstop>ExtSelector</tabstop>
   <tabstop>InputFPS</tabstop>
   <tabstop>ExpSelecter</tabstop>
   <tabstop>OutputFPS</tabstop>

@@ -571,7 +571,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetOutput.setVisible(False)
         self.ScdetUseMix.setVisible(False)
         self.UseAiSR.setChecked(False)
-        self.UseAiSR.setVisible(False)
+        self.UseAiSR.setEnabled(False)
         self.SrField.setVisible(False)
         self.RenderSettingsLabel.setVisible(False)
         self.RenderSettingsGroup.setVisible(False)
@@ -580,6 +580,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.TtaModeChecker.setVisible(False)
         self.AutoInterpScaleChecker.setVisible(False)
         self.ReverseChecker.setVisible(False)
+        self.ProAdLabel_1.setVisible(True)
 
         self.DeinterlaceChecker.setVisible(False)
         self.FastDenoiseChecker.setVisible(False)
@@ -2063,8 +2064,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.StrictModeChecker.setVisible(self.expert_mode)
         self.RenderSettingsLabel.setVisible(self.expert_mode)
         self.RenderSettingsGroup.setVisible(self.expert_mode)
+        self.HwaccelEncodeBox.setEnabled(False)
+        self.FP16Checker.setVisible(self.expert_mode)
         self.ReverseChecker.setVisible(self.expert_mode)
-        # self.TtaModeChecker.setVisible(self.expert_mode)
         self.KeepChunksChecker.setVisible(self.expert_mode)
         self.AutoInterpScaleChecker.setVisible(self.expert_mode)
         self.ScdetOutput.setVisible(self.expert_mode)
@@ -2160,6 +2162,14 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.rifeActionButton.clicked.connect(lambda i=4: self.toolBox.setCurrentIndex(i))
         self.presetActionButton.clicked.connect(lambda i=5: self.toolBox.setCurrentIndex(i))
         self.toolboxActionButton.clicked.connect(lambda i=6: self.toolBox.setCurrentIndex(i))
+
+    @pyqtSlot(bool)
+    def on_tutorialLinkButton_clicked(self):
+        tutorial_path = os.path.join(dname, "SVFI_Tutorial.pdf")
+        if os.path.exists(tutorial_path):
+            os.startfile(f'"{tutorial_path}"')
+        else:
+            self.function_send_msg("Not Find Tutorial", _translate("", "未能找到SVFI教程"))
 
 
 if __name__ == "__main__":
