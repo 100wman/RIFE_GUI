@@ -7,6 +7,7 @@ from Utils.utils import ArgumentManager
 root = r"D:\60-fps-Project\Projects\RIFE GUI"
 ico_path = os.path.join(root, "svfi-i.ico")
 pack_dir = r"D:\60-fps-Project\Projects\RIFE GUI\release\release_pack"
+steam_dir = r"D:\60-fps-Project\Projects\RIFE GUI\release\sdk\tools\ContentBuilder\content"
 
 
 def generate_release():
@@ -34,9 +35,16 @@ def generate_release():
             sp2.kill()
             break
         time.sleep(0.1)
-
-    os.replace(compile_ols_path, os.path.join(pack_dir, f"one_line_shot_args.{tag_version}.exe"))
-    os.replace(compile_gui_path, os.path.join(pack_dir, f"SVFI.{tag_version}.exe"))
+    if ArgumentManager.is_steam:
+        if 'Professional' in tag_version:
+            os.replace(compile_ols_path, os.path.join(steam_dir, "ProfessionalVersion", f"one_line_shot_args.exe"))
+            os.replace(compile_gui_path, os.path.join(steam_dir, "ProfessionalVersion", f"SVFI.Professional.exe"))
+        else:
+            os.replace(compile_ols_path, os.path.join(steam_dir, "CommunityVersion", f"one_line_shot_args.exe"))
+            os.replace(compile_gui_path, os.path.join(steam_dir, "CommunityVersion", f"SVFI.Community.exe"))
+    else:
+        os.replace(compile_ols_path, os.path.join(pack_dir, f"one_line_shot_args.{tag_version}.exe"))
+        os.replace(compile_gui_path, os.path.join(pack_dir, f"SVFI.{tag_version}.exe"))
     with open(os.path.join(pack_dir, f"启动SVFI.{tag_version}.bat"), "w", encoding="utf-8") as w:
         w.write(f"cd /d %~dp0/Package\nstart SVFI.{tag_version}.exe")
 

@@ -984,9 +984,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         if not self.settings_check_args():
             return
-        if not len(self.function_get_input_paths()):
+        if not self.InputFileName.count():
             return
-        current_item = self.InputFileName.currentItem()
+        current_item = self.InputFileName.item(self.InputFileName.currentRow())
         if current_item is None:
             self.function_send_msg(f"恢复进度？", _translate('', "正在使用队列的第一个任务进行进度检测"))
             self.InputFileName.setCurrentRow(0)
@@ -1549,7 +1549,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         自动设置启动信息按钮（点我就完事了）
         :return:
         """
-        self.function_load_all_tasks_settings()
+        # self.function_load_all_tasks_settings()
         if self.InputFileName.currentItem() is None or not len(self.OutputFolder.text()):
             self.function_send_msg("Invalid Inputs", _translate('', "请检查你的输入和输出文件夹"))
             return
