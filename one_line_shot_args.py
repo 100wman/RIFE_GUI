@@ -20,10 +20,8 @@ except:
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 f"""
 Update Log at {ArgumentManager.ols_version}
-1. Enhance Security Level (remove steam_appid.txt)
-2. Optimize Settings Checked Display
-3. Add Basic Tutorial (alpha) and link button
-4. Optimize Settings Evisceration
+1. Optimize Chunk Check
+2. Modify i18n for English
 """
 
 """设置环境路径"""
@@ -659,51 +657,21 @@ class InterpWorkFlow:
                               start_frame=self.ARGS.interp_start, logger=self.logger,
                               output_ext=self.ARGS.output_ext, )
             last_img = img_io.get_start_frame()
+            if self.ARGS.interp_start not in [-1, ]:
+                return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)  # Manually Prioritized
             if last_img == 0:
                 return 1, 0
-            else:
-                if self.ARGS.interp_start not in [-1, ] or self.ARGS.output_chunk_cnt not in [-1, 0]:
-                    return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)  # Manually Prioritized
 
-        if self.ARGS.interp_start not in [-1, ] or self.ARGS.output_chunk_cnt not in [-1, ]:
+        if self.ARGS.interp_start != -1 or self.ARGS.output_chunk_cnt != -1:
             return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
 
-        chunk_regex = rf"chunk-[\d+].*?\{self.output_ext}"
-
-        """获得现有区块"""
+        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(self.project_dir)
         if del_chunk:
-            for f in os.listdir(self.project_dir):
-                if re.match(chunk_regex, f):
-                    os.remove(os.path.join(self.project_dir, f))
+            for f in chunk_paths:
+                os.remove(os.path.join(self.project_dir, f))
             return 1, 0
-
-        """If remove only"""
-        if del_chunk:
+        if not len(chunk_paths):
             return 1, 0
-
-        chunk_info_path = os.path.join(self.project_dir, "chunk.json")
-
-        if not os.path.exists(chunk_info_path):
-            return 1, 0
-
-        with open(chunk_info_path, "r", encoding="utf-8") as r:
-            chunk_info = json.load(r)
-        """
-        key: project_dir, input filename, chunk cnt, chunk list, last frame
-        """
-        chunk_cnt = chunk_info["chunk_cnt"]
-        """Not find previous chunk"""
-        if not chunk_cnt:
-            return 1, 0
-
-        last_frame = chunk_info["last_frame"]
-
-        """Not start from the beginning"""
-        if self.ARGS.interp_start not in [-1, ] or self.ARGS.output_chunk_cnt not in [-1, ]:
-            if chunk_cnt + 1 != self.ARGS.output_chunk_cnt or last_frame + 1 != self.ARGS.interp_start:
-                """人工输入优先，删除进度信息从头开始"""
-                os.remove(chunk_info_path)
-            return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
         return chunk_cnt + 1, last_frame + 1
 
     # @profile

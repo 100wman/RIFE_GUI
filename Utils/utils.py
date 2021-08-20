@@ -5,6 +5,7 @@ import json
 import logging
 import math
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -345,6 +346,21 @@ class Tools:
             return 0
 
     @staticmethod
+    def get_existed_chunks(project_dir: str):
+        chunk_paths = []
+        for chunk_p in os.listdir(project_dir):
+            if re.match("chunk-\d+-\d+-\d+\.\w+", chunk_p):
+                chunk_paths.append(chunk_p)
+
+        if not len(chunk_paths):
+            return chunk_paths, -1, -1
+
+        chunk_paths.sort()
+        last_chunk = chunk_paths[-1]
+        chunk_cnt, last_frame = re.findall('chunk-(\d+)-\d+-(\d+).*?', last_chunk)[0]
+        return chunk_paths, int(chunk_cnt), int(last_frame)
+
+    @staticmethod
     def popen(args: str):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
@@ -609,10 +625,10 @@ class ArgumentManager:
     is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.6"
+    gui_version = "3.5.7"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.8"
+    ols_version = "6.9.9"
     """ 发布前改动以上参数即可 """
 
     def __init__(self, args: dict):
