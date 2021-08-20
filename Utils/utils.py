@@ -622,7 +622,7 @@ class ArgumentManager:
 
     """Release Version Control"""
     is_steam = True
-    is_free = True
+    is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
     gui_version = "3.5.7"
