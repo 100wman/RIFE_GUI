@@ -1003,7 +1003,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
             self.function_send_msg(f"Resume Workflow?", f"{_msg1}{widget_data['row']}{_msg2}", 3)
-            self.settings_set_start_info(0, 1, True)  # start from zero
+            self.settings_set_start_info(0, 1, False)  # start from zero
             return
 
         if self.ImgOutputChecker.isChecked():
@@ -1019,23 +1019,15 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.settings_set_start_info(last_img + 1, 1, False)
             return
 
-        chunk_info_path = os.path.join(project_dir, "chunk.json")
-
-        if not os.path.exists(chunk_info_path):
+        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(project_dir)
+        if not len(chunk_paths):
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
             self.function_send_msg(f"Resume Workflow?", f"{_msg1}{widget_data['row']}{_msg2}", 3)
             logger.info("AutoSet find None to resume interpolation")
-            self.settings_set_start_info(0, 1, True)
+            self.settings_set_start_info(0, 1, False)
             return
 
-        with open(chunk_info_path, "r", encoding="utf-8") as r:
-            chunk_info = json.load(r)
-        """
-        key: project_dir, input filename, chunk cnt, chunk list, last frame
-        """
-        chunk_cnt = chunk_info["chunk_cnt"]
-        last_frame = chunk_info["last_frame"]
         if chunk_cnt > 0:
             reply = self.function_send_msg(f"Resume Workflow?", _translate('', "检测到未完成的补帧任务，载入进度？"), 3)
             if reply == QMessageBox.No:

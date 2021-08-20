@@ -474,7 +474,7 @@
                  <item>
                   <widget class="QPushButton" name="tutorialLinkButton">
                    <property name="text">
-                    <string>查看SVFI使用教程</string>
+                    <string>点击查看使用教程</string>
                    </property>
                   </widget>
                  </item>
@@ -688,7 +688,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>448</width>
+                    <width>416</width>
                     <height>724</height>
                    </rect>
                   </property>
@@ -709,7 +709,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>430</width>
+                        <width>398</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -987,7 +987,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>430</width>
+                        <width>398</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -1250,7 +1250,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>430</width>
+                        <width>398</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -1612,7 +1612,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>413</width>
+                        <width>381</width>
                         <height>468</height>
                        </rect>
                       </property>
@@ -2142,7 +2142,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>430</width>
+                        <width>398</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -2405,7 +2405,7 @@
                           <item row="1" column="0">
                            <widget class="QLabel" name="ProAdLabel_1">
                             <property name="text">
-                             <string>专业版可使用TTA及动态光流功能以大幅度提升动漫补帧质量</string>
+                             <string>*专业版可使用TTA及动态光流功能以大幅度提升动漫补帧质量</string>
                             </property>
                            </widget>
                           </item>
@@ -2419,7 +2419,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>430</width>
+                        <width>398</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -2507,8 +2507,8 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-65</y>
-                        <width>413</width>
+                        <y>0</y>
+                        <width>381</width>
                         <height>460</height>
                        </rect>
                       </property>

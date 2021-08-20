@@ -540,12 +540,12 @@
     <message>
         <location filename="SVFI_UI.py" line="1457"/>
         <source>使用A卡或核显 (?)</source>
-        <translation>Use AMD or Intel Card (?)</translation>
+        <translation>AMD/Intel (?)</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1458"/>
         <source>导出带音频、字幕</source>
-        <translation>Output with audio and subtitles</translation>
+        <translation>Keep Audio &amp; Subs</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1459"/>
@@ -555,7 +555,7 @@
     <message>
         <location filename="SVFI_UI.py" line="1460"/>
         <source>输出图片序列 (?)</source>
-        <translation>Output Image Sequence (?)</translation>
+        <translation>Image Seq Output (?)</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1461"/>
@@ -704,8 +704,13 @@
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1490"/>
-        <source>输入文件或文件夹，切换条目以保存设置</source>
-        <translation>Input items</translation>
+        <source>输入文件或文件夹 (?)</source>
+        <translation>Input File or Folder (?)</translation>
+    </message>
+    <message>
+        <location filename="SVFI_UI.py" line="1490"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;条目勾亮说明设置已保存&lt;/p&gt;&lt;p&gt;点击条目以保存设置&lt;span style=" font-weight:600;"&gt;（无需点勾）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=" font-weight:600;"&gt;内测/专业版支持任务队列&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Clip the item to check the Checkbox before item to save settings&lt;/p&gt;&lt;p&gt;Clip the item to save settings&lt;span style=" font-weight:600;"&gt;(Do not try to check the check box)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=" font-weight:600;"&gt;(Pro Version supports multi items import)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1491"/>
@@ -1330,12 +1335,12 @@
     <message>
         <location filename="SVFI_UI.py" line="1621"/>
         <source>不懂就百度</source>
-        <translation>Google</translation>
+        <translation>FFmpeg's CRF/CQP, the smaller value for the greater bitrate (Better Google it)</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1622"/>
         <source>渲染质量CRF：</source>
-        <translation>Render Quality CRF</translation>
+        <translation>Render Quality</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1623"/>
@@ -1354,7 +1359,7 @@
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1626"/>
-        <source>N卡硬编预设：（老黄送的福利！） (?)</source>
+        <source>N卡硬编预设：(?)</source>
         <translation>NVENC Encode Presets: (?)</translation>
     </message>
     <message>
@@ -1456,6 +1461,11 @@
         <location filename="SVFI_UI.py" line="1647"/>
         <source>用于补帧的N卡</source>
         <translation>NVIDIA Card for interpolation</translation>
+    </message>
+    <message>
+        <location filename="SVFI_UI.py" line="1647"/>
+        <source>*专业版可使用TTA及动态光流功能以大幅度提升动漫补帧质量</source>
+        <translation>*Pro Version can enable TTA and Dynamic Scale function to greatly optimize interpolation for animation</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1648"/>
