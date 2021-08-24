@@ -1,13 +1,12 @@
 # coding: utf-8
 import argparse
-import re
 import sys
 
 import psutil
 import tqdm
 # profile line
 # from line_profiler_pycharm import profile
-from skvideo.io import FFmpegWriter, FFmpegReader, NVenccWriter
+from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter
 
 from Utils.utils import *
 from steamworks.exceptions import *
@@ -20,8 +19,11 @@ except:
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 f"""
 Update Log at {ArgumentManager.ols_version}
-1. Optimize Chunk Check
-2. Modify i18n for English
+1. Optimize HDR Recognization
+2. Add New HDR Mode Selector, better control hdr process
+3. Add NVENCC and QSVENCC Encoder
+4. Optimize Import System(Give warning if input length is > 240)
+5. Figure out way to Modify DOVI RPU for SVFI interpolation 
 """
 
 """设置环境路径"""
@@ -116,8 +118,14 @@ class InterpWorkFlow:
         """Get input's info"""
         self.video_info_instance = VideoInfo(file_input=self.input, logger=self.logger, project_dir=self.project_dir,
                                              ffmpeg=self.ARGS.ffmpeg, img_input=self.ARGS.is_img_input,
-                                             strict_mode=self.ARGS.is_hdr_strict_mode, exp=self.ARGS.rife_exp)
+                                             hdr_mode=self.ARGS.hdr_mode, exp=self.ARGS.rife_exp)
         self.video_info = self.video_info_instance.get_info()
+        if self.ARGS.hdr_mode == 0:  # Auto
+            self.hdr_check_status = self.video_info['hdr_mode']
+            # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
+        else:
+            self.hdr_check_status = self.ARGS.hdr_mode
+
         if not self.ARGS.is_img_input:  # 输入不是文件夹，使用检测到的帧率
             self.input_fps = self.video_info["fps"]
         elif self.ARGS.input_fps:
@@ -266,7 +274,6 @@ class InterpWorkFlow:
             self.output_ext = ".mov"
 
         self.main_error = None
-        self.first_hdr_check_report = 0  # no hdr at default, 1 checked, 2 hdr10, 3 hlg
 
     def generate_frame_reader(self, start_frame=-1, frame_check=False):
         """
@@ -371,7 +378,6 @@ class InterpWorkFlow:
         :param output_path:
         :return:
         """
-        # TODO preset ~ different params
         params_265s = {
             "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
                     "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
@@ -411,50 +417,25 @@ class InterpWorkFlow:
                      "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
                      "cll='1000,100'"
         }
-        params_264 = ""
-        params_265 = ""
 
-        def HDRChecker():
-            nonlocal params_265, params_264
-            if self.ARGS.is_img_input:
+        def HDR_modify_params():
+            if self.ARGS.is_img_input or self.hdr_check_status == 1:  # img input or ordinary hdr
                 return
 
-            if self.ARGS.is_hdr_strict_mode:
-                self.logger.warning("Strict Mode, Skip HDR Check")
-                return
-
-            if "color_transfer" not in self.video_info["video_info"]:
-                if self.first_hdr_check_report == 0:
-                    self.logger.warning("Not Find Color Transfer\n%s" % str(self.video_info["video_info"]))
-                return
-
-            color_trc = self.video_info["video_info"]["color_transfer"]
-
-            if "smpte2084" in color_trc or "bt2020" in color_trc:
-                """should be 10bit encoding"""
+            if self.hdr_check_status == 2:
+                """HDR10"""
                 self.ARGS.render_hwaccel_mode = "CPU"
-                self.first_hdr_check_report = 2  # hdr
-                if 'fast' in self.ARGS.render_encoder_preset:
-                    self.ARGS.render_encoder_preset = "medium"
                 if "H265" in self.ARGS.render_encoder:
                     self.ARGS.render_encoder = "H265, 10bit"
-                    params_265 = params_265s["10bit"]
-                    if "master-display" in str(self.video_info["video_info"]):
-                        params_265 = params_265s["hdr10"]
-                        self.logger.warning("Detect HDR10+ Content, Switch to CPU HEVC Render Compulsorily")
                 elif "H264" in self.ARGS.render_encoder:
                     self.ARGS.render_encoder = "H264, 10bit"
-                    params_264 = params_264s["10bit"]
-                    if "master-display" in str(self.video_info["video_info"]):
-                        params_264 = params_264s["hdr10"]
-                        self.logger.warning("Detect HDR10+ Content, Switch to CPU H264 Render Compulsorily")
-
-            elif "arib-std-b67" in color_trc:
+                self.ARGS.render_encoder_preset = "medium"
+            elif self.hdr_check_status == 4:
+                """HLG"""
                 self.ARGS.render_encoder = "H265, 10bit"
                 self.ARGS.render_hwaccel_mode = "CPU"
-                self.first_hdr_check_report = 3  # HLG
-                self.logger.warning("HLG Content Detected, Switch to CPU HEVC Render Compulsorily")
-            pass
+                self.ARGS.render_encoder_preset = "medium"
+
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
@@ -464,10 +445,8 @@ class InterpWorkFlow:
             return img_io
 
         """HDR Check"""
-        if self.first_hdr_check_report == 0:
-            HDRChecker()
-            if self.first_hdr_check_report == 0:
-                self.first_hdr_check_report = 1
+        if self.ARGS.hdr_mode == 0:  # Auto
+            HDR_modify_params()
 
         """Output Video"""
         input_dict = {"-vsync": "cfr"}
@@ -512,9 +491,9 @@ class InterpWorkFlow:
                                         "-x264-params": params_264s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x264-params": params_264s["fast"]})
-                if self.first_hdr_check_report not in [0, 1]:
-                    """HDR Detected Before"""
-                    output_dict.update({"-x264-params": params_264})
+                if self.hdr_check_status == 2:
+                    """HDR10"""
+                    output_dict.update({"-x264-params": params_264s["hdr10"]})
             elif "H265" in self.ARGS.render_encoder:
                 output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
                 if "8bit" in self.ARGS.render_encoder:
@@ -526,9 +505,9 @@ class InterpWorkFlow:
                                         "-x265-params": params_265s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x265-params": params_265s["fast"]})
-                if self.first_hdr_check_report not in [0, 1]:
-                    """HDR Detected Before"""
-                    output_dict.update({"-x265-params": params_265})
+                if self.hdr_check_status == 2:
+                    """HDR10"""
+                    output_dict.update({"-x265-params": params_265s["hdr10"]})
             else:
                 """ProRes"""
                 if "-preset" in output_dict:
@@ -566,24 +545,104 @@ class InterpWorkFlow:
                 output_dict.update({"-preset": "10", })
 
         elif self.ARGS.render_hwaccel_mode == "NVENCC":
-            _input_dict = {'--avsw': '',
-                           '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
-                           "-pix_fmt": "rgb24"}
-            if '-s' in output_dict:
-                _input_dict.update({'--output-res': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
-                _input_dict.update({"--output-depth": "10"})
-            if "H264" in self.ARGS.render_encoder:
-                _input_dict.update({f"-c": f"h264"})
-            elif "H265" in self.ARGS.render_encoder:
-                _input_dict.update({"-c": "hevc"})
+            _input_dict = {  # '--avsw': '',
+                'encc': "NVENCC",
+                '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                "-pix_fmt": "rgb24",
+            }
+            _output_dict = {
+                "--chroma-qp-offset": "-2",
+                "--lookahead": "16",
+                "--gop-len": "250",
+                "-b": "4",
+                "--ref": "8",
+                "--aq": "",
+                "--aq-temporal": "",
+                "--bref-mode": "middle"}
+            if '-color_range' in output_dict:
+                _output_dict.update({"--colorrange": output_dict["-color_range"]})
+            if '-colorspace' in output_dict:
+                _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
+            if '-color_trc' in output_dict:
+                _output_dict.update({"--transfer": output_dict["-color_trc"]})
+            if '-color_primaries' in output_dict:
+                _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
 
-            if self.ARGS.render_encoder_preset != "loseless":
-                hwacccel_preset = self.ARGS.render_hwaccel_preset
+            if '-s' in output_dict:
+                _output_dict.update({'--output-res': output_dict['-s']})
+            if "10bit" in self.ARGS.render_encoder:
+                _output_dict.update({"--output-depth": "10"})
+            if "H264" in self.ARGS.render_encoder:
+                _output_dict.update({f"-c": f"h264",
+                                     "--profile": "high10" if "10bit" in self.ARGS.render_encoder else "high", })
+            elif "H265" in self.ARGS.render_encoder:
+                _output_dict.update({"-c": "hevc",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--tier": "main", "-b": "5"})
+
+            if self.hdr_check_status == 2:
+                """HDR10"""
+                _output_dict.update({"-c": "hevc",
+                                     "--profile": "main10",
+                                     "--tier": "main", "-b": "5",
+                                     "--max-cll": "1000,100",
+                                     "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"})
             else:
-                _input_dict.update({"--lossless": "", })
+                if self.ARGS.render_encoder_preset != "loseless":
+                    _output_dict.update({"--preset": self.ARGS.render_encoder_preset})
+                else:
+                    _output_dict.update({"--lossless": "", "--preset": self.ARGS.render_encoder_preset})
+
             input_dict = _input_dict
-            output_dict = {}
+            output_dict = _output_dict
+            pass
+        elif self.ARGS.render_hwaccel_mode == "QSVENCC":
+            _input_dict = {  # '--avsw': '',
+                'encc': "QSVENCC",
+                '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                "-pix_fmt": "rgb24",
+            }
+            _output_dict = {
+                "--fallback-rc": "", "--la-depth": "50", "--la-quality": "slow", "--extbrc": "", "--mbbrc": "",
+                "--i-adapt": "",
+                "--b-adapt": "", "--gop-len": "250", "-b": "6", "--ref": "8", "--b-pyramid": "", "--weightb": "",
+                "--weightp": "", "--adapt-ltr": "",
+            }
+            if '-color_range' in output_dict:
+                _output_dict.update({"--colorrange": output_dict["-color_range"]})
+            if '-colorspace' in output_dict:
+                _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
+            if '-color_trc' in output_dict:
+                _output_dict.update({"--transfer": output_dict["-color_trc"]})
+            if '-color_primaries' in output_dict:
+                _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+
+            if '-s' in output_dict:
+                _output_dict.update({'--output-res': output_dict['-s']})
+            if "10bit" in self.ARGS.render_encoder:
+                _output_dict.update({"--output-depth": "10"})
+            if "H264" in self.ARGS.render_encoder:
+                # TODO Preset is dead
+                _output_dict.update({f"-c": f"h264",
+                                     "--profile": "high", "--repartition-check": "", "--trellis": "all"})
+            elif "H265" in self.ARGS.render_encoder:
+                _output_dict.update({"-c": "hevc",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--tier": "main", "--sao": "luma", "--ctu": "64", })
+            if self.hdr_check_status == 2:
+                _output_dict.update({"-c": "hevc",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--tier": "main", "--sao": "luma", "--ctu": "64",
+                                     "--max-cll": "1000,100",
+                                     "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
+                                     })
+            # if self.ARGS.render_encoder_preset != "loseless":
+            #     _output_dict.update({"--preset": self.ARGS.render_encoder_preset})
+            # else:
+            #     _output_dict.update({"--lossless": "", "--preset": self.ARGS.render_encoder_preset})
+
+            input_dict = _input_dict
+            output_dict = _output_dict
             pass
 
         else:
@@ -611,21 +670,25 @@ class InterpWorkFlow:
                     elif hwaccel_mode == "QSV":
                         output_dict.update({"-q": str(self.ARGS.render_crf)})
                     elif hwaccel_mode == "NVENCC":
-                        output_dict.update({"--cqp": str(self.ARGS.render_crf)})
+                        output_dict.update({"--vbr": "0", "--vbr-quality": str(self.ARGS.render_crf)})
+                    elif hwaccel_mode == "QSVENCC":
+                        output_dict.update({"--la-icq": str(self.ARGS.render_crf)})
                 else:  # CPU
                     output_dict.update({"-crf": str(self.ARGS.render_crf)})
 
             if self.ARGS.render_bitrate and self.ARGS.use_bitrate:
-                # TODO Support Specific Bitrate Encoding for NVENCC
-                output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
+                if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
+                    output_dict.update({"--vbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
+                else:
+                    output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
                 if self.ARGS.render_hwaccel_mode == "QSV":
                     output_dict.update({"-maxrate": "200M"})
 
         if self.ARGS.use_manual_encode_thread:
-            output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
             if self.ARGS.render_hwaccel_mode == "NVENCC":
                 output_dict.update({"--output-thread": f"{self.ARGS.render_encode_thread}"})
-                output_dict.pop('-threads')
+            else:
+                output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
 
         self.logger.debug(f"writer: {output_dict}, {input_dict}")
 
@@ -640,8 +703,8 @@ class InterpWorkFlow:
                     ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
         self.logger.debug(ffmpeg_customized_command)
         output_dict.update(ffmpeg_customized_command)
-        if self.ARGS.render_hwaccel_mode == "NVENCC":
-            return NVenccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
+        if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
+            return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
         return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
 
     # @profile

@@ -479,7 +479,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_link_shortcut()
 
         """Link InputFileName Event"""
-        # self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
+        self.InputFileName.failSignal.connect(self.on_InputFileName_failImport)
         self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
         self.InputFileName.addSignal.connect(self.on_InputFileName_currentItemChanged)
 
@@ -586,7 +586,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.FastDenoiseChecker.setVisible(False)
         self.HwaccelDecode.setVisible(False)
         self.EncodeThreadField.setVisible(False)
-        self.HwaccelEncodeBox.setEnabled(False)
+        # self.HwaccelEncodeBox.setEnabled(False)
         self.HwaccelPresetLabel.setVisible(False)
         self.HwaccelPresetSelector.setVisible(False)
 
@@ -707,12 +707,13 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.EncodeThreadSelector.setValue(appData.value("render_encode_thread", 16, type=int))
         self.EncoderSelector.setCurrentText(appData.value("render_encoder", "H264, 8bit"))
         self.PresetSelector.setCurrentText(appData.value("render_encoder_preset", "slow"))
+        self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
         self.FFmpegCustomer.setText(appData.value("render_ffmpeg_customized", ""))
         self.ExtSelector.setCurrentText(appData.value("output_ext", "mp4"))
         self.RenderGapSelector.setValue(appData.value("render_gap", 1000, type=int))
         self.SaveAudioChecker.setChecked(appData.value("is_save_audio", True, type=bool))
         self.FastDenoiseChecker.setChecked(appData.value("use_fast_denoise", False, type=bool))
-        self.StrictModeChecker.setChecked(appData.value("is_hdr_strict_mode", False, type=bool))
+        self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
         self.QuickExtractChecker.setChecked(appData.value("is_quick_extract", True, type=bool))
         self.DeinterlaceChecker.setChecked(appData.value("use_deinterlace", False, type=bool))
 
@@ -811,7 +812,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_manual_encode_thread", self.UseEncodeThread.isChecked())
         appData.setValue("render_encode_thread", self.EncodeThreadSelector.value())
         appData.setValue("is_quick_extract", self.QuickExtractChecker.isChecked())
-        appData.setValue("is_hdr_strict_mode", self.StrictModeChecker.isChecked())
+        appData.setValue("hdr_mode", self.HDRModeSelector.currentIndex())
         appData.setValue("render_ffmpeg_customized", self.FFmpegCustomer.text())
         appData.setValue("no_concat", False)  # always concat
         appData.setValue("use_fast_denoise", self.FastDenoiseChecker.isChecked())
@@ -1482,6 +1483,20 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 pass
         return
 
+    def on_InputFileName_failImport(self, fail_code:int):
+        """
+
+        :param fail_code:
+        :return:
+        """
+        # TODO: i18n
+        if fail_code == 1:
+            """Path too long"""
+            self.function_send_msg("Path Too Long", _translate('', '输入文件路径过长，请适当缩短文件路径并重试'))
+        elif fail_code == 2:
+            """Free Version Does not support multi import"""
+            self.function_send_msg("Community Version", _translate('', '请升级专业版以使用任务队列'))
+
     @pyqtSlot(bool)
     def on_InputButton_clicked(self):
         input_files = self.function_select_file(_translate('', '要补帧的视频'), multi=True)
@@ -1815,8 +1830,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         presets = EncodePresetAssemply.encoder[currentHwaccel][currentEncoder]
         for preset in presets:
             self.PresetSelector.addItem(preset)
-        self.HwaccelPresetLabel.setVisible("NVENC" in currentHwaccel)
-        self.HwaccelPresetSelector.setVisible("NVENC" in currentHwaccel)
+        self.HwaccelPresetLabel.setVisible(currentHwaccel == "NVENC")
+        self.HwaccelPresetSelector.setVisible(currentHwaccel == "NVENC")
         self.settings_free_hide()
 
     @pyqtSlot(int)
@@ -2053,10 +2068,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.HwaccelPresetSelector.setVisible(self.expert_mode)
         self.HwaccelPresetLabel.setVisible(self.expert_mode)
         self.QuickExtractChecker.setVisible(self.expert_mode)
-        self.StrictModeChecker.setVisible(self.expert_mode)
+        self.HDRModeField.setVisible(self.expert_mode)
         self.RenderSettingsLabel.setVisible(self.expert_mode)
         self.RenderSettingsGroup.setVisible(self.expert_mode)
-        self.HwaccelEncodeBox.setEnabled(False)
+        # self.HwaccelEncodeBox.setEnabled(False)
         self.FP16Checker.setVisible(self.expert_mode)
         self.ReverseChecker.setVisible(self.expert_mode)
         self.KeepChunksChecker.setVisible(self.expert_mode)
