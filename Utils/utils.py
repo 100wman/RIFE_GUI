@@ -50,9 +50,13 @@ class EncodePresetAssemply:
              "H265,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
              "H265,10bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"], },
         "NVENCC":
-            {"H264,8bit": ["slow", "medium", "fast", "loseless"],
-             "H265,8bit": ["slow", "medium", "fast", "loseless"],
-             "H265,10bit": ["slow", "medium", "fast", "loseless"], },
+            {"H264,8bit": ["default", "performance", "quality"],
+             "H265,8bit": ["default", "performance", "quality"],
+             "H265,10bit": ["default", "performance", "quality"], },
+        "QSVENCC":
+            {"H264,8bit": ["best", "higher", "high", "balanced", "fast", "faster", "fastest"],
+             "H265,8bit": ["best", "higher", "high", "balanced", "fast", "faster", "fastest"],
+             "H265,10bit": ["best", "higher", "high", "balanced", "fast", "faster", "fastest"], },
         "QSV":
             {"H264,8bit": ["slow", "fast", "medium", "veryslow", ],
              "H265,8bit": ["slow", "fast", "medium", "veryslow", ],
@@ -157,26 +161,24 @@ class Tools:
     @staticmethod
     def get_logger(name, log_path, debug=False):
         logger = logging.getLogger(name)
-        logger.setLevel(logging.INFO)
+        if debug:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
+
         logger_formatter = logging.Formatter(f'%(asctime)s - %(module)s - %(lineno)s - %(levelname)s - %(message)s')
         if ArgumentManager.is_release:
             logger_formatter = logging.Formatter(f'%(asctime)s - %(module)s - %(levelname)s - %(message)s')
+
         log_path = os.path.join(log_path, "log")  # private dir for logs
         if not os.path.exists(log_path):
             os.mkdir(log_path)
         logger_path = os.path.join(log_path,
                                    f"{datetime.datetime.now().date()}.log")
-        txt_handler = logging.FileHandler(logger_path)
 
+        txt_handler = logging.FileHandler(logger_path, encoding='utf-8')
         txt_handler.setFormatter(logger_formatter)
-
         console_handler = logging.StreamHandler()
-        if debug:
-            txt_handler.setLevel(level=logging.DEBUG)
-            console_handler.setLevel(level=logging.DEBUG)
-        else:
-            txt_handler.setLevel(level=logging.INFO)
-            console_handler.setLevel(level=logging.INFO)
         console_handler.setFormatter(logger_formatter)
 
         logger.addHandler(console_handler)
@@ -621,15 +623,17 @@ class ArgumentManager:
     pro_dlc_id = 1718750
 
     """Release Version Control"""
-    is_steam = True
+    is_steam = False
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.7"
+    gui_version = "3.5.8"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.9"
+    ols_version = "6.9.10"
     """ 发布前改动以上参数即可 """
+
+    path_len_limit = 230
 
     def __init__(self, args: dict):
         self.app_dir = args.get("app_dir", "")
@@ -700,7 +704,7 @@ class ArgumentManager:
         self.use_manual_encode_thread = args.get("use_manual_encode_thread", False)
         self.render_encode_thread = args.get("render_encode_thread", 16)
         self.is_quick_extract = args.get("is_quick_extract", True)
-        self.is_hdr_strict_mode = args.get("is_hdr_strict_mode", False)
+        self.hdr_mode = args.get("hdr_mode", 0)
         self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "")
         self.is_no_concat = args.get("is_no_concat", False)
         self.use_fast_denoise = args.get("use_fast_denoise", False)
@@ -745,20 +749,23 @@ class ArgumentManager:
 
 class VideoInfo:
     def __init__(self, file_input: str, logger: Tools.get_logger, project_dir: str, ffmpeg=None, img_input=False,
-                 strict_mode=False, exp=0, **kwargs):
+                 hdr_mode=False, exp=0, **kwargs):
         self.filepath = file_input
         self.img_input = img_input
-        self.strict_mode = strict_mode
+        self.hdr_mode = -1
         self.ffmpeg = "ffmpeg"
         self.ffprobe = "ffprobe"
+        self.hdr10_parser = "hdr10plus_parser"
         self.logger = logger
         self.project_dir = project_dir
         if ffmpeg is not None:
             self.ffmpeg = Tools.fillQuotation(os.path.join(ffmpeg, "ffmpeg.exe"))
             self.ffprobe = Tools.fillQuotation(os.path.join(ffmpeg, "ffprobe.exe"))
+            self.hdr10_parser = Tools.fillQuotation(os.path.join(ffmpeg, "hdr10plus_parser.exe"))
         if not os.path.exists(self.ffmpeg):
             self.ffmpeg = "ffmpeg"
             self.ffprobe = "ffprobe"
+            self.hdr10_parser = "hdr10plus_parser"
         self.color_info = dict()
         self.exp = exp
         self.frames_cnt = 0
@@ -767,6 +774,38 @@ class VideoInfo:
         self.duration = 0
         self.video_info = dict()
         self.update_info()
+
+    def update_hdr_mode(self):
+        # TODO Check DV
+        if any([i in str(self.video_info["video_info"]) for i in ['dv_profile', 'DOVI']]):
+            # Dolby Vision
+            self.hdr_mode = 3
+            return
+        if "color_transfer" not in self.video_info["video_info"]:
+            self.logger.warning("Not Find Color Transfer")
+            self.hdr_mode = 0
+            return
+        color_trc = self.video_info["video_info"]["color_transfer"]
+        if "smpte2084" in color_trc or "bt2020" in color_trc:
+            """should be 10bit encoding"""
+            self.hdr_mode = 1  # hdr(normal)
+            self.logger.warning("HDR Content Detected")
+            if any([i in str(self.video_info["video_info"]).lower()]
+                   for i in ['mastering-display', "mastering display", "content light level metadata"]):
+                self.hdr_mode = 2  # hdr10
+                self.logger.warning("HDR10+ Content Detected")
+                check_command = (f'{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.filepath)} -c:v copy '
+                                 f'-vbsf hevc_mp4toannexb -f hevc - | '
+                                 f'{self.hdr10_parser} -o {os.path.join(self.project_dir, "hdr10plus_metadata.json")} -')
+                try:
+                    check_output(shlex.split(check_command), shell=True)
+                except Exception:
+                    self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+
+        elif "arib-std-b67" in color_trc:
+            self.hdr_mode = 4  # HLG
+            self.logger.warning("HLG Content Detected")
+        pass
 
     def update_frames_info_ffprobe(self):
         check_command = (f'{self.ffprobe} -v error -show_streams -select_streams v:0 -v error '
@@ -780,6 +819,7 @@ class VideoInfo:
             self.logger.warning(f"Parse Video Info Failed: {result}")
             raise e
         self.video_info = video_info
+        self.video_info['video_info'] = video_info
         self.logger.info(f"\nInput Video Info\n{video_info}")
         # update color info
         if "color_range" in video_info:
@@ -790,6 +830,8 @@ class VideoInfo:
             self.color_info["-color_trc"] = video_info["color_transfer"]
         if "color_primaries" in video_info:
             self.color_info["-color_primaries"] = video_info["color_primaries"]
+
+        self.update_hdr_mode()
 
         # update frame size info
         if 'width' in video_info and 'height' in video_info:
@@ -849,6 +891,7 @@ class VideoInfo:
         get_dict["size"] = self.frames_size
         get_dict["cnt"] = self.frames_cnt
         get_dict["duration"] = self.duration
+        get_dict['hdr_mode'] = self.hdr_mode
         return get_dict
 
 

@@ -163,6 +163,7 @@ class MyLineWidget(QtWidgets.QLineEdit):
 
 class MyListWidget(QListWidget):
     addSignal = pyqtSignal(int)
+    failSignal = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -274,8 +275,12 @@ class MyListWidget(QListWidget):
 
     def addFileItem(self, input_path: str, task_id=None) -> dict:
         input_path = input_path.strip('"')
+        if len(input_path) > ArgumentManager.path_len_limit:
+            self.failSignal.emit(1)  # path too long
+            return {"input_path": input_path, "task_id": task_id}
         if ArgumentManager.is_free:  # in free version, only one task available
             if self.count() >= 1:
+                self.failSignal.emit(2)  # community version does not support multi import
                 return {"input_path": input_path, "task_id": task_id}
         # input_path, task_id = self.addConfigItem(input_path, task_id)
         if task_id is None:
