@@ -16,6 +16,7 @@ import traceback
 import cv2
 import psutil
 import torch
+from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtCore import QSettings, pyqtSignal, pyqtSlot, QThread, QTime, QVariant, QPoint, QSize
 from PyQt5.QtGui import QIcon, QTextCursor
@@ -23,7 +24,7 @@ from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFi
 
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator
-from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamValidation
+from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamUtils
 
 MAC = True
 try:
@@ -48,7 +49,7 @@ translator = SVFITranslator()
 
 
 def _translate(from_where='@default', input_text=""):
-    return QCoreApplication.translate('', input_text)  # TODO When finished Translating, Remove All Translate Name to ''
+    return QCoreApplication.translate('', input_text)
 
 
 class SVFI_Help_Dialog(QDialog, SVFI_help.Ui_Dialog):
@@ -139,7 +140,9 @@ class SVFI_Preference_Dialog(QDialog, SVFI_preference.Ui_Dialog):
         self.ExpertModeChecker.setChecked(self.preference_dict["expert"])
         self.PreviewArgsModeChecker.setChecked(self.preference_dict["is_preview_args"])
         self.QuietModeChecker.setChecked(self.preference_dict["is_gui_quiet"])
+        self.WinOnTopChecker.setChecked(self.preference_dict["is_windows_ontop"])
         self.OneWayModeChecker.setChecked(self.preference_dict["use_clear_inputs"])
+        self.UseGlobalSettingsChecker.setChecked(self.preference_dict["use_global_settings"])
         pass
 
     def request_preference(self):
@@ -155,7 +158,9 @@ class SVFI_Preference_Dialog(QDialog, SVFI_preference.Ui_Dialog):
         preference_dict["expert"] = self.ExpertModeChecker.isChecked()
         preference_dict["is_preview_args"] = self.PreviewArgsModeChecker.isChecked()
         preference_dict["is_gui_quiet"] = self.QuietModeChecker.isChecked()
+        preference_dict["is_windows_ontop"] = self.WinOnTopChecker.isChecked()
         preference_dict["use_clear_inputs"] = self.OneWayModeChecker.isChecked()
+        preference_dict["use_global_settings"] = self.UseGlobalSettingsChecker.isChecked()
 
         self.preference_signal.emit(preference_dict)
 
@@ -463,7 +468,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.expert_mode = True
         self.preview_args = False
         self.is_gui_quiet = False
+        self.is_windows_ontop = False
         self.use_clear_inputs = False
+        self.use_global_settings = False
         self.rife_cuda_cnt = 0
         self.SVFI_Preference_form = None
         self.resize_exp = 0
@@ -477,6 +484,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AdvanceSettingsArea.setVisible(False)
         self.ProgressBarVisibleControl.setVisible(False)
         self.settings_link_shortcut()
+        self.settings_windows_ontop()
 
         """Link InputFileName Event"""
         self.InputFileName.failSignal.connect(self.on_InputFileName_failImport)
@@ -488,7 +496,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_dilapidation_hide()
         self.settings_load_settings_templates()
 
-        self.STEAM = SteamValidation(self.is_steam, logger=logger)
+        self.STEAM = SteamUtils(self.is_steam, logger=logger)
         if self.is_steam:
             if not self.STEAM.steam_valid:
                 warning_title = _translate('', "Steam认证出错！SVFI用不了啦！")
@@ -599,7 +607,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def settings_update_pack(self, item_update=False, template_update=False):
         self.settings_initiation(item_update=item_update, template_update=False)
-        self.settings_update_gpu_info()  # Flush GPU Info, 1
+        self.settings_update_gpu_info(item_update=item_update)  # Flush GPU Info, 1
         self.on_UseNCNNButton_clicked(silent=True)  # G2
         self.settings_update_rife_model_info()
         self.on_HwaccelSelector_currentTextChanged()  # Flush Encoder Sets, 1
@@ -684,7 +692,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.expert_mode = appData.value("expert_mode", True, type=bool)
             self.preview_args = appData.value("is_preview_args", False, type=bool)
             self.is_gui_quiet = appData.value("is_gui_quiet", False, type=bool)
+            self.is_windows_ontop = appData.value("is_windows_ontop", False, type=bool)
             self.use_clear_inputs = appData.value("use_clear_inputs", False, type=bool)
+            self.use_global_settings = appData.value("use_global_settings", False, type=bool)
 
         self.DebugChecker.setChecked(appData.value("debug", False, type=bool))
 
@@ -705,7 +715,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.HwaccelDecode.setChecked(appData.value("use_hwaccel_decode", True, type=bool))
         self.UseEncodeThread.setChecked(appData.value("use_manual_encode_thread", False, type=bool))
         self.EncodeThreadSelector.setValue(appData.value("render_encode_thread", 16, type=int))
-        self.EncoderSelector.setCurrentText(appData.value("render_encoder", "H264, 8bit"))
+        self.EncoderSelector.setCurrentText(appData.value("render_encoder", "H264,8bit"))
         self.PresetSelector.setCurrentText(appData.value("render_encoder_preset", "slow"))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
         self.FFmpegCustomer.setText(appData.value("render_ffmpeg_customized", ""))
@@ -896,7 +906,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("expert_mode", self.expert_mode)
         appData.setValue("is_preview_args", self.preview_args)
         appData.setValue("is_gui_quiet", self.is_gui_quiet)
+        appData.setValue("is_windows_ontop", self.is_windows_ontop)
         appData.setValue("use_clear_inputs", self.use_clear_inputs)
+        appData.setValue("use_global_settings", self.use_global_settings)
 
         """SVFI Main Page Position and Size"""
         appData.setValue("pos", QVariant(self.pos()))
@@ -924,6 +936,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not len(input_paths) or not len(output_dir):
             self.function_send_msg("Empty Input", _translate('', "请输入要补帧的文件和输出文件夹"))
             return False
+
+        if Tools.check_non_ascii(output_dir):
+            reply = self.function_send_msg("Non ASCII Detected",
+                                           _translate('', "输出路径存在非英文字符，这可能导致程序异常\n(不支持Dolby Vision)\n是否继续？"), 4)
+            if reply == QMessageBox.No:
+                return False
 
         if len(input_paths) > 1:
             self.ProgressBarVisibleControl.setVisible(True)
@@ -1038,7 +1056,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_set_start_info(last_frame + 1, chunk_cnt + 1, False)
         return
 
-    def settings_update_gpu_info(self):
+    def settings_update_gpu_info(self, item_update=False):
+        if item_update:
+            card_id = appData.value("use_specific_gpu", 0, type=int)
+            if self.DiscreteCardSelector.count() - 1 >= card_id:
+                self.DiscreteCardSelector.setCurrentIndex(card_id)
+            return
         cuda_infos = {}
         self.rife_cuda_cnt = torch.cuda.device_count()
         for i in range(self.rife_cuda_cnt):
@@ -1204,6 +1227,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                                             f"{title}",
                                             f"{string}",
                                             QMessageBox.Yes | QMessageBox.No)
+        elif msg_type == 4:
+            reply = QMessageBox.warning(self,
+                                            f"{title}",
+                                            f"{string}",
+                                            QMessageBox.Yes | QMessageBox.No)
+
         else:
             return
         return reply
@@ -1557,6 +1586,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.OptionCheck.setText(update_text)
         self.current_failed = False
         self.tabWidget.setCurrentIndex(1)  # redirect to info page
+        self.steam_update_achv()
 
     @pyqtSlot(bool)
     def on_AutoSet_clicked(self):
@@ -1976,7 +2006,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
             config_path = config_maintainer.FetchConfig()
         self.settings_load_config(config_path)
-        self.settings_update_pack(True)
+        if self.use_global_settings:
+            self.settings_update_pack(True)
         self.last_item = widget_data
 
     @pyqtSlot(bool)
@@ -2041,7 +2072,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             preference_dict["rife_use_cpu"] = self.force_cpu
             preference_dict["is_preview_args"] = self.preview_args
             preference_dict["is_gui_quiet"] = self.is_gui_quiet
+            preference_dict["is_windows_ontop"] = self.is_windows_ontop
             preference_dict["use_clear_inputs"] = self.use_clear_inputs
+            preference_dict["use_global_settings"] = self.use_global_settings
             return preference_dict
 
         self.SVFI_Preference_form = SVFI_Preference_Dialog(preference_dict=generate_preference_dict())
@@ -2058,7 +2091,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.force_cpu = preference_dict["rife_use_cpu"]
         self.preview_args = preference_dict["is_preview_args"]
         self.is_gui_quiet = preference_dict["is_gui_quiet"]
+        self.is_windows_ontop = preference_dict["is_windows_ontop"]
         self.use_clear_inputs = preference_dict["use_clear_inputs"]
+        self.use_global_settings = preference_dict["use_global_settings"]
         self.on_ExpertMode_changed()
         self.settings_load_current()
 
@@ -2170,6 +2205,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.presetActionButton.clicked.connect(lambda i=5: self.toolBox.setCurrentIndex(i))
         self.toolboxActionButton.clicked.connect(lambda i=6: self.toolBox.setCurrentIndex(i))
 
+    def settings_windows_ontop(self):
+        if not self.is_windows_ontop:
+            self.setWindowFlags(QtCore.Qt.Widget)  # 取消置顶
+        else:
+            self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)  # 置顶
+
     @pyqtSlot(bool)
     def on_tutorialLinkButton_clicked(self):
         tutorial_path = os.path.join(dname, "SVFI_Tutorial.pdf")
@@ -2178,6 +2219,16 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.function_send_msg("Not Find Tutorial", _translate("", "未能找到SVFI教程"))
 
+    def steam_update_achv(self):
+        if not self.is_steam:
+            return
+        ACHV_Use_MX250 = self.STEAM.GetAchv("ACHV_Use_MX250")
+        ACHV_Use_RTX2060 = self.STEAM.GetAchv("ACHV_Use_RTX2060")
+        if all([i in self.DiscreteCardSelector.currentText() for i in ['MX', '250']]) and not ACHV_Use_MX250:
+            self.STEAM.SetAchv("ACHV_Use_MX250")
+        if all([i in self.DiscreteCardSelector.currentText() for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
+            self.STEAM.SetAchv("ACHV_Use_RTX2060")
+        self.STEAM.Store()
 
 if __name__ == "__main__":
     try:
