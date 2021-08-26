@@ -14,7 +14,7 @@
    <string>MainWindow</string>
   </property>
   <property name="toolTip">
-   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;指定输出的HDR模式&lt;/p&gt;&lt;p&gt;Auto为自动，检测到HDR内容会切换到CPU渲染&lt;/p&gt;&lt;p&gt;Normal为普通HDR，将不向输入写入元数据（HDR10+、DolbyVision不适用）&lt;/p&gt;&lt;p&gt;其余选项为手动指定输出为对应HDR模式&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   <string/>
   </property>
   <property name="dockOptions">
    <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
@@ -2017,10 +2017,10 @@
                              <item>
                               <widget class="QLabel" name="HDRModeLabel">
                                <property name="toolTip">
-                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;指定输出的HDR模式&lt;/p&gt;&lt;p&gt;Auto为自动，检测到HDR内容会切换到CPU渲染&lt;/p&gt;&lt;p&gt;Normal为普通HDR，将不向输入写入元数据（HDR10+、DolbyVision不适用）&lt;/p&gt;&lt;p&gt;其余选项为手动指定输出为对应HDR模式&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;指定输出的HDR模式&lt;/p&gt;&lt;p&gt;Auto为自动，检测到HDR内容会切换到CPU渲染&lt;/p&gt;&lt;p&gt;Normal为普通HDR，将不向输出写入元数据（HDR10+、Dolby Vision不适用）&lt;/p&gt;&lt;p&gt;Dolby Vision仅支持倍帧补帧(24-&amp;gt;48, 72fps, 24-x-&amp;gt;60fps)，且不支持划分时间段补帧&lt;/p&gt;&lt;p&gt;其余选项为手动指定输出为对应HDR模式&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                                </property>
                                <property name="text">
-                                <string>HDR模式 (?)</string>
+                                <string>源HDR (?)</string>
                                </property>
                               </widget>
                              </item>
@@ -2038,12 +2038,12 @@
                                </item>
                                <item>
                                 <property name="text">
-                                 <string>HDR10+</string>
+                                 <string>HDR10</string>
                                 </property>
                                </item>
                                <item>
                                 <property name="text">
-                                 <string>DolbyVision</string>
+                                 <string>Dolby Vision</string>
                                 </property>
                                </item>
                                <item>

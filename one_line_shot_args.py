@@ -19,12 +19,14 @@ except:
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 f"""
 Update Log at {ArgumentManager.ols_version}
-1. Optimize HDR Recognization
-2. Add New HDR Mode Selector, better control hdr process
-3. Add NVENCC and QSVENCC Encoder
-4. Optimize Import System(Give warning if input length is > 240)
-5. Figure out way to Modify DOVI RPU for SVFI interpolation 
+1. SteamUtils Add Achievement System (Not working yet
+2. Add HDR10+ and Dolby Vision Metadata Mapping Workflow
+3. Add Windows On Top Preference Setting
+4. Add Use Global Settings Preference Setting
+5. Add Non-ASCII Output Dir Check
+6. Fix Multi GPU Selection in Queue
 """
+# TODO SVT-HEVC
 
 """设置环境路径"""
 abspath = os.path.abspath(__file__)
@@ -90,7 +92,7 @@ class InterpWorkFlow:
         self.logger.info("Changing working dir to {0}".format(dname))
 
         """Steam Validation"""
-        self.STEAM = SteamValidation(self.ARGS.is_steam, logger=self.logger)
+        self.STEAM = SteamUtils(self.ARGS.is_steam, logger=self.logger)
 
         """Set FFmpeg"""
         self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "ffmpeg.exe"))
@@ -144,6 +146,14 @@ class InterpWorkFlow:
                 self.target_fps = self.ARGS.target_fps
             else:
                 self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
+
+        self.interpolation_exp = self.target_fps / self.input_fps
+        if self.hdr_check_status == 3 or (self.hdr_check_status == 2 and len(self.video_info['hdr10plus_metadata'])):
+            """DoVi or Valid HDR10 Metadata Dected"""
+            self.interpolation_exp = int(math.ceil(self.target_fps / self.input_fps))
+            self.target_fps = self.interpolation_exp * self.input_fps
+        self.hdr10_metadata_processer = Hdr10PlusProcesser(self.logger, self.project_dir, self.ARGS,
+                                                           self.interpolation_exp, self.video_info)
 
         """Update All Frames Count"""
         self.all_frames_cnt = min(abs(int(self.video_info["duration"] * self.target_fps)),
@@ -378,6 +388,7 @@ class InterpWorkFlow:
         :param output_path:
         :return:
         """
+        hdr10plus_metadata = self.hdr10_metadata_processer.get_hdr10plus_metadata_at_point(start_frame)
         params_265s = {
             "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
                     "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
@@ -397,7 +408,14 @@ class InterpWorkFlow:
                      'deblock=-1:sao=0:'
                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                      'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                     'max-cll="1000,100":hdr10-opt=1:repeat-headers=1'
+                     'max-cll="1000,100":hdr10-opt=1:repeat-headers=1',
+            "hdr10+": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
+                     'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
+                     'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
+                     'deblock=-1:sao=0:'
+                     'range=limited:colorprim=9:transfer=16:colormatrix=9:'
+                     'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
+                     f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata}"'
         }
 
         params_264s = {
@@ -435,7 +453,6 @@ class InterpWorkFlow:
                 self.ARGS.render_encoder = "H265, 10bit"
                 self.ARGS.render_hwaccel_mode = "CPU"
                 self.ARGS.render_encoder_preset = "medium"
-
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
@@ -508,6 +525,8 @@ class InterpWorkFlow:
                 if self.hdr_check_status == 2:
                     """HDR10"""
                     output_dict.update({"-x265-params": params_265s["hdr10"]})
+                    if os.path.exists(hdr10plus_metadata):
+                        output_dict.update({"-x265-params": params_265s["hdr10+"]})
             else:
                 """ProRes"""
                 if "-preset" in output_dict:
@@ -587,6 +606,8 @@ class InterpWorkFlow:
                                      "--tier": "main", "-b": "5",
                                      "--max-cll": "1000,100",
                                      "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"})
+                if os.path.exists(hdr10plus_metadata):
+                    _output_dict.update({"--dhdr10-info": hdr10plus_metadata})
             else:
                 if self.ARGS.render_encoder_preset != "loseless":
                     _output_dict.update({"--preset": self.ARGS.render_encoder_preset})
@@ -1444,131 +1465,177 @@ class InterpWorkFlow:
                 previous_cnt = now_frame
                 pass
 
-            """Load RIFE Model"""
-            if self.ARGS.use_ncnn:
-                self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
-                from Utils import inference_rife_ncnn as inference
+            """Concat Already / Mission Conflict Check & Dolby Vision Sort"""
+            concat_filepath, output_ext = self.get_output_path()
+            if os.path.exists(concat_filepath):
+                self.logger.warning("Mission Already Finished, "
+                                    "Jump to Dolby Vision Check")
+                if self.hdr_check_status == 3:
+                    """Dolby Vision"""
+                    dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS,
+                                               self.interpolation_exp)
+                    dovi_maker.run()
             else:
-                try:
-                    from Utils import inference_rife as inference
-                except Exception:
-                    self.logger.warning("Import Torch Failed, use NCNN-RIFE instead")
-                    self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
-                    self.ARGS.use_ncnn = True
-                    self.ARGS.rife_model_name = "rife-v2"
+
+                """Load RIFE Model"""
+                if self.ARGS.use_ncnn:
+                    self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
                     from Utils import inference_rife_ncnn as inference
-
-            """Update RIFE Core"""
-            self.vfi_core = inference.RifeInterpolation(self.ARGS)
-            self.vfi_core.initiate_algorithm(self.ARGS)
-
-            if not self.ARGS.use_ncnn:
-                self.nvidia_vram_test()
-
-            """Get RIFE Task Thread"""
-            if self.ARGS.remove_dup_mode in [0, 1]:
-                self.rife_thread = threading.Thread(target=self.rife_run_any_fps, name="[ARGS] RifeTaskThread", )
-            else:  # 1, 2 => 去重一拍二或一拍三
-                self.rife_thread = threading.Thread(target=self.rife_run, name="[ARGS] RifeTaskThread", )
-            self.rife_thread.start()
-
-            """Get Renderer"""
-            chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-            self.render_thread = threading.Thread(target=self.render, name="[ARGS] RenderThread",
-                                                  args=(chunk_cnt, start_frame,))
-            self.render_thread.start()
-
-            previous_cnt = start_frame
-            now_frame = start_frame
-            PURE_SCENE_THRESHOLD = 30
-
-            self.rife_work_event.wait()  # 等待补帧线程启动（等待all frames cnt 更新、验证啥的）
-            if self.main_error:
-                self.logger.error("Threads outside RUN encounters error,")
-                self.feed_to_render([None], is_end=True)
-                raise self.main_error
-
-            pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
-            pbar.update(n=start_frame)
-            pbar.unpause()
-            task_acquire_time = time.time()
-            process_time = time.time()
-            while True:
-                task = self.rife_task_queue.get()
-                task_acquire_time = time.time() - task_acquire_time
-                if task is None:
-                    self.feed_to_render([None], is_end=True)
-                    break
-                """
-                task = {"now_frame", "img0", "img1", "n", "exp","scale", "is_end", "is_scene", "add_scene"}
-                """
-                # now_frame = task["now_frame"]
-                img0 = task["img0"]
-                img1 = task["img1"]
-                n = task["n"]
-                scale = task["scale"]
-                is_end = task["is_end"]
-                add_scene = task["add_scene"]
-
-                debug = False
-
-                if img1 is None:
-                    self.feed_to_render([None], is_end=True)
-                    break
-
-                frames_list = [img0]
-                if self.ARGS.is_scdet_mix and add_scene:
-                    mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
-                    frames_list.extend(mix_list)
                 else:
-                    if n > 0:
-                        if n > PURE_SCENE_THRESHOLD and Tools.check_pure_img(img0):
-                            """It's Pure Img Sequence, Copy img0"""
-                            for i in range(n):
-                                frames_list.append(img0)
-                        else:
-                            interp_list = self.vfi_core.generate_n_interp(img0, img1, n=n, scale=scale, debug=debug)
-                            frames_list.extend(interp_list)
-                    if add_scene:
-                        frames_list.append(img1)
-                feed_list = list()
-                for i in frames_list:
-                    feed_list.append([now_frame, i])
-                    now_frame += 1
+                    try:
+                        from Utils import inference_rife as inference
+                    except Exception:
+                        self.logger.warning("Import Torch Failed, use NCNN-RIFE instead")
+                        self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+                        self.ARGS.use_ncnn = True
+                        self.ARGS.rife_model_name = "rife-v2"
+                        from Utils import inference_rife_ncnn as inference
 
-                self.feed_to_render(feed_list, is_end=is_end)
-                process_time = time.time() - process_time
-                update_progress()
-                process_time = time.time()
+                """Update RIFE Core"""
+                self.vfi_core = inference.RifeInterpolation(self.ARGS)
+                self.vfi_core.initiate_algorithm(self.ARGS)
+
+                if not self.ARGS.use_ncnn:
+                    self.nvidia_vram_test()
+
+                """Get RIFE Task Thread"""
+                if self.ARGS.remove_dup_mode in [0, 1]:
+                    self.rife_thread = threading.Thread(target=self.rife_run_any_fps, name="[ARGS] RifeTaskThread", )
+                else:  # 1, 2 => 去重一拍二或一拍三
+                    self.rife_thread = threading.Thread(target=self.rife_run, name="[ARGS] RifeTaskThread", )
+                self.rife_thread.start()
+
+                """Get Renderer"""
+                chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
+                self.render_thread = threading.Thread(target=self.render, name="[ARGS] RenderThread",
+                                                      args=(chunk_cnt, start_frame,))
+                self.render_thread.start()
+
+                previous_cnt = start_frame
+                now_frame = start_frame
+                PURE_SCENE_THRESHOLD = 30
+
+                self.rife_work_event.wait()  # 等待补帧线程启动（等待all frames cnt 更新、验证啥的）
+                if self.main_error:
+                    self.logger.error("Threads outside RUN encounters error,")
+                    self.feed_to_render([None], is_end=True)
+                    raise self.main_error
+
+                pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
+                pbar.update(n=start_frame)
+                pbar.unpause()
                 task_acquire_time = time.time()
-                if is_end:
-                    break
+                process_time = time.time()
+                while True:
+                    task = self.rife_task_queue.get()
+                    task_acquire_time = time.time() - task_acquire_time
+                    if task is None:
+                        self.feed_to_render([None], is_end=True)
+                        break
+                    """
+                    task = {"now_frame", "img0", "img1", "n", "exp","scale", "is_end", "is_scene", "add_scene"}
+                    """
+                    # now_frame = task["now_frame"]
+                    img0 = task["img0"]
+                    img1 = task["img1"]
+                    n = task["n"]
+                    scale = task["scale"]
+                    is_end = task["is_end"]
+                    add_scene = task["add_scene"]
 
-            process_time = 0  # rife's work is done
-            task_acquire_time = 0  # task acquire is impossible
-            while (self.render_thread is not None and self.render_thread.is_alive()) or \
-                    (self.rife_thread is not None and self.rife_thread.is_alive()):
-                """等待渲染线程结束"""
-                update_progress()
-                time.sleep(0.1)
+                    debug = False
 
-            pbar.update(abs(self.all_frames_cnt - now_frame))
-            pbar.close()
+                    if img1 is None:
+                        self.feed_to_render([None], is_end=True)
+                        break
 
-            self.logger.info(f"Scedet Status Quo: {self.scene_detection.get_scene_status()}")
+                    frames_list = [img0]
+                    if self.ARGS.is_scdet_mix and add_scene:
+                        mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
+                        frames_list.extend(mix_list)
+                    else:
+                        if n > 0:
+                            if n > PURE_SCENE_THRESHOLD and Tools.check_pure_img(img0):
+                                """It's Pure Img Sequence, Copy img0"""
+                                for i in range(n):
+                                    frames_list.append(img0)
+                            else:
+                                interp_list = self.vfi_core.generate_n_interp(img0, img1, n=n, scale=scale, debug=debug)
+                                frames_list.extend(interp_list)
+                        if add_scene:
+                            frames_list.append(img1)
+                    feed_list = list()
+                    for i in frames_list:
+                        feed_list.append([now_frame, i])
+                        now_frame += 1
 
-            """Check Finished Safely"""
-            if self.main_error is not None:
-                raise self.main_error
+                    self.feed_to_render(feed_list, is_end=is_end)
+                    process_time = time.time() - process_time
+                    update_progress()
+                    process_time = time.time()
+                    task_acquire_time = time.time()
+                    if is_end:
+                        break
 
-            """Concat the chunks"""
-            if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
-                self.concat_all()
+                process_time = 0  # rife's work is done
+                task_acquire_time = 0  # task acquire is impossible
+                while (self.render_thread is not None and self.render_thread.is_alive()) or \
+                        (self.rife_thread is not None and self.rife_thread.is_alive()):
+                    """等待渲染线程结束"""
+                    update_progress()
+                    time.sleep(0.1)
+
+                pbar.update(abs(self.all_frames_cnt - now_frame))
+                pbar.close()
+
+                self.logger.info(f"Scedet Status Quo: {self.scene_detection.get_scene_status()}")
+
+                """Check Finished Safely"""
+                if self.main_error is not None:
+                    raise self.main_error
+
+                """Concat the chunks"""
+                if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
+                    self.concat_all()
 
         if os.path.exists(self.ARGS.config):
             self.logger.info("Successfully Remove Config File")
             os.remove(self.ARGS.config)
+        self.steam_update_achv()
         self.logger.info(f"Program finished at {datetime.datetime.now()}")
+        pass
+
+    def steam_update_achv(self):
+        if not self.ARGS.is_steam:
+            return
+        """Get Stat"""
+        STAT_INT_FINISHED_CNT = self.STEAM.GetStat("STAT_INT_FINISHED_CNT", int)
+        STAT_FLOAT_FINISHED_MINUTE = self.STEAM.GetStat("STAT_FLOAT_FINISHED_MINUTE", float)
+
+        """Update Stat"""
+        STAT_INT_FINISHED_CNT += 1
+        reply = self.STEAM.SetStat("STAT_INT_FINISHED_CNT", STAT_INT_FINISHED_CNT)
+        if self.video_info['duration'] >= 0:
+            STAT_FLOAT_FINISHED_MINUTE += self.video_info['duration'] / 60
+            reply = self.STEAM.SetStat("STAT_FLOAT_FINISHED_MINUTE", STAT_FLOAT_FINISHED_MINUTE)
+
+        """Get ACHV"""
+        ACHV_Task_Frozen = self.STEAM.GetAchv("ACHV_Task_Frozen")
+        ACHV_Task_Cruella = self.STEAM.GetAchv("ACHV_Task_Cruella")
+        ACHV_Task_10 = self.STEAM.GetAchv("ACHV_Task_10")
+        ACHV_Task_50 = self.STEAM.GetAchv("ACHV_Task_50")
+
+        """Update ACHV"""
+        output_path, _ = self.get_output_path()
+        if 'Frozen' in output_path and not ACHV_Task_Frozen:
+            reply = self.STEAM.SetAchv("ACHV_Task_Frozen")
+        if 'Cruella' in output_path and not ACHV_Task_Cruella:
+            reply = self.STEAM.SetAchv("ACHV_Task_Cruella")
+        if STAT_INT_FINISHED_CNT > 10 and not ACHV_Task_10:
+            reply = self.STEAM.SetAchv("ACHV_Task_10")
+        if STAT_INT_FINISHED_CNT > 50 and not ACHV_Task_50:
+            reply = self.STEAM.SetAchv("ACHV_Task_50")
+        self.STEAM.Store()
         pass
 
     def extract_only(self):
@@ -1712,11 +1779,19 @@ class InterpWorkFlow:
         else:
             map_audio = ""
 
+        color_info_str = ' '.join(Tools.dict2Args(self.color_info))
+
         ffmpeg_command = f'{self.ffmpeg} -hide_banner -f concat -safe 0 -i "{concat_path}" {map_audio} -c:v copy ' \
-                         f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" -y'
+                         f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" ' \
+                         f'{color_info_str} ' \
+                         f'-y'
+
         self.logger.debug(f"Concat command: {ffmpeg_command}")
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
+        if self.hdr_check_status == 3:
+            dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS, self.interpolation_exp)
+            dovi_maker.run()
         if self.ARGS.is_output_only and os.path.exists(concat_filepath):
             if not os.path.getsize(concat_filepath):
                 self.logger.error(f"Concat Error, {output_ext}, empty output")

@@ -15,6 +15,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1297, 846)
+        MainWindow.setToolTip("")
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
@@ -1504,7 +1505,6 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        MainWindow.setToolTip(_translate("MainWindow", "<html><head/><body><p>指定输出的HDR模式</p><p>Auto为自动，检测到HDR内容会切换到CPU渲染</p><p>Normal为普通HDR，将不向输入写入元数据（HDR10+、DolbyVision不适用）</p><p>其余选项为手动指定输出为对应HDR模式</p></body></html>"))
         self.OutputLabel.setText(_translate("MainWindow", "输出文件夹："))
         self.AllInOne.setText(_translate("MainWindow", "一键补帧"))
         self.UseNCNNButton.setToolTip(_translate("MainWindow", "<html><head/><body><p>强制使用检测到的A卡或核显进行补帧任务</p></body></html>"))
@@ -1693,12 +1693,12 @@ class Ui_MainWindow(object):
         self.FastDenoiseChecker.setText(_translate("MainWindow", "快速降噪 (?)"))
         self.PresetReminder.setToolTip(_translate("MainWindow", "<html><head/><body><p><span style=\" font-weight:600;\">slow或veryslow的压制质量已足够好，但速度慢</span></p><p>ll是NVIDIA硬件编码专用预设，代表low latency，低延迟，速度快，质量不高</p><p>hq是NVIDIA硬件编码和ProRes专用预设，代表high quality，相对高质量，但不会比slow高</p><p><span style=\" font-weight:600;\">其他都是字面意思</span></p><p><span style=\" font-weight:600;\">PS：</span>选择HEVC/H265编码，压制预设选择fast或faster，会调用“者佬™快速编码预设”</p></body></html>"))
         self.PresetReminder.setText(_translate("MainWindow", "选择压制预设： (?)"))
-        self.HDRModeLabel.setToolTip(_translate("MainWindow", "<html><head/><body><p>指定输出的HDR模式</p><p>Auto为自动，检测到HDR内容会切换到CPU渲染</p><p>Normal为普通HDR，将不向输入写入元数据（HDR10+、DolbyVision不适用）</p><p>其余选项为手动指定输出为对应HDR模式</p></body></html>"))
-        self.HDRModeLabel.setText(_translate("MainWindow", "HDR模式 (?)"))
+        self.HDRModeLabel.setToolTip(_translate("MainWindow", "<html><head/><body><p>指定输出的HDR模式</p><p>Auto为自动，检测到HDR内容会切换到CPU渲染</p><p>Normal为普通HDR，将不向输出写入元数据（HDR10+、Dolby Vision不适用）</p><p>Dolby Vision仅支持倍帧补帧(24-&gt;48, 72fps, 24-x-&gt;60fps)，且不支持划分时间段补帧</p><p>其余选项为手动指定输出为对应HDR模式</p></body></html>"))
+        self.HDRModeLabel.setText(_translate("MainWindow", "源HDR (?)"))
         self.HDRModeSelector.setItemText(0, _translate("MainWindow", "Auto"))
         self.HDRModeSelector.setItemText(1, _translate("MainWindow", "None"))
-        self.HDRModeSelector.setItemText(2, _translate("MainWindow", "HDR10+"))
-        self.HDRModeSelector.setItemText(3, _translate("MainWindow", "DolbyVision"))
+        self.HDRModeSelector.setItemText(2, _translate("MainWindow", "HDR10"))
+        self.HDRModeSelector.setItemText(3, _translate("MainWindow", "Dolby Vision"))
         self.HDRModeSelector.setItemText(4, _translate("MainWindow", "HLG"))
         self.PresetSelector.setToolTip(_translate("MainWindow", "<html><head/><body><p><br/></p></body></html>"))
         self.PresetSelector.setCurrentText(_translate("MainWindow", "slow"))

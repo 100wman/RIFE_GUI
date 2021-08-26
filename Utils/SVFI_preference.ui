@@ -147,44 +147,37 @@
           <string/>
          </property>
          <layout class="QGridLayout" name="gridLayout_4">
-          <item row="0" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <item>
-             <widget class="QCheckBox" name="ExpertModeChecker">
-              <property name="text">
-               <string>开启专家模式</string>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="PreviewArgsModeChecker">
-              <property name="text">
-               <string>开启任务前参数文本预览</string>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="QuietModeChecker">
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="OneWayModeChecker">
             <property name="text">
-             <string>开启安静模式（不显示弹窗等）</string>
+             <string>任务完成后清空任务列表</string>
             </property>
             <property name="checked">
              <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="OneWayModeChecker">
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="PreviewArgsModeChecker">
             <property name="text">
-             <string>任务完成后清空任务列表</string>
+             <string>开启任务前参数文本预览</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QCheckBox" name="UseGlobalSettingsChecker">
+            <property name="text">
+             <string>使用全局设置</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="ExpertModeChecker">
+            <property name="text">
+             <string>开启专家模式</string>
             </property>
             <property name="checked">
              <bool>false</bool>
@@ -195,9 +188,38 @@
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_5">
+         <property name="title">
+          <string/>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_6">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="QuietModeChecker">
+            <property name="text">
+             <string>开启安静模式（不显示弹窗等）</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="WinOnTopChecker">
+            <property name="text">
+             <string>窗口置顶（下次启动生效）</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>

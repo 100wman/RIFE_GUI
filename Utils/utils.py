@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import shutil
+import string
 import subprocess
 import threading
 import time
@@ -22,6 +23,7 @@ from sklearn import linear_model
 from skvideo.utils import check_output
 
 from steamworks import STEAMWORKS
+from steamworks.exceptions import *
 
 
 class AiModulePaths:
@@ -157,6 +159,8 @@ class Tools:
     def fillQuotation(string):
         if string[0] != '"':
             return f'"{string}"'
+        else:
+            return string
 
     @staticmethod
     def get_logger(name, log_path, debug=False):
@@ -203,6 +207,15 @@ class Tools:
             return None
 
     @staticmethod
+    def dict2Args(d: dict):
+        args = []
+        for key in d.keys():
+            args.append(key)
+            if len(d[key]):
+                args.append(d[key])
+        return args
+
+    @staticmethod
     def clean_parsed_config(args: dict) -> dict:
         for a in args:
             if args[a] in ["false", "true"]:
@@ -233,6 +246,15 @@ class Tools:
         if np.var(img1) < 10:
             return True
         return False
+
+    @staticmethod
+    def check_non_ascii(s: str):
+        ascii_set = set(string.printable)
+        _s = ''.join(filter(lambda x: x in ascii_set, s))
+        if s != _s:
+            return True
+        else:
+            return False
 
     @staticmethod
     def get_norm_img(img1, resize=True):
@@ -623,14 +645,14 @@ class ArgumentManager:
     pro_dlc_id = 1718750
 
     """Release Version Control"""
-    is_steam = False
-    is_free = False
+    is_steam = True
+    is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.8"
+    gui_version = "3.5.9"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.10"
+    ols_version = "6.9.11"
     """ 发布前改动以上参数即可 """
 
     path_len_limit = 230
@@ -746,6 +768,199 @@ class ArgumentManager:
         self.render_only = args.get("render_only", False)
         self.version = args.get("version", "0.0.0 beta")
 
+class Hdr10PlusProcesser:
+    def __init__(self, logger: logging, project_dir: str, args: ArgumentManager,
+                 interpolation_exp: int, video_info: dict, **kwargs):
+        """
+
+        :param logger:
+        :param project_dir:
+        :param args:
+        :param kwargs:
+        """
+        self.logger = logger
+        self.project_dir = project_dir
+        self.ARGS = args
+        self.interp_exp = interpolation_exp
+        self.video_info = video_info
+        self.hdr10plus_metadata_4interp = []
+        self._initialize()
+
+    def _initialize(self):
+        if not len(self.video_info['hdr10plus_metadata']):
+            return
+        hdr10plus_metadata = self.video_info['hdr10plus_metadata'].copy()
+        hdr10plus_metadata = hdr10plus_metadata['SceneInfo']
+        hdr10plus_metadata.sort(key=lambda x: int(x['SceneFrameIndex']))
+        current_index = -1
+        for m in hdr10plus_metadata:
+            for j in range(int(self.interp_exp)):
+                current_index += 1
+                _m = m.copy()
+                _m['SceneFrameIndex'] = current_index
+                self.hdr10plus_metadata_4interp.append(_m)
+        return
+
+    def get_hdr10plus_metadata_at_point(self, start_frame:0):
+        """
+
+        :return: path of metadata json to use immediately
+        """
+        if not len(self.hdr10plus_metadata_4interp) or start_frame < 0 or start_frame > len(self.hdr10plus_metadata_4interp):
+            return ""
+        if start_frame + self.ARGS.render_gap < len(self.hdr10plus_metadata_4interp):
+            hdr10plus_metadata = self.hdr10plus_metadata_4interp[start_frame:start_frame+self.ARGS.render_gap]
+        else:
+            hdr10plus_metadata = self.hdr10plus_metadata_4interp[start_frame:]
+        hdr10plus_metadata_path = os.path.join(self.project_dir, f'hdr10plus_metadata_{start_frame}_{start_frame+self.ARGS.render_gap}.json')
+        json.dump(hdr10plus_metadata, open(hdr10plus_metadata_path, 'w'))
+        return hdr10plus_metadata_path.replace('/','\\')
+
+
+class DoviProcesser:
+    def __init__(self, concat_input: str, logger: logging, project_dir: str, args: ArgumentManager,
+                 interpolation_exp: int, **kwargs):
+        """
+
+        :param concat_input:
+        :param logger:
+        :param project_dir:
+        :param args:
+        :param kwargs:
+        """
+        self.concat_input = concat_input
+        self.logger = logger
+        self.project_dir = project_dir
+        self.ARGS = args
+        self.interp_exp = interpolation_exp
+        self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "ffmpeg.exe"))
+        self.ffprobe = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "ffprobe.exe"))
+        self.dovi_tool = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "dovi_tool.exe"))
+        self.dovi_muxer = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "dovi_muxer.exe"))
+        if self.ARGS.ffmpeg == 'ffmpeg':
+            self.ffmpeg = "ffmpeg"
+            self.ffprobe = "ffprobe"
+            self.dovi_tool = "dovi_tool"
+            self.dovi_muxer = "dovi_muxer"
+        self.video_info, self.audio_info = {}, {}
+        self.dovi_profile = 8
+        self.get_input_info()
+        self.concat_video_stream = Tools.fillQuotation(os.path.join(self.project_dir, f"concat_video.{self.video_info['codec_name']}"))
+        self.dv_video_stream = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_video.{self.video_info['codec_name']}"))
+        self.dv_audio_stream = ""
+        self.dv_before_rpu = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_before_rpu.rpu"))
+        self.rpu_edit_json = os.path.join(self.project_dir, 'rpu_duplicate_edit.json')
+        self.dv_after_rpu = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_after_rpu.rpu"))
+        self.dv_injected_video_stream = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_injected_video.{self.video_info['codec_name']}"))
+        self.dv_concat_output_path = Tools.fillQuotation(f'{os.path.splitext(self.concat_input)[0]}_dovi.mp4')
+
+    def get_input_info(self):
+        check_command = (f'{self.ffprobe} -v error '
+                         f'-show_streams -print_format json '
+                         f'{Tools.fillQuotation(self.ARGS.input)}')
+        result = check_output(shlex.split(check_command))
+        try:
+            stream_info = json.loads(result)['streams']  # select first video stream as input
+        except Exception as e:
+            self.logger.warning(f"Parse Video Info Failed: {result}")
+            raise e
+        for stream in stream_info:
+            if stream['codec_type'] == 'video':
+                self.video_info = stream
+                break
+        for stream in stream_info:
+            if stream['codec_type'] == 'audio':
+                self.audio_info = stream
+                break
+        self.logger.info(f"DV Processing [0] - Information gathered, Start Extracting")
+        pass
+
+    def run(self):
+        try:
+            self.split_video2va()
+            self.extract_rpu()
+            self.modify_rpu()
+            self.inject_rpu()
+            result = self.mux_va()
+            return result
+        except Exception:
+            self.logger.error("Dovi Conversion Failed")
+            raise Exception
+
+    def split_video2va(self):
+        audio_map = {'eac3': 'ec3'}
+        command_line = (
+            f"{self.ffmpeg} -i {Tools.fillQuotation(self.concat_input)} -c:v copy -an -f {self.video_info['codec_name']} {self.concat_video_stream} -y")
+        check_output(command_line)
+        if len(self.audio_info):
+            audio_ext = self.audio_info['codec_name']
+            if self.audio_info['codec_name'] in audio_map:
+                audio_ext = audio_map[self.audio_info['codec_name']]
+            self.dv_audio_stream = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_audio.{audio_ext}"))
+            command_line = (
+                f"{self.ffmpeg} -i {Tools.fillQuotation(self.ARGS.input)} -c:a copy -vn -f {self.audio_info['codec_name']} {self.dv_audio_stream} -y")
+            check_output(command_line)
+        self.logger.info(f"DV Processing [1] - Video and Audio track Extracted, start RPU Extracting")
+
+        pass
+
+    def extract_rpu(self):
+        command_line = (
+            f"{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.ARGS.input)} -c:v copy "
+            f'-vbsf {self.video_info["codec_name"]}_mp4toannexb -f {self.video_info["codec_name"]} - | {self.dovi_tool} extract-rpu --rpu-out {self.dv_before_rpu} -')
+        check_output(command_line, shell=True)
+        self.logger.info(f"DV Processing [2] - Dolby Vision RPU layer extracted, start RPU Modifying")
+        pass
+
+    def modify_rpu(self):
+        command_line = (
+            f"{self.dovi_tool} info -i {self.dv_before_rpu} -f 0")
+        rpu_info = check_output(command_line)
+        try:
+            rpu_info = re.findall('dovi_profile: (.*?),\s.*?offset: (\d+), len: (\d+)', rpu_info.decode())[0]
+        except Exception as e:
+            self.logger.warning(f"Parse Video Info Failed: {rpu_info}")
+            raise e
+        self.dovi_profile, dovi_offset, dovi_len = map(lambda x: int(x), rpu_info)
+        if 'nb_frames' in self.video_info:
+            dovi_len = int(self.video_info['nb_frames'])
+        elif 'r_frame_rate' in self.video_info and 'duration' in self.video_info:
+            frame_rate = self.video_info['r_frame_rate'].split('/')
+            frame_rate = int(frame_rate[0])/int(frame_rate[1])
+            dovi_len = int(frame_rate * float(self.video_info['duration']))
+
+        duplicate_list = []
+        for frame in range(dovi_len):
+            duplicate_list.append({'source': frame, 'offset': frame, 'length': self.interp_exp - 1})
+        edit_dict = {'duplicate': duplicate_list}
+        with open(self.rpu_edit_json, 'w') as w:
+            json.dump(edit_dict, w)
+        command_line = (
+            f"{self.dovi_tool} editor -i {self.dv_before_rpu} -j {Tools.fillQuotation(self.rpu_edit_json)} -o {self.dv_after_rpu}")
+        check_output(command_line)
+        self.logger.info(f"DV Processing [3] - RPU layer modified with duplication {self.interp_exp - 1} at length {dovi_len}, start RPU Injecting")
+
+        pass
+
+    def inject_rpu(self):
+        command_line = (
+            f"{self.dovi_tool} inject-rpu -i {self.concat_video_stream} --rpu-in {self.dv_after_rpu} -o {self.dv_injected_video_stream}")
+        check_output(command_line)
+        self.logger.info(f"DV Processing [4] - RPU layer Injected to interpolated stream, start muxing")
+
+        pass
+
+    def mux_va(self):
+        audio_path = ''
+        if len(self.audio_info):
+            audio_path = f"-i {Tools.fillQuotation(self.dv_audio_stream)}"
+        command_line = f"{self.dovi_muxer} -i {self.dv_injected_video_stream} {audio_path} -o {self.dv_concat_output_path} " \
+                       f"--dv-profile {self.dovi_profile} --mpeg4-comp-brand mp42,iso6,isom,msdh,dby1 --overwrite --dv-bl-compatible-id 1"
+        check_output(command_line)
+        self.logger.info(f"DV Processing [5] - interpolated stream muxed to destination: {Tools.get_filename(self.dv_concat_output_path)}")
+        self.logger.info(f"DV Processing FINISHED")
+        return True
+
 
 class VideoInfo:
     def __init__(self, file_input: str, logger: Tools.get_logger, project_dir: str, ffmpeg=None, img_input=False,
@@ -773,16 +988,17 @@ class VideoInfo:
         self.fps = 0
         self.duration = 0
         self.video_info = dict()
+        self.hdr10plus_metadata = ""
         self.update_info()
 
     def update_hdr_mode(self):
-        # TODO Check DV
         if any([i in str(self.video_info["video_info"]) for i in ['dv_profile', 'DOVI']]):
             # Dolby Vision
             self.hdr_mode = 3
+            self.logger.warning("Dolby Vision Content Detected")
             return
         if "color_transfer" not in self.video_info["video_info"]:
-            self.logger.warning("Not Find Color Transfer")
+            self.logger.warning("Not Find Color Transfer Characteristics")
             self.hdr_mode = 0
             return
         color_trc = self.video_info["video_info"]["color_transfer"]
@@ -794,9 +1010,10 @@ class VideoInfo:
                    for i in ['mastering-display', "mastering display", "content light level metadata"]):
                 self.hdr_mode = 2  # hdr10
                 self.logger.warning("HDR10+ Content Detected")
+                self.hdr10plus_metadata = os.path.join(self.project_dir, "hdr10plus_metadata.json")
                 check_command = (f'{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.filepath)} -c:v copy '
                                  f'-vbsf hevc_mp4toannexb -f hevc - | '
-                                 f'{self.hdr10_parser} -o {os.path.join(self.project_dir, "hdr10plus_metadata.json")} -')
+                                 f'{self.hdr10_parser} -o {Tools.fillQuotation(self.hdr10plus_metadata)} -')
                 try:
                     check_output(shlex.split(check_command), shell=True)
                 except Exception:
@@ -892,6 +1109,15 @@ class VideoInfo:
         get_dict["cnt"] = self.frames_cnt
         get_dict["duration"] = self.duration
         get_dict['hdr_mode'] = self.hdr_mode
+        if os.path.exists(self.hdr10plus_metadata):
+            hdr10plus_metadata = {}
+            try:
+                hdr10plus_metadata = json.load(open(self.hdr10plus_metadata, 'r'))
+            except json.JSONDecodeError:
+                self.logger.error("Unable to Decode HDR10Plus Metadata")
+            get_dict['hdr10plus_metadata'] = hdr10plus_metadata
+        else:
+            get_dict['hdr10plus_metadata'] = {}
         return get_dict
 
 
@@ -1308,7 +1534,7 @@ class TransitionDetection:
         return self.scedet_info
 
 
-class SteamValidation:
+class SteamUtils:
     def CheckSteamAuth(self):
         if self.is_steam:
             return 0
@@ -1345,13 +1571,57 @@ class SteamValidation:
             except Exception:
                 self.steam_valid = False
                 self.steam_error = traceback.format_exc(limit=ArgumentManager.traceback_limit)
+            if self.steamworks.UserStats.RequestCurrentStats() == True:
+                self.logger.info('Steam Stats successfully retrieved!')
+            else:
+                self.steam_valid = False
+                self.steam_error = GenericSteamException('Failed to get Stats Error')
+                self.logger.error('Failed to get stats. Shutting down.')
         os.chdir(original_cwd)
+
+    def GetStat(self, key: str, key_type: type):
+        if not self.is_steam:
+            return
+        if key_type is int:
+            return self.steamworks.UserStats.GetStatInt(key)
+        elif key_type is float:
+            return self.steamworks.UserStats.GetStatFloat(key)
+
+    def GetAchv(self, key: str):
+        if not self.is_steam:
+            return False
+        return self.steamworks.UserStats.GetAchievement(key)
+
+    def SetStat(self, key: str, value):
+        if not self.is_steam:
+            return False
+        return self.steamworks.UserStats.SetStat(key, value)
+
+    def SetAchv(self, key: str):
+        if not self.is_steam:
+            return False
+        return self.steamworks.UserStats.SetAchievement(key)
+
+    def Store(self):
+        if not self.is_steam:
+            return False
+        return self.steamworks.UserStats.StoreStats()
 
 
 if __name__ == "__main__":
-    u = Tools()
-    cp = DefaultConfigParser(allow_no_value=True)
-    cp.read(r"D:\60-fps-Project\arXiv2020-RIFE-main\release\SVFI.Ft.RIFE_GUI.release.v6.2.2.A\RIFE_GUI.ini",
-            encoding='utf-8')
-    print(cp.get("General", "UseCUDAButton=true", 6))
-    print(u.clean_parsed_config(dict(cp.items("General"))))
+    # u = Tools()
+    # cp = DefaultConfigParser(allow_no_value=True)
+    # cp.read(r"D:\60-fps-Project\arXiv2020-RIFE-main\release\SVFI.Ft.RIFE_GUI.release.v6.2.2.A\RIFE_GUI.ini",
+    #         encoding='utf-8')
+    # print(cp.get("General", "UseCUDAButton=true", 6))
+    # print(u.clean_parsed_config(dict(cp.items("General"))))
+    # dm = DoviMaker(r"D:\60-fps-Project\input_or_ref\Test\output\dolby vision-blocks_71fps_[S-0.5]_[offical_3.8]_963577.mp4", Tools.get_logger('', ''),
+    #                r"D:\60-fps-Project\input_or_ref\Test\output\dolby vision-blocks_ec4c18_963577",
+    #                ArgumentManager(
+    #                    {'ffmpeg': r'D:\60-fps-Project\ffmpeg',
+    #                     'input': r"E:\Library\Downloads\Video\dolby vision-blocks.mp4"}),
+    #                int(72 / 24),
+    #                )
+    # dm.run()
+    print(Tools.check_non_ascii(".fdassda f。"))
+    pass
