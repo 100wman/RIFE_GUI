@@ -19,15 +19,9 @@ except:
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 f"""
 Update Log at {ArgumentManager.ols_version}
-1. SteamUtils Add Achievement System (Not working yet
-2. Add HDR10+ and Dolby Vision Metadata Mapping Workflow
-3. Add Windows On Top Preference Setting
-4. Add Use Global Settings Preference Setting
-5. Add Non-ASCII Output Dir Check
-6. Fix Multi GPU Selection in Queue
-7. Fix Mission Start Failed after once
+This is SVFI 3.5 dev Branch
 """
-# TODO SVT-HEVC
+# TODO Fix up SVT-HEVC
 
 """设置环境路径"""
 abspath = os.path.abspath(__file__)
