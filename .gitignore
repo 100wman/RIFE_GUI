@@ -1,16 +1,11 @@
 /SVFI.ini
 /log/
-/dilapidated/
 /ncnn/
 /release/
 /test/
-/Utils/dilapidated/
 /train_log/
 /Configs/
-/Utils/Auxiliary/
-/ncnn/sr/realESR/models/
 /Auxiliary/
-/model_cpu/history/
 /steamworks/
 /QCandyUi/.idea/
 /Utils/log/
