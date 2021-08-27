@@ -6,7 +6,7 @@ import psutil
 import tqdm
 # profile line
 # from line_profiler_pycharm import profile
-from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter
+from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
 
 from Utils.utils import *
 from steamworks.exceptions import *
@@ -25,6 +25,7 @@ Update Log at {ArgumentManager.ols_version}
 4. Add Use Global Settings Preference Setting
 5. Add Non-ASCII Output Dir Check
 6. Fix Multi GPU Selection in Queue
+7. Fix Mission Start Failed after once
 """
 # TODO SVT-HEVC
 
@@ -436,7 +437,7 @@ class InterpWorkFlow:
                      "cll='1000,100'"
         }
 
-        def HDR_modify_params():
+        def HDR_auto_modify_params():
             if self.ARGS.is_img_input or self.hdr_check_status == 1:  # img input or ordinary hdr
                 return
 
@@ -463,7 +464,7 @@ class InterpWorkFlow:
 
         """HDR Check"""
         if self.ARGS.hdr_mode == 0:  # Auto
-            HDR_modify_params()
+            HDR_auto_modify_params()
 
         """Output Video"""
         input_dict = {"-vsync": "cfr"}
@@ -665,6 +666,55 @@ class InterpWorkFlow:
             input_dict = _input_dict
             output_dict = _output_dict
             pass
+        elif self.ARGS.render_hwaccel_mode == "SVT":
+            _input_dict = {  # '--avsw': '',
+                '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                "-pix_fmt": "rgb24",
+                '-n': f"{self.ARGS.render_gap}"
+            }
+            _output_dict = {
+                "encc": "hevc", "-brr": "1", "-sharp": "1", "-b": ""
+            }
+            if "VP9" in self.ARGS.render_encoder:
+                _output_dict = {
+                    "encc": "vp9", "-tune": "0", "-b": ""
+                }
+            # TODO Color Info
+            # if '-color_range' in output_dict:
+            #     _output_dict.update({"--colorrange": output_dict["-color_range"]})
+            # if '-colorspace' in output_dict:
+            #     _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
+            # if '-color_trc' in output_dict:
+            #     _output_dict.update({"--transfer": output_dict["-color_trc"]})
+            # if '-color_primaries' in output_dict:
+            #     _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+
+            if '-s' in output_dict:
+                _output_dict.update({'-s': output_dict['-s']})
+            if "10bit" in self.ARGS.render_encoder:
+                _output_dict.update({"-bit-depth": "10"})
+            else:
+                _output_dict.update({"-bit-depth": "8"})
+
+            preset_mapper = {"slowest": "4", "slow": "5", "fast": "7", "faster":"9"}
+
+            if "H265" in self.ARGS.render_encoder_preset:
+                _output_dict.update({"-encMode": preset_mapper[self.ARGS.render_encoder_preset]})
+            elif "VP9" in self.ARGS.render_encoder_preset:
+                _output_dict.update({"-enc-mode": preset_mapper[self.ARGS.render_encoder_preset]})
+
+            # TODO max cll, master display
+            # if self.hdr_check_status == 2:
+            #     _output_dict.update({"-c": "hevc",
+            #                          "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+            #                          "--tier": "main", "--sao": "luma", "--ctu": "64",
+            #                          "--max-cll": "1000,100",
+            #                          "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
+            #                          })
+
+            input_dict = _input_dict
+            output_dict = _output_dict
+            pass
 
         else:
             """QSV"""
@@ -694,12 +744,17 @@ class InterpWorkFlow:
                         output_dict.update({"--vbr": "0", "--vbr-quality": str(self.ARGS.render_crf)})
                     elif hwaccel_mode == "QSVENCC":
                         output_dict.update({"--la-icq": str(self.ARGS.render_crf)})
+                    elif hwaccel_mode == "SVT":
+                        output_dict.update({"-q": str(self.ARGS.render_crf)})
+
                 else:  # CPU
                     output_dict.update({"-crf": str(self.ARGS.render_crf)})
 
             if self.ARGS.render_bitrate and self.ARGS.use_bitrate:
                 if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
                     output_dict.update({"--vbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
+                elif self.ARGS.render_hwaccel_mode == "SVT":
+                    output_dict.update({"-tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
                 else:
                     output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
                 if self.ARGS.render_hwaccel_mode == "QSV":
@@ -726,6 +781,8 @@ class InterpWorkFlow:
         output_dict.update(ffmpeg_customized_command)
         if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
             return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
+        elif self.ARGS.render_hwaccel_mode in ["SVT"]:
+            return SVTWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
         return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
 
     # @profile

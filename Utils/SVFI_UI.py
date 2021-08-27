@@ -1693,7 +1693,7 @@ class Ui_MainWindow(object):
         self.FastDenoiseChecker.setText(_translate("MainWindow", "快速降噪 (?)"))
         self.PresetReminder.setToolTip(_translate("MainWindow", "<html><head/><body><p><span style=\" font-weight:600;\">slow或veryslow的压制质量已足够好，但速度慢</span></p><p>ll是NVIDIA硬件编码专用预设，代表low latency，低延迟，速度快，质量不高</p><p>hq是NVIDIA硬件编码和ProRes专用预设，代表high quality，相对高质量，但不会比slow高</p><p><span style=\" font-weight:600;\">其他都是字面意思</span></p><p><span style=\" font-weight:600;\">PS：</span>选择HEVC/H265编码，压制预设选择fast或faster，会调用“者佬™快速编码预设”</p></body></html>"))
         self.PresetReminder.setText(_translate("MainWindow", "选择压制预设： (?)"))
-        self.HDRModeLabel.setToolTip(_translate("MainWindow", "<html><head/><body><p>指定输出的HDR模式</p><p>Auto为自动，检测到HDR内容会切换到CPU渲染</p><p>Normal为普通HDR，将不向输出写入元数据（HDR10+、Dolby Vision不适用）</p><p>Dolby Vision仅支持倍帧补帧(24-&gt;48, 72fps, 24-x-&gt;60fps)，且不支持划分时间段补帧</p><p>其余选项为手动指定输出为对应HDR模式</p></body></html>"))
+        self.HDRModeLabel.setToolTip(_translate("MainWindow", "<html><head/><body><p>指定输出的HDR模式</p><p>Auto为自动，检测到HDR内容会切换到CPU渲染</p><p>Normal为普通HDR，将不向输出写入元数据（HDR10+、Dolby Vision不适用）</p><p>Dolby Vision，HDR10+仅支持倍帧补帧(24-&gt;48, 72fps, 24-x-&gt;60fps)，且不支持划分时间段补帧</p><p><span style=\" font-weight:600;\">如需要自行操作元数据（包括元数据的保留、迁移、修改，乃至对补帧输出二压，请选择None）</span></p><p><span style=\" font-weight:600;\">特别说明：</span></p><p><span style=\" font-weight:600;\">当编码器为CPU且输入为HDR10+源时，(libx265)渲染有可能出错，出错情况视机器环境而定</span></p><p>其余选项为手动指定输出为对应HDR模式</p></body></html>"))
         self.HDRModeLabel.setText(_translate("MainWindow", "源HDR (?)"))
         self.HDRModeSelector.setItemText(0, _translate("MainWindow", "Auto"))
         self.HDRModeSelector.setItemText(1, _translate("MainWindow", "None"))

@@ -2017,7 +2017,7 @@
                              <item>
                               <widget class="QLabel" name="HDRModeLabel">
                                <property name="toolTip">
-                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;指定输出的HDR模式&lt;/p&gt;&lt;p&gt;Auto为自动，检测到HDR内容会切换到CPU渲染&lt;/p&gt;&lt;p&gt;Normal为普通HDR，将不向输出写入元数据（HDR10+、Dolby Vision不适用）&lt;/p&gt;&lt;p&gt;Dolby Vision仅支持倍帧补帧(24-&amp;gt;48, 72fps, 24-x-&amp;gt;60fps)，且不支持划分时间段补帧&lt;/p&gt;&lt;p&gt;其余选项为手动指定输出为对应HDR模式&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;指定输出的HDR模式&lt;/p&gt;&lt;p&gt;Auto为自动，检测到HDR内容会切换到CPU渲染&lt;/p&gt;&lt;p&gt;Normal为普通HDR，将不向输出写入元数据（HDR10+、Dolby Vision不适用）&lt;/p&gt;&lt;p&gt;Dolby Vision，HDR10+仅支持倍帧补帧(24-&amp;gt;48, 72fps, 24-x-&amp;gt;60fps)，且不支持划分时间段补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如需要自行操作元数据（包括元数据的保留、迁移、修改，乃至对补帧输出二压，请选择None）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;当编码器为CPU且输入为HDR10+源时，(libx265)渲染有可能出错，出错情况视机器环境而定&lt;/span&gt;&lt;/p&gt;&lt;p&gt;其余选项为手动指定输出为对应HDR模式&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                                </property>
                                <property name="text">
                                 <string>源HDR (?)</string>
