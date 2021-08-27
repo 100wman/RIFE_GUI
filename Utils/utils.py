@@ -63,6 +63,10 @@ class EncodePresetAssemply:
             {"H264,8bit": ["slow", "fast", "medium", "veryslow", ],
              "H265,8bit": ["slow", "fast", "medium", "veryslow", ],
              "H265,10bit": ["slow", "fast", "medium", "veryslow", ], },
+        "SVT":
+            {"VP9,8bit": ["slowest", "slow", "fast", "faster"],
+             "H265,8bit": ["slowest", "slow", "fast", "faster"],
+             "H265,10bit": ["slowest", "slow", "fast", "faster"], },
 
     }
     preset = {
@@ -652,7 +656,7 @@ class ArgumentManager:
     gui_version = "3.5.9"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.11"
+    ols_version = "6.9.12"
     """ 发布前改动以上参数即可 """
 
     path_len_limit = 230

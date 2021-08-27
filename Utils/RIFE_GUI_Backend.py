@@ -99,7 +99,7 @@ class SVFI_Preview_Args_Dialog(QDialog, SVFI_preview_args.Ui_Dialog):
                 _arg = str(arg_data)
             args_string = args_string.replace(f"{{{arg_key}}}", html.escape(_arg))
 
-        logger.info(f"Check Arguments Preview: \n{args_string}")
+        logger.debug(f"Check Arguments Preview: \n{args_string}")
         self.ArgsLabel.setText(args_string)
 
 
@@ -636,6 +636,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         global appData
+
         if not item_update:
             """New Initiation of GUI"""
             try:
@@ -656,15 +657,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             size = appData.value("size", QVariant(QSize(int(desktop.width() * 0.6), int(desktop.height() * 0.5))))
             self.resize(size)
             self.move(pos)
-
-        appData.setValue("ols_path", ols_potential)
-        appData.setValue("ffmpeg", dname)
-
-        if not os.path.exists(ols_potential):
-            appData.setValue("ols_path",
-                             r"D:\60-fps-Project\Projects\RIFE GUI\one_line_shot_args.py")
-            appData.setValue("ffmpeg", "ffmpeg")
-            logger.info("Change to Debug Path")
 
         if not template_update:
             """Basic Configuration"""
@@ -787,6 +779,14 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         添加新选项/变量 2/3 Options -> appData
         :return:
         """
+
+        appData.setValue("ols_path", ols_potential)
+        appData.setValue("ffmpeg", dname)
+        if not os.path.exists(ols_potential):
+            appData.setValue("ols_path",
+                             r"D:\60-fps-Project\Projects\RIFE GUI\one_line_shot_args.py")
+            appData.setValue("ffmpeg", "ffmpeg")
+            logger.info("Change to Debug Path")
 
         """Input Basic Input Information"""
         appData.setValue("version", self.version)
