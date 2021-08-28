@@ -650,14 +650,21 @@ class ArgumentManager:
 
     """Release Version Control"""
     is_steam = True
-    is_free = True
+    is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.9"
+    gui_version = "3.5.10"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.12"
+    ols_version = "6.9.13"
     """ 发布前改动以上参数即可 """
+
+    f"""
+    Update Log
+    - Remove NVENC Codec for Community Version
+    - Optimize TTA and Forward Ensemble Mode (Use Torch Concat to speed up)
+    - Fix Multi Tasks Settings Omission
+    """
 
     path_len_limit = 230
 

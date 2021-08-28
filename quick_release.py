@@ -11,7 +11,6 @@ steam_dir = r"D:\60-fps-Project\Projects\RIFE GUI\release\sdk\tools\ContentBuild
 
 
 def generate_release():
-    tag_version = f"{ArgumentManager.gui_version}-{'community' if ArgumentManager.is_free else 'professional'}"
     tag_version = f"{'Community' if ArgumentManager.is_free else 'Professional'}." \
                   f"{'Steam' if ArgumentManager.is_steam else 'NoSteam'}"
     compile_ols = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports                                      --plugin-enable=qt-plugins                                   --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI CLI" --windows-product-version={ArgumentManager.ols_version} --windows-file-description="SVFI Interpolation CLI"             --windows-company-name="Jeanna-SVFI"  --follow-import-to=Utils,steamworks,model,model_cpu --output-dir=release\{tag_version} --windows-disable-console .\one_line_shot_args.py'

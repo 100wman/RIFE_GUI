@@ -57,14 +57,15 @@ class RifeInterpolation(VideoFrameInterpolation):
 
         try:
             from model.RIFE_HDv2 import Model
-            model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards)
+            model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
+                          forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
             model.load_model(self.model_path, -1 if not self.ARGS.use_rife_multi_cards else 0)
             self.model_version = 2
             print("INFO - Loaded v2.x HD model.")
         except:
             from model.RIFE_HDv3 import Model
             model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
-                          forward_ensemble=self.ARGS.use_rife_forward_ensemble)
+                          forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
             model.load_model(self.model_path, -1)
             self.model_version = 3
             print("INFO - Loaded v3.x HD model.")
@@ -86,10 +87,6 @@ class RifeInterpolation(VideoFrameInterpolation):
         i1 = self.generate_torch_img(img1, padding)
         i2 = self.generate_torch_img(img2, padding)
         mid = self.__inference(i1, i2, scale)
-        if self.tta_mode:
-            mid1 = self.__inference(i1, mid, scale)
-            mid2 = self.__inference(mid, i2, scale)
-            mid = self.__inference(mid1, mid2, scale)
         del i1, i2
         mid = ((mid[0] * 255.).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
         if n == 1:

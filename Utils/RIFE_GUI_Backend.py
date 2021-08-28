@@ -445,8 +445,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.is_free = ArgumentManager.is_free
         self.is_steam = ArgumentManager.is_steam
 
-        appData.setValue("app_dir", ddname)
-
         if appData.value("ffmpeg", "") != "ffmpeg":
             self.ffmpeg = f'"{os.path.join(appData.value("ffmpeg", ""), "ffmpeg.exe")}"'
         else:
@@ -571,6 +569,16 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                      _translate('', "单一识别")]
         for m in ST_RmMode:
             self.DupRmMode.addItem(m)
+
+        ST_HwaccelMode = ['CPU', 'QSV']
+        try:
+            self.HwaccelSelector.disconnect()
+        except:
+            pass
+        self.HwaccelSelector.clear()
+        for m in ST_HwaccelMode:
+            self.HwaccelSelector.addItem(m)
+        self.HwaccelSelector.currentTextChanged.connect(self.on_HwaccelSelector_currentTextChanged)
 
         self.StartPoint.setVisible(False)
         self.EndPoint.setVisible(False)
@@ -780,6 +788,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
 
+        appData.setValue("app_dir", ddname)
         appData.setValue("ols_path", ols_potential)
         appData.setValue("ffmpeg", dname)
         if not os.path.exists(ols_potential):
@@ -1229,9 +1238,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                                             QMessageBox.Yes | QMessageBox.No)
         elif msg_type == 4:
             reply = QMessageBox.warning(self,
-                                            f"{title}",
-                                            f"{string}",
-                                            QMessageBox.Yes | QMessageBox.No)
+                                        f"{title}",
+                                        f"{string}",
+                                        QMessageBox.Yes | QMessageBox.No)
 
         else:
             return
@@ -1512,7 +1521,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 pass
         return
 
-    def on_InputFileName_failImport(self, fail_code:int):
+    def on_InputFileName_failImport(self, fail_code: int):
         """
 
         :param fail_code:
@@ -1836,7 +1845,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(str)
     def on_HwaccelSelector_currentTextChanged(self):
-        logger.info("Switch To HWACCEL Mode: %s" % self.HwaccelSelector.currentText())
+        logger.debug("Switch To HWACCEL Mode: %s" % self.HwaccelSelector.currentText())
         check = self.HwaccelSelector.currentText() == "NVENC"
         self.HwaccelPresetLabel.setVisible(check)
         self.HwaccelPresetSelector.setVisible(check)
@@ -1846,10 +1855,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         except Exception:
             pass
         self.EncoderSelector.clear()
-        self.EncoderSelector.currentTextChanged.connect(self.on_EncoderSelector_currentTextChanged)
         for e in encoders:
             self.EncoderSelector.addItem(e)
         self.EncoderSelector.setCurrentIndex(0)
+        self.EncoderSelector.currentTextChanged.connect(self.on_EncoderSelector_currentTextChanged)
         self.on_EncoderSelector_currentTextChanged()
 
     @pyqtSlot(str)
@@ -1860,9 +1869,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         presets = EncodePresetAssemply.encoder[currentHwaccel][currentEncoder]
         for preset in presets:
             self.PresetSelector.addItem(preset)
-        self.HwaccelPresetLabel.setVisible(currentHwaccel == "NVENC")
-        self.HwaccelPresetSelector.setVisible(currentHwaccel == "NVENC")
-        self.settings_free_hide()
+        # self.HwaccelPresetLabel.setVisible(currentHwaccel == "NVENC")
+        # self.HwaccelPresetSelector.setVisible(currentHwaccel == "NVENC")
+        # self.settings_free_hide()
 
     @pyqtSlot(int)
     def on_tabWidget_currentChanged(self, tabIndex):
@@ -2006,8 +2015,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
             config_path = config_maintainer.FetchConfig()
         self.settings_load_config(config_path)
-        if self.use_global_settings:
-            self.settings_update_pack(True)
+        self.settings_update_pack(item_update=self.use_global_settings)
         self.last_item = widget_data
 
     @pyqtSlot(bool)
@@ -2229,6 +2237,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if all([i in self.DiscreteCardSelector.currentText() for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
             self.STEAM.SetAchv("ACHV_Use_RTX2060")
         self.STEAM.Store()
+
 
 if __name__ == "__main__":
     try:

@@ -705,7 +705,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>3</number>
+                      <number>4</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -2222,7 +2222,7 @@
                           <item row="5" column="0">
                            <widget class="QCheckBox" name="TtaModeChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;N卡A卡通用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;用4倍的时间缓解2%的物体消失问题，具体效果视不同输入而定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;N卡A卡通用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;用4倍的时间缓解12%的物体消失问题，具体效果视不同输入而定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>TTA模式 (?)</string>
@@ -2433,7 +2433,7 @@
                             <item row="0" column="1">
                              <widget class="QCheckBox" name="ForwardEnsembleChecker">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;只适用于N卡 3.x模型&lt;/span&gt;&lt;/p&gt;&lt;p&gt;开启后画面更清晰，但是比2.3模型慢&lt;/p&gt;&lt;p&gt;不开启比2.3快两倍，但补帧效果比2.3差&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;提高光流预测准确性&lt;/p&gt;&lt;p&gt;开启后可有效减轻虚影&lt;/p&gt;&lt;p&gt;速度减慢25%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>双向光流 (?)</string>

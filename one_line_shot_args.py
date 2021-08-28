@@ -17,10 +17,6 @@ try:
 except:
     pass
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
-f"""
-Update Log at {ArgumentManager.ols_version}
-This is SVFI 3.5 dev Branch
-"""
 # TODO Fix up SVT-HEVC
 
 """设置环境路径"""
