@@ -106,7 +106,9 @@ class FusionNet(nn.Module):
 
 
 class Model:
-    def __init__(self, use_multi_cards=False, local_rank=-1):
+    def __init__(self, use_multi_cards=False, forward_ensemble=False, tta=False, local_rank=-1):
+        self.forward_ensemble = forward_ensemble
+        self.tta = tta
         self.use_multi_cards = use_multi_cards
         if self.use_multi_cards:
             self.flownet = nn.DataParallel(IFNet())
@@ -184,17 +186,37 @@ class Model:
         else:
             return pred
 
-    def inference(self, img0, img1, scale=1.0):
+    def calculate_flow(self, img0, img1, scale):
         imgs = torch.cat((img0, img1), 1)
         flow, _ = self.flownet(imgs, scale)
-        return self.predict(imgs, flow, training=False)
+        if self.forward_ensemble:
+            reimgs = torch.cat((img1, img0), 1)
+            reflow, _ = self.flownet(reimgs,scale)
+            flow = (flow + reflow) / 2
+        return flow
+
+    def calculate_prediction(self, img0, img1, scale):
+        flow = self.calculate_flow(img0, img1, scale)
+        imgs = torch.cat((img0, img1), 1)
+        prediction = self.predict(imgs, flow, training=False)
+        return prediction
+
+    def inference(self, img0, img1, scale=1.0):
+        predicted = self.calculate_prediction(img0, img1, scale)
+        if not self.tta:
+            return predicted
+        else:
+            img_025 = self.calculate_prediction(img0, predicted, scale)
+            img_075 = self.calculate_prediction(predicted, img1, scale)
+            img_050 = self.calculate_prediction(img_025, img_075, scale)
+            return img_050
 
 
 if __name__ == '__main__':
-    img0 = torch.zeros(1, 3, 256, 256).float().to(device)
-    img1 = torch.tensor(np.random.normal(
+    _img0 = torch.zeros(1, 3, 256, 256).float().to(device)
+    _img1 = torch.tensor(np.random.normal(
         0, 1, (1, 3, 256, 256))).float().to(device)
-    imgs = torch.cat((img0, img1), 1)
-    model = Model(True)
+    _imgs = torch.cat((_img0, _img1), 1)
+    model = Model(True, True, True)
     model.eval()
-    print(model.inference(img0, img1).shape)
+    print(model.inference(_img0, _img1).shape)
