@@ -1127,33 +1127,30 @@ class InterpWorkFlow:
         if init:
             self.logger.info("Initiating Duplicated Frames Removal Process...This might take some time")
             pbar = tqdm.tqdm(total=check_queue_size, unit="frames")
-
         else:
             pbar = None
         """
             check_frame_list contains key, check_frame_data contains (key, frame_data)
         """
         check_frame_cnt = -1
-
         while len(check_frame_list) < check_queue_size:
             check_frame_cnt += 1
             check_frame = Tools.gen_next(videogen_check)
             if check_frame is None:
                 break
-            if init:
-                pbar.update(1)
-                pbar.set_description(
-                    f"Process at Extract Frame {check_frame_cnt}")
             if len(check_frame_list):  # len>1
                 if Tools.get_norm_img_diff(input_frame_data[check_frame_list[-1]],
                                            check_frame) < 0.001:
                     # do not use pure scene check to avoid too much duplication result
                     # duplicate frames
                     continue
+            if init:
+                pbar.update(1)
+                pbar.set_description(
+                    f"Process at Extract Frame {check_frame_cnt}")
             check_frame_list.append(check_frame_cnt)  # key list
             input_frame_data[check_frame_cnt] = check_frame
-            # check_frame_data[check_frame_cnt] = cv2.resize(cv2.GaussianBlur(check_frame, (3, 3), 0), (256, 256))
-            check_frame_data[check_frame_cnt] = cv2.resize(cv2.GaussianBlur(check_frame, (3, 3), 0), (256, 256))
+            check_frame_data[check_frame_cnt] = cv2.GaussianBlur(check_frame, (3, 3), 0)
         if not len(check_frame_list):
             if init:
                 pbar.close()
@@ -1240,14 +1237,16 @@ class InterpWorkFlow:
         self.logger.info("Resuming Video Frames...")
         frame_reader = self.generate_frame_reader(start_frame)
         frame_check_reader = self.generate_frame_reader(start_frame, frame_check=True)
+        frame_available_check_reader = self.generate_frame_reader(start_frame, frame_check=True)
 
         """Get Frames to interpolate"""
         videogen = frame_reader.nextFrame()
         videogen_check = frame_check_reader.nextFrame()
+        videogen_available_check = frame_available_check_reader.nextFrame()
 
-        img1 = self.crop_read_img(Tools.gen_next(videogen_check))
+        check_img1 = self.crop_read_img(Tools.gen_next(videogen_available_check))
         now_frame_key = start_frame
-        if img1 is None:
+        if check_img1 is None:
             self.main_error = OSError(f"Input file not valid: {self.input}, img_input: {self.ARGS.is_img_input},"
                                       f"Please Check Your Input Settings(Start Point, Start Frame)")
             self.rife_work_event.set()
@@ -1274,7 +1273,7 @@ class InterpWorkFlow:
                 time.sleep(600)
                 run_time = time.time()
 
-            check_frame_list, scene_frame_list, input_frame_data = self.remove_duplicate_frames(videogen,
+            check_frame_list, scene_frame_list, input_frame_data = self.remove_duplicate_frames(videogen_check,
                                                                                                 init=first_run)
             input_frame_data = dict(input_frame_data)
             first_run = False
@@ -1290,30 +1289,42 @@ class InterpWorkFlow:
                 break
 
             else:
-                img0 = input_frame_data[check_frame_list[0]]
+                img0 = self.crop_read_img(Tools.gen_next(videogen))
+                img1 = img0
                 last_frame_key = check_frame_list[0]
+                now_a_key = last_frame_key
                 for frame_cnt in range(1, len(check_frame_list)):
-                    img1 = input_frame_data[check_frame_list[frame_cnt]]
-                    now_frame_key = check_frame_list[frame_cnt]
+                    now_b_key = check_frame_list[frame_cnt]
+                    img1 = img0
+                    """A - Interpolate -> B"""
+                    while True:
+                        last_possible_scene = img1
+                        if now_a_key != now_b_key:
+                            img1 = self.crop_read_img(Tools.gen_next(videogen))
+                            now_a_key += 1
+                        else:
+                            break
+                    now_frame_key = now_b_key
                     self.task_info.update({"now_frame": now_frame_key})
                     if now_frame_key in scene_frame_list:
                         self.scene_detection.update_scene_status(now_frame_key, "scene")
-                        potential_key = check_frame_list[frame_cnt] - 1
+                        potential_key = now_frame_key - 1
                         if potential_key > 0 and potential_key in input_frame_data:
-                            before_img = input_frame_data[potential_key]
+                            before_img = last_possible_scene
                         else:
                             before_img = img0
 
                         # Scene Review, should be annoted
                         # title = f"try:"
                         # comp_stack = np.hstack((img0, before_img, img1))
+                        # comp_stack = cv2.resize(comp_stack, (1440, 270))
                         # cv2.imshow(title, cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB))
                         # cv2.moveWindow(title, 0, 0)
                         # cv2.resizeWindow(title, 1440, 270)
                         # cv2.waitKey(0)
                         # cv2.destroyAllWindows()
 
-                        if frame_cnt < 1 or check_frame_list[frame_cnt] - 1 == check_frame_list[frame_cnt - 1]:
+                        if frame_cnt < 1:
                             self.feed_to_rife(now_frame_key, img0, img0, n=0,
                                               is_end=is_end)
                         elif self.ARGS.is_scdet_mix:
@@ -1326,11 +1337,10 @@ class InterpWorkFlow:
                                               is_end=is_end)
                     else:
                         self.scene_detection.update_scene_status(now_frame_key, "normal")
-                        self.feed_to_rife(now_frame_key, img0, img1, n=now_frame_key - last_frame_key - 1,
+                        self.feed_to_rife(now_b_key, img0, img1, n=now_frame_key - last_frame_key - 1,
                                           is_end=is_end)
                     last_frame_key = now_frame_key
                     img0 = img1
-                img1 = input_frame_data[check_frame_list[-1]]  # write last frame since it's not in loop
                 self.feed_to_rife(now_frame_key, img1, img1, n=0, is_end=is_end)
                 self.task_info.update({"now_frame": check_frame_list[-1]})
 
@@ -1574,6 +1584,8 @@ class InterpWorkFlow:
                 task_acquire_time = time.time()
                 process_time = time.time()
                 while True:
+                    # if not self.rife_thread.is_alive():
+                    #     raise AssertionError("RIFE Thread Dead Unexpectedly without putting none to buffer")
                     task = self.rife_task_queue.get()
                     task_acquire_time = time.time() - task_acquire_time
                     if task is None:

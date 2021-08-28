@@ -47,13 +47,25 @@ def generate_release():
     with open(os.path.join(pack_dir, f"启动SVFI.{tag_version}.bat"), "w", encoding="utf-8") as w:
         w.write(f"cd /d %~dp0/Package\nstart SVFI.{tag_version}.exe")
 
+def change_utils_with_mighty_power():
+    with open('./Utils/utils.py', 'r', encoding='utf-8') as r:
+        utils_r = r.read()
+    utils_r = utils_r.replace("is_steam = True", f"is_steam = {ArgumentManager.is_steam}")
+    utils_r = utils_r.replace("is_steam = False", f"is_steam = {ArgumentManager.is_steam}")
+    utils_r = utils_r.replace("is_free = True", f"is_free = {ArgumentManager.is_free}")
+    utils_r = utils_r.replace("is_free = False", f"is_free = {ArgumentManager.is_free}")
+    with open('./Utils/utils.py', 'w', encoding='utf-8') as w:
+        w.write(utils_r)
 
-# steam_ver = [False, True]
-# free_ver = [False, True]
-# for _free_ver in free_ver:
-#     for _steam_ver in steam_ver:
-#         ArgumentManager.is_free = _free_ver
-#         ArgumentManager.is_steam = _steam_ver
-#         generate_release()
-#         time.sleep(5)
-generate_release()
+
+steam_ver = [True, False]
+free_ver = [False, True]
+for _steam_ver in steam_ver:
+    for _free_ver in free_ver:
+        ArgumentManager.is_free = _free_ver
+        ArgumentManager.is_steam = _steam_ver
+        change_utils_with_mighty_power()
+        generate_release()
+        time.sleep(5)
+        pass
+# generate_release()
