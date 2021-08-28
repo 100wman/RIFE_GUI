@@ -649,8 +649,8 @@ class ArgumentManager:
     pro_dlc_id = 1718750
 
     """Release Version Control"""
-    is_steam = True
-    is_free = False
+    is_steam = False
+    is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
     gui_version = "3.5.10"
@@ -661,9 +661,8 @@ class ArgumentManager:
 
     f"""
     Update Log
-    - Remove NVENC Codec for Community Version
-    - Optimize TTA and Forward Ensemble Mode (Use Torch Concat to speed up)
-    - Fix Multi Tasks Settings Omission
+    - Optimize Dedup Mode by 300% speed up (kidding, using pipe guide)
+    - Optimize Release Build Automation
     """
 
     path_len_limit = 230
