@@ -97,11 +97,8 @@ class RealESRGANer:
                 input_tile = self.img[:, :, input_start_y_pad:input_end_y_pad, input_start_x_pad:input_end_x_pad]
 
                 # upscale tile
-                try:
-                    with torch.no_grad():
-                        output_tile = self.model(input_tile)
-                except Exception as error:
-                    print('Error', error)
+                with torch.no_grad():
+                    output_tile = self.model(input_tile)
                 # print(f'\tTile {tile_idx}/{tiles_x * tiles_y}')
 
                 # output tile area on total image

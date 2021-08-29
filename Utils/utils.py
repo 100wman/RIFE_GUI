@@ -646,23 +646,25 @@ class ArgumentManager:
     For OLS's arguments input management
     """
     app_id = 1692080
-    pro_dlc_id = 1718750
+    pro_dlc_id = [1718750]
 
     """Release Version Control"""
     is_steam = False
     is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.10"
+    gui_version = "3.5.11"
     version_tag = f"{gui_version} " \
-                  f"{'Professional' if not is_free else 'Community'} [{'Steam' if is_steam else 'No Steam'}]"
-    ols_version = "6.9.13"
+                  f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
+    ols_version = "6.9.14"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Optimize Dedup Mode by 300% speed up (kidding, using pipe guide)
-    - Optimize Release Build Automation
+    - Fix Loss of Frames at the end of input
+    - Fix "SR - interpolate" mode None Error at the end of input
+    - Add Forward Ensemble warning for RIFE 2.x Model
+    - Optimize i18n
     """
 
     path_len_limit = 230
@@ -1553,10 +1555,16 @@ class SteamUtils:
         self.logger.info(f'Steam User Logged on as {steam_64id}, auth: {valid_response}')
         return valid_response
 
-    def CheckProDLC(self) -> bool:
+    def CheckProDLC(self, dlc_id: int) -> bool:
+        """
+
+        :param dlc_id: DLC for SVFI, start from 0
+        0: Pro
+        :return:
+        """
         if not self.is_steam:
             return False
-        purchase_pro = self.steamworks.Apps.IsDLCInstalled(ArgumentManager.pro_dlc_id)
+        purchase_pro = self.steamworks.Apps.IsDLCInstalled(ArgumentManager.pro_dlc_id[dlc_id])
         self.logger.info(f'Steam User Purchase Pro DLC Status: {purchase_pro}')
         return purchase_pro
 

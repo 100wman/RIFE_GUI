@@ -498,6 +498,9 @@
                  <layout class="QGridLayout" name="gridLayout_35">
                   <item row="0" column="0">
                    <widget class="QLabel" name="SettingsPresetLabel">
+                    <property name="toolTip">
+                     <string/>
+                    </property>
                     <property name="layoutDirection">
                      <enum>Qt::LeftToRight</enum>
                     </property>
@@ -2219,6 +2222,13 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_31">
+                          <item row="3" column="0">
+                           <widget class="QLabel" name="AMDSettingsLabel">
+                            <property name="text">
+                             <string>使用A卡进行补帧的参数</string>
+                            </property>
+                           </widget>
+                          </item>
                           <item row="5" column="0">
                            <widget class="QCheckBox" name="TtaModeChecker">
                             <property name="toolTip">
@@ -2226,23 +2236,6 @@
                             </property>
                             <property name="text">
                              <string>TTA模式 (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="6" column="0">
-                           <widget class="QCheckBox" name="UseMultiCardsChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用所有能检测到的显卡进行补帧&lt;/p&gt;&lt;p&gt;使用A卡模式（左侧“使用A卡或核显”）将同时调用能识别到的A卡和N卡&lt;/p&gt;&lt;p&gt;不适用A卡模式则只能使用检测到的N卡&lt;/p&gt;&lt;p&gt;速度较单卡慢&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>使用多卡 (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="7" column="0">
-                           <widget class="QLabel" name="label_2">
-                            <property name="text">
-                             <string>输出文件名将带有反映上述设置的缩写</string>
                             </property>
                            </widget>
                           </item>
@@ -2308,10 +2301,27 @@
                             </item>
                            </layout>
                           </item>
+                          <item row="6" column="0">
+                           <widget class="QCheckBox" name="UseMultiCardsChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用所有能检测到的显卡进行补帧&lt;/p&gt;&lt;p&gt;使用A卡模式（左侧“使用A卡或核显”）将同时调用能识别到的A卡和N卡&lt;/p&gt;&lt;p&gt;不适用A卡模式则只能使用检测到的N卡&lt;/p&gt;&lt;p&gt;速度较单卡慢&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>使用多卡 (?)</string>
+                            </property>
+                           </widget>
+                          </item>
                           <item row="2" column="0">
                            <widget class="Line" name="line_6">
                             <property name="orientation">
                              <enum>Qt::Horizontal</enum>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="7" column="0">
+                           <widget class="QLabel" name="label_2">
+                            <property name="text">
+                             <string>输出文件名将带有反映上述设置的缩写</string>
                             </property>
                            </widget>
                           </item>
@@ -2433,7 +2443,7 @@
                             <item row="0" column="1">
                              <widget class="QCheckBox" name="ForwardEnsembleChecker">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;提高光流预测准确性&lt;/p&gt;&lt;p&gt;开启后可有效减轻虚影&lt;/p&gt;&lt;p&gt;速度减慢25%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;提高光流预测准确性&lt;/p&gt;&lt;p&gt;开启后可有效减轻虚影&lt;/p&gt;&lt;p&gt;速度减慢25%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用，2.x模型不推荐开启&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>双向光流 (?)</string>
@@ -2445,17 +2455,10 @@
                             </item>
                            </layout>
                           </item>
-                          <item row="3" column="0">
-                           <widget class="QLabel" name="AMDSettingsLabel">
-                            <property name="text">
-                             <string>使用A卡进行补帧的参数</string>
-                            </property>
-                           </widget>
-                          </item>
                           <item row="1" column="0">
                            <widget class="QLabel" name="ProAdLabel_1">
                             <property name="text">
-                             <string>*专业版可使用TTA及动态光流功能以大幅度提升动漫补帧质量</string>
+                             <string>*专业版可使用TTA及动态光流以提升动漫补帧质量</string>
                             </property>
                            </widget>
                           </item>

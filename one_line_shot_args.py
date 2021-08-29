@@ -980,7 +980,7 @@ class InterpWorkFlow:
                 m = min(y25, y50, y100)
                 scale = {y25: 0.25, y50: 0.5, y100: 1.0}[m]
 
-        if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0:
+        if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0 and img0 is not None and img1 is not None:
             """先超后补"""
             img0, img1 = self.sr_module.svfi_process(img0), self.sr_module.svfi_process(img1)
 
@@ -1290,12 +1290,12 @@ class InterpWorkFlow:
 
             else:
                 img0 = self.crop_read_img(Tools.gen_next(videogen))
-                img1 = img0
+                img1 = img0.copy()
                 last_frame_key = check_frame_list[0]
                 now_a_key = last_frame_key
                 for frame_cnt in range(1, len(check_frame_list)):
                     now_b_key = check_frame_list[frame_cnt]
-                    img1 = img0
+                    img1 = img0.copy()
                     """A - Interpolate -> B"""
                     while True:
                         last_possible_scene = img1
@@ -1420,16 +1420,16 @@ class InterpWorkFlow:
                 continue
             else:
                 if diff < self.ARGS.remove_dup_threshold:
-                    before_img = img1
+                    before_img = img1.copy()
                     is_scene = False
                     while diff < self.ARGS.remove_dup_threshold:
                         skip += 1
                         self.scene_detection.update_scene_status(now_frame, "dup")
-
+                        last_frame = img1.copy()
                         img1 = self.crop_read_img(Tools.gen_next(videogen))
 
                         if img1 is None:
-                            img1 = before_img
+                            img1 = last_frame
                             is_end = True
                             break
 
@@ -1482,7 +1482,7 @@ class InterpWorkFlow:
                 if valid_response != 0:
                     self.logger.error(f"Steam Validation Failed, code {valid_response}")
                     return
-            steam_dlc_check = self.STEAM.CheckProDLC()
+            steam_dlc_check = self.STEAM.CheckProDLC(0)
             if not steam_dlc_check:
                 _msg = "SVFI - Pro DLC Not Purchased,"
                 if self.ARGS.extract_only or self.ARGS.render_only:
