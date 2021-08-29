@@ -526,7 +526,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                     return
 
                 if not self.is_free:
-                    valid_response = self.STEAM.CheckProDLC()
+                    valid_response = self.STEAM.CheckProDLC(0)
                     if not valid_response:
                         self.STEAM.steam_valid = False
                         warning_title = _translate('', "未购买专业版！SVFI用不了啦！")
