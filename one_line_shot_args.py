@@ -26,8 +26,8 @@ os.chdir(os.path.dirname(dname))
 sys.path.append(dname)
 
 """输入命令行参数"""
-parser = argparse.ArgumentParser(prog="#### RIFE CLI tool/补帧分步设置命令行工具 by Jeanna ####",
-                                 description='Interpolation for sequences of images')
+parser = argparse.ArgumentParser(prog="#### SVFI CLI tool by Jeanna ####",
+                                 description='Interpolation for long video/imgs footage')
 basic_parser = parser.add_argument_group(title="Basic Settings, Necessary")
 basic_parser.add_argument('-i', '--input', dest='input', type=str, required=True,
                           help="原视频/图片序列文件夹路径")
@@ -1053,6 +1053,13 @@ class InterpWorkFlow:
             else:
                 return None
 
+        def sobel(src):
+            src = cv2.GaussianBlur(src, (3, 3), 0)
+            gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+            grad_x = cv2.Sobel(gray, -1, 3, 0, ksize=5)
+            grad_y = cv2.Sobel(gray, -1, 0, 3, ksize=5)
+            return cv2.addWeighted(grad_x, 0.5, grad_y, 0.5, 0)
+
         def calc_flow_distance(pos0: int, pos1: int, _use_flow=True):
             if not _use_flow:
                 return diff_canny(pos0, pos1)
@@ -1081,7 +1088,10 @@ class InterpWorkFlow:
                 return canny_dict[(pos0, pos1)]
             if (pos1, pos0) in canny_dict:
                 return canny_dict[(pos1, pos0)]
-            canny_diff = cv2.Canny(cv2.absdiff(get_img(pos0), get_img(pos0)), 100, 200).mean()
+            img0, img1 = get_img(pos0), get_img(pos1)
+            if self.ARGS.use_dedup_sobel:
+                img0, img1 = sobel(img0), sobel(img1)
+            canny_diff = cv2.Canny(cv2.absdiff(img0, img1), 100, 200).mean()
             canny_dict[(pos0, pos1)] = canny_diff
             return canny_diff
 
@@ -1138,9 +1148,11 @@ class InterpWorkFlow:
             check_frame = Tools.gen_next(videogen_check)
             if check_frame is None:
                 break
+            check_frame_data[check_frame_cnt] = check_frame
             if len(check_frame_list):  # len>1
-                if Tools.get_norm_img_diff(input_frame_data[check_frame_list[-1]],
-                                           check_frame) < 0.001:
+                # if Tools.get_norm_img_diff(input_frame_data[check_frame_list[-1]],
+                #                            check_frame) < 0.001:
+                if diff_canny(check_frame_list[-1], check_frame_cnt) < 0.007:
                     # do not use pure scene check to avoid too much duplication result
                     # duplicate frames
                     continue
@@ -1148,9 +1160,8 @@ class InterpWorkFlow:
                 pbar.update(1)
                 pbar.set_description(
                     f"Process at Extract Frame {check_frame_cnt}")
-            check_frame_list.append(check_frame_cnt)  # key list
             input_frame_data[check_frame_cnt] = check_frame
-            check_frame_data[check_frame_cnt] = cv2.GaussianBlur(check_frame, (3, 3), 0)
+            check_frame_list.append(check_frame_cnt)  # key list
         if not len(check_frame_list):
             if init:
                 pbar.close()

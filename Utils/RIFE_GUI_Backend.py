@@ -198,17 +198,20 @@ class SVFI_Run_Others(QThread):
 class SVFI_Run(QThread):
     run_signal = pyqtSignal(str)
 
-    def __init__(self, parent=None, concat_only=False, extract_only=False, render_only=False):
+    def __init__(self, parent=None, concat_only=False, extract_only=False, render_only=False, task_list: list = None):
         """
         Launch Task Thread
         :param parent:
         :param concat_only:
         :param extract_only:
+        :param render_only:
+        :param task_list: [int], only execute selected task
         """
         super(SVFI_Run, self).__init__(parent)
         self.concat_only = concat_only
         self.extract_only = extract_only
         self.render_only = render_only
+        self.task_list = task_list
         self.command = ""
         self.current_proc = None
         self.kill = False
@@ -274,7 +277,7 @@ class SVFI_Run(QThread):
         update sub process status
         :return:
         """
-        emit_json = {"cnt": self.task_cnt, "current": self.current_step, "finished": finished,
+        emit_json = {"cnt": len(self.task_list), "current": self.current_step, "finished": finished,
                      "notice": notice, "subprocess": sp_status, "returncode": returncode}
         emit_json = json.dumps(emit_json)
         self.run_signal.emit(emit_json)
@@ -298,27 +301,30 @@ class SVFI_Run(QThread):
             command_list = list()
             for item_data in input_list_data['inputs']:
                 input_path, command = self.build_command(item_data)
-                if not len(command):
-                    continue
+                # if not len(command):
+                #     continue
                 command_list.append((input_path, command))
 
             self.current_step = 0
             self.task_cnt = len(command_list)
+            if self.task_list is None or not len(self.task_list):
+                logger.info("Add All tasks into queue")
+                self.task_list = list(range(self.task_cnt))
 
             if self.task_cnt > 1:
                 """MultiTask"""
                 appData.setValue("batch", True)
 
-            if not self.task_cnt:
-                logger.info("Task List Empty, Please Check Your Settings! (input fps for example)")
-                _msg = _translate('', '请点击输入条目以更新设置，并确认输入输出帧率不为0')
-                self.update_status(True, f"\nTask List is Empty!\n{_msg}",
-                                   returncode=404)
-                return
-
             interval_time = time.time()
             try:
-                for input_path, command in command_list:
+                for i, command_data in enumerate(command_list):
+                    input_path, command = command_data
+                    if i not in self.task_list:
+                        logger.info(f"Skip task {i}")
+                        continue
+                    if not len(command):
+                        logger.warning(f"At task {i}, Invalid Input Path: {command}")
+                        continue
                     logger.info(f"Designed Command:\n{command}")
                     proc_args = shlex.split(command)
                     self.current_proc = sp.Popen(args=proc_args, stdout=sp.PIPE, stderr=sp.STDOUT, encoding='utf-8',
@@ -377,6 +383,14 @@ class SVFI_Run(QThread):
             except Exception:
                 logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
 
+            if self.current_proc is None:
+                """Not one single task ever started"""
+                logger.error("Task List Empty, Please Check Your Settings! (input fps for example)")
+                _msg = _translate('', '请点击输入条目以更新设置，并确认输入输出帧率不为0')
+                self.update_status(True, f"\nTask List is Empty!\n{_msg}",
+                                   returncode=404)
+                return
+
             self.update_status(True, returncode=self.current_proc.returncode)
             logger.info("Tasks Finished")
             if self.current_proc.returncode == 0:
@@ -389,10 +403,10 @@ class SVFI_Run(QThread):
                     logger.info("Task Finished Normally, User Request to Hibernate")
                     pp = Tools.popen("shutdown -h")
                     pp.wait()
+            return
         except Exception:
             logger.error("Task Badly Finished", traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self.update_status(True, returncode=1)
-        pass
 
     def kill_proc_exec(self):
         self.kill = True
@@ -649,7 +663,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             """New Initiation of GUI"""
             try:
                 input_list_data = json.loads(appData.value("gui_inputs", ""))
-                if not len(self.function_get_input_paths()):
+                if not self.InputFileName.count():
                     for item_data in input_list_data['inputs']:
                         config_maintainer = SVFI_Config_Manager(item_data, dname)
                         input_path = config_maintainer.FetchConfig()
@@ -741,8 +755,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.UseFixedScdet.setChecked(appData.value("use_scdet_fixed", False, type=bool))
         self.ScdetMaxDiffSelector.setValue(appData.value("scdet_fixed_max", 40, type=int))
         self.ScdetMode.setCurrentIndex(appData.value("scdet_mode", 0, type=int))
-        # self.DupRmChecker.setChecked(appData.value("remove_dup", False, type=bool))
         self.DupRmMode.setCurrentIndex(appData.value("remove_dup_mode", 0, type=int))
+        self.UseSobelChecker.setChecked(appData.value("use_dedup_sobel", False, type=bool))
         self.DupFramesTSelector.setValue(appData.value("remove_dup_threshold", 10.00, type=float))
 
         """AI Super Resolution Configuration"""
@@ -873,6 +887,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         """Duplicate Frames Removal"""
         appData.setValue("remove_dup_mode", self.DupRmMode.currentIndex())
+        appData.setValue("use_dedup_sobel", self.UseSobelChecker.isChecked())
         appData.setValue("remove_dup_threshold", self.DupFramesTSelector.value())
 
         """RAM Management"""
@@ -1342,10 +1357,25 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if path_type == 1:
             return os.path.join(sr_ncnn_dir, key_word, "models")
 
-    def function_load_all_tasks_settings(self):
-        for it in range(len(self.function_get_input_paths())):
-            self.InputFileName.setCurrentRow(it)
-            self.on_InputFileName_currentItemChanged()
+    def function_load_tasks_settings(self, load_all=False, load_one=False):
+        task_data = self.InputFileName.getItems()
+        task_list = list()
+        for t in task_data:
+            if self.InputFileName.itemWidget(t).iniCheck.isChecked():
+                task_list.append(self.InputFileName.getWidgetData(t)['row'])
+        if load_all:
+            """Activate All Tasks"""
+            for it in range(self.InputFileName.count()):
+                self.InputFileName.setCurrentRow(it)
+                self.on_InputFileName_currentItemChanged()
+            return list(range(self.InputFileName.count()))
+        elif load_one:
+            task_current_item = self.InputFileName.currentItem()
+            task_list.clear()
+            if task_current_item is not None:
+                task_list.append(self.InputFileName.getWidgetData(task_current_item)['row'])
+            pass
+        return task_list
 
     def process_update_rife(self, json_data):
         """
@@ -1564,7 +1594,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         懒人式启动补帧按钮
         :return:
         """
-        self.function_load_all_tasks_settings()
+        task_list = self.function_load_tasks_settings()
         if not self.settings_check_args():
             return
         self.settings_load_current()  # update settings
@@ -1585,7 +1615,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AllInOne.setEnabled(False)
         self.InputFileName.setEnabled(False)
         self.progressBar.setValue(0)
-        RIFE_thread = SVFI_Run()
+        RIFE_thread = SVFI_Run(task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
 
@@ -1821,6 +1851,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_DupRmMode_currentTextChanged(self):
         self.DupFramesTSelector.setVisible(
             self.DupRmMode.currentIndex() == 1)  # Single Threshold Duplicated Frames Removal
+        self.UseSobelChecker.setVisible(self.DupRmMode.currentIndex() > 1)
 
     @pyqtSlot(bool)
     def on_ImgOutputChecker_clicked(self):
@@ -1921,12 +1952,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Concat Existed Chunks
         :return:
         """
-        self.function_load_all_tasks_settings()
+        task_list = self.function_load_tasks_settings(load_one=True)
         self.settings_load_current()  # update settings
         self.ConcatAllButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
         self.progressBar.setValue(0)
-        RIFE_thread = SVFI_Run(concat_only=True)
+        RIFE_thread = SVFI_Run(concat_only=True, task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
@@ -1939,12 +1970,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Extract Frames from current input
         :return:
         """
-        self.function_load_all_tasks_settings()
+        task_list = self.function_load_tasks_settings(load_one=True)
         self.settings_load_current()
         self.StartExtractButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
         self.progressBar.setValue(0)
-        RIFE_thread = SVFI_Run(extract_only=True)
+        RIFE_thread = SVFI_Run(extract_only=True, task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
@@ -1957,12 +1988,12 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Render Input based on current settings
         :return:
         """
-        self.function_load_all_tasks_settings()
+        task_list = self.function_load_tasks_settings(load_one=True)
         self.settings_load_current()
         self.StartRenderButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
         self.progressBar.setValue(0)
-        RIFE_thread = SVFI_Run(render_only=True)
+        RIFE_thread = SVFI_Run(render_only=True, task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
@@ -2185,7 +2216,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         reply = self.function_send_msg("Quit", _translate('', "是否保存当前设置？"), 3)
         if reply == QMessageBox.Yes:
-            self.function_load_all_tasks_settings()
+            self.function_load_tasks_settings(load_all=True)
             self.settings_load_config(appDataPath)
             self.settings_load_current()
             event.accept()

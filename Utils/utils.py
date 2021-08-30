@@ -653,18 +653,16 @@ class ArgumentManager:
     is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.11"
+    gui_version = "3.5.12"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.14"
+    ols_version = "6.9.15"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix Loss of Frames at the end of input
-    - Fix "SR - interpolate" mode None Error at the end of input
-    - Add Forward Ensemble warning for RIFE 2.x Model
-    - Optimize i18n
+    - Add Select Task Mode, can execute target tasks
+    - Optimize Dedup 1-n Mode, add sobel to optimize removal of simple translation scene
     """
 
     path_len_limit = 230
@@ -707,6 +705,7 @@ class ArgumentManager:
         self.scdet_mode = args.get("scdet_mode", 0)
         self.remove_dup_mode = args.get("remove_dup_mode", 0)
         self.remove_dup_threshold = args.get("remove_dup_threshold", 0.1)
+        self.use_dedup_sobel = args.get("use_dedup_sobel", False)
 
         self.use_manual_buffer = args.get("use_manual_buffer", False)
         self.manual_buffer_size = args.get("manual_buffer_size", 1)
