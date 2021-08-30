@@ -708,7 +708,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>4</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -991,10 +991,10 @@
                      <widget class="QWidget" name="ScdetSettings">
                       <property name="geometry">
                        <rect>
-                        <x>0</x>
+                        <x>-34</x>
                         <y>0</y>
-                        <width>398</width>
-                        <height>395</height>
+                        <width>432</width>
+                        <height>378</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1106,6 +1106,16 @@
                                 </property>
                                 <property name="value">
                                  <double>2.000000000000000</double>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QCheckBox" name="UseSobelChecker">
+                                <property name="toolTip">
+                                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用Sobel进行边缘检测（复合canny）&lt;/p&gt;&lt;p&gt;可减少背景平移误判，但会降低对于景深较大的一拍N运动画面判断正确率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;推荐开启试试&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                </property>
+                                <property name="text">
+                                 <string>Sobel (?)</string>
                                 </property>
                                </widget>
                               </item>
