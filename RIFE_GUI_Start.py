@@ -47,7 +47,7 @@ if hasattr(Qt, 'AA_EnableHighDpiScaling'):
 """Initiate APP"""
 app = QApplication(sys.argv)
 app_backend_module = RIFE_GUI_Backend
-app_backend = app_backend_module.RIFE_GUI_BACKEND()
+app_backend = app_backend_module.UiBackend()
 try:
     if app_backend.STEAM.steam_valid:
         form = QCandyUi.CandyWindow.createWindow(app_backend, theme="blueDeep", ico_path="svfi.png",

@@ -72,7 +72,7 @@ class InterpWorkFlow:
         self.project_dir = os.path.join(self.ARGS.output_dir, self.project_name)
 
         if not os.path.exists(self.project_dir):
-            os.mkdir(self.project_dir)
+            os.makedirs(self.project_dir, exist_ok=True)
 
         """Set Logger"""
         sys.path.append(self.project_dir)
@@ -80,7 +80,6 @@ class InterpWorkFlow:
 
         self.logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
                          self.ARGS.input)
-        self.logger.info("Changing working dir to {0}".format(dname))
 
         """Steam Validation"""
         self.STEAM = SteamUtils(self.ARGS.is_steam, logger=self.logger)
@@ -95,10 +94,6 @@ class InterpWorkFlow:
         """Set input output and initiate environment"""
         self.input = self.ARGS.input
         self.output = self.ARGS.output_dir
-        self.input_dir = os.path.join(self.project_dir, 'frames')
-        self.interp_dir = os.path.join(self.project_dir, 'interp')
-        self.scene_dir = os.path.join(self.project_dir, 'scenes')
-        self.env = [self.input_dir, self.interp_dir, self.scene_dir]
         if self.ARGS.is_img_output:
             self.output = os.path.join(self.output, self.project_name)
             os.makedirs(self.output, exist_ok=True)
@@ -401,12 +396,12 @@ class InterpWorkFlow:
                      'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
                      'max-cll="1000,100":hdr10-opt=1:repeat-headers=1',
             "hdr10+": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
-                     'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
-                     'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                     'deblock=-1:sao=0:'
-                     'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                     'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                     f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata}"'
+                      'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
+                      'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
+                      'deblock=-1:sao=0:'
+                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
+                      'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
+                      f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata}"'
         }
 
         params_264s = {
@@ -686,7 +681,7 @@ class InterpWorkFlow:
             else:
                 _output_dict.update({"-bit-depth": "8"})
 
-            preset_mapper = {"slowest": "4", "slow": "5", "fast": "7", "faster":"9"}
+            preset_mapper = {"slowest": "4", "slow": "5", "fast": "7", "faster": "9"}
 
             if "H265" in self.ARGS.render_encoder_preset:
                 _output_dict.update({"-encMode": preset_mapper[self.ARGS.render_encoder_preset]})
@@ -1016,12 +1011,6 @@ class InterpWorkFlow:
             else:
                 w, h = list(map(lambda x: round(x), self.video_info["size"]))
 
-            # if w * h > 1920 * 1080:
-            #     if self.ARGS.rife_scale > 0.5:
-            #         """超过1080p锁光流尺度为0.5"""
-            #         self.ARGS.rife_scale = 0.5
-            #     self.logger.warning(f"Big Resolution (>1080p) Input found")
-            # else:
             self.logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
@@ -1077,9 +1066,9 @@ class InterpWorkFlow:
                                                  flow=None, pyr_scale=0.5, levels=1, iterations=20,
                                                  winsize=15, poly_n=5, poly_sigma=1.1, flags=0)
             flow = (flow0 - flow1) / 2
-            x = flow[:, :, 0]
-            y = flow[:, :, 1]
-            dis = np.linalg.norm(x) + np.linalg.norm(y)
+            _x = flow[:, :, 0]
+            _y = flow[:, :, 1]
+            dis = np.linalg.norm(_x) + np.linalg.norm(_y)
             flow_dict[(pos0, pos1)] = dis
             return dis
 
@@ -1483,6 +1472,7 @@ class InterpWorkFlow:
 
     # @profile
     def run(self):
+        run_all_time = datetime.datetime.now()
         if self.ARGS.is_steam:
             if not self.STEAM.steam_valid:
                 error = self.STEAM.steam_error.split('\n')[-1]
@@ -1672,7 +1662,8 @@ class InterpWorkFlow:
             self.logger.info("Successfully Remove Config File")
             os.remove(self.ARGS.config)
         self.steam_update_achv()
-        self.logger.info(f"Program finished at {datetime.datetime.now()}")
+        self.logger.info(f"Program finished at {datetime.datetime.now()}: "
+                         f"Duration: {datetime.datetime.now() - run_all_time}")
         pass
 
     def steam_update_achv(self):
@@ -1742,7 +1733,7 @@ class InterpWorkFlow:
             raise OSError(f"Input file not valid: {self.input}, "
                           f"Please Check Your Input Settings(Start Point, Start Frame)")
 
-        render_path, _ = self.get_output_path()
+        render_path, output_ext = self.get_output_path()
         renderer = self.generate_frame_renderer(render_path)
         pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
         pbar.update(n=start_frame)
@@ -1759,6 +1750,28 @@ class InterpWorkFlow:
             img1 = self.crop_read_img(Tools.gen_next(videogen))
 
         renderer.close()
+
+        if self.ARGS.is_save_audio:
+            audio_path = self.input
+            map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy '
+            if self.ARGS.input_start_point or self.ARGS.input_end_point:
+                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -c:a aac -ab 640k '
+                if self.ARGS.input_end_point is not None:
+                    map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
+                if self.ARGS.input_start_point is not None:
+                    map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
+
+            color_info_str = ' '.join(Tools.dict2Args(self.color_info))
+            concat_filepath = os.path.splitext(render_path)[0] + '_audio' + output_ext
+            ffmpeg_command = f'{self.ffmpeg} -hide_banner -i {Tools.fillQuotation(render_path)} {map_audio} -c:v copy ' \
+                             f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" ' \
+                             f'{color_info_str} ' \
+                             f'-y'
+            self.logger.info("Concating Audio")
+            self.logger.debug(f"Concat command: {ffmpeg_command}")
+            sp = Tools.popen(ffmpeg_command)
+            sp.wait()
+            os.remove(render_path)
 
     def get_output_path(self):
         """
@@ -1860,7 +1873,8 @@ class InterpWorkFlow:
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
         if self.hdr_check_status == 3:
-            dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS, self.interpolation_exp)
+            dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS,
+                                       self.interpolation_exp)
             dovi_maker.run()
         if self.ARGS.is_output_only and os.path.exists(concat_filepath):
             if not os.path.getsize(concat_filepath):
@@ -1885,9 +1899,5 @@ class InterpWorkFlow:
 
 
 interpworkflow = InterpWorkFlow(ARGS)
-# debug
 interpworkflow.run()
 sys.exit(0)
-# if __name__ == "__main__":
-#     interpworkflow.run()
-#     sys.exit(0)
