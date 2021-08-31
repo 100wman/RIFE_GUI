@@ -69,51 +69,9 @@ class EncodePresetAssemply:
              "H265,10bit": ["slowest", "slow", "fast", "faster"], },
 
     }
-    preset = {
-        "HEVC": {
-            "x265": ["slow", "ultrafast", "fast", "medium", "veryslow"],
-            "NVENC": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
-            "QSV": ["slow", "fast", "medium", "veryslow", ],
-        },
-        "H264": {
-            "x264": ["slow", "ultrafast", "fast", "medium", "veryslow", "placebo", ],
-            "NVENC": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
-            "QSV": ["slow", "fast", "medium", "veryslow", ],
-        },
-        "ProRes": ["hq", "4444", "4444xq"]
-    }
-    pixfmt = {
-        "HEVC": {
-            "x265": ["yuv420p10le", "yuv420p", "yuv422p", "yuv444p", "yuv422p10le", "yuv444p10le", "yuv420p12le",
-                     "yuv422p12le", "yuv444p12le"],
-            "NVENC": ["p010le", "yuv420p", "yuv444p", ],
-            "QSV": ["yuv420p", "p010le", ],
-        },
-        "H264": {
-            "x264": ["yuv420p", "yuv422p", "yuv444p", "yuv420p10le", "yuv422p10le", "yuv444p10le", ],
-            "NVENC": ["yuv420p", "yuv444p"],
-            "QSV": ["yuv420p", ],
-        },
-        "ProRes": ["yuv422p10le", "yuv444p10le"]
-    }
 
 
 class SettingsPresets:
-    genre = \
-        {0:  # 动漫
-            {0:  # 速度
-                {
-                    0: {"encoder": "CPU", "...": "..."},  # CPU
-                    1: 1,  # NVENC
-                }
-            },
-            1:  # 实拍
-                {0:  # 速度
-                     {0: 0,  # CPU
-                      1: 1  # NVENC
-                      }
-                 }
-        }
     genre_2 = {(0, 0, 0): {"render_crf": 16}}
 
 
@@ -653,16 +611,19 @@ class ArgumentManager:
     is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.12"
+    gui_version = "3.5.13"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.15"
+    ols_version = "6.9.16"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add Select Task Mode, can execute target tasks
-    - Optimize Dedup 1-n Mode, add sobel to optimize removal of simple translation scene
+    - Fix No Audio Output under Render-Only Mode
+    - Fix Global Settings Mode(make it online)
+    - Reduce Scene Death Threshold under Auto mode to increase result credulity
+    - Add Timer for all mission
+    - UI modification
     """
 
     path_len_limit = 230
@@ -1136,15 +1097,14 @@ class TransitionDetection_ST:
     def __init__(self, project_dir, scene_queue_length, scdet_threshold=50, no_scdet=False,
                  use_fixed_scdet=False, fixed_max_scdet=50, scdet_output=False):
         """
-        转场检测类
-        :param scdet_flow: 输入光流模式：0：2D 1：3D
-        :param scene_queue_length: 转场判定队列长度
-        :param fixed_scdet:
-        :param scdet_threshold: （标准输入）转场阈值
-        :param output: 输出
-        :param no_scdet: 不进行转场识别
-        :param use_fixed_scdet: 使用固定转场阈值
-        :param fixed_max_scdet: 使用的最大转场阈值
+
+        :param project_dir: 项目所在文件夹
+        :param scene_queue_length:
+        :param scdet_threshold:
+        :param no_scdet: 无转场检测
+        :param use_fixed_scdet: 使用固定转场识别
+        :param fixed_max_scdet: 固定转场识别模式下的阈值
+        :param scdet_output:
         """
         self.scdet_output = scdet_output
         self.scdet_threshold = scdet_threshold
@@ -1157,7 +1117,7 @@ class TransitionDetection_ST:
         self.black_scene_queue = deque(maxlen=self.scene_stack_len)  # 黑场开场特判队列
         self.scene_checked_queue = deque(maxlen=self.scene_stack_len // 2)  # 已判断的转场absdiff特判队列
         self.utils = Tools
-        self.dead_thres = 80
+        self.dead_thres = 60
         self.born_thres = 2
         self.img1 = None
         self.img2 = None

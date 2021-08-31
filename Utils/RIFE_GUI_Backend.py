@@ -34,16 +34,15 @@ except ImportError:
 
 Utils = Tools()
 abspath = os.path.abspath(__file__)
-dname = os.path.dirname(os.path.dirname(abspath))
-ddname = os.path.dirname(dname)
+appDir = os.path.dirname(os.path.dirname(abspath))
 
-appDataPath = os.path.join(dname, "SVFI.ini")
+appDataPath = os.path.join(appDir, "SVFI.ini")
 appData = QSettings(appDataPath, QSettings.IniFormat)
 appData.setIniCodec("UTF-8")
 
-logger = Utils.get_logger("GUI", dname)
-ols_potential = os.path.join(dname, "one_line_shot_args.exe")
-ico_path = os.path.join(dname, "svfi.ico")
+logger = Utils.get_logger("GUI", appDir)
+ols_potential = os.path.join(appDir, "one_line_shot_args.exe")
+ico_path = os.path.join(appDir, "svfi.ico")
 
 translator = SVFITranslator()
 
@@ -52,9 +51,9 @@ def _translate(from_where='@default', input_text=""):
     return QCoreApplication.translate('', input_text)
 
 
-class SVFI_Help_Dialog(QDialog, SVFI_help.Ui_Dialog):
+class UiHelpDialog(QDialog, SVFI_help.Ui_Dialog):
     def __init__(self, parent=None):
-        super(SVFI_Help_Dialog, self).__init__(parent)
+        super(UiHelpDialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
@@ -62,9 +61,9 @@ class SVFI_Help_Dialog(QDialog, SVFI_help.Ui_Dialog):
         self.retranslateUi(self)
 
 
-class SVFI_About_Dialog(QDialog, SVFI_about.Ui_Dialog):
+class UiAboutDialog(QDialog, SVFI_about.Ui_Dialog):
     def __init__(self, parent=None):
-        super(SVFI_About_Dialog, self).__init__(parent)
+        super(UiAboutDialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
@@ -72,16 +71,16 @@ class SVFI_About_Dialog(QDialog, SVFI_about.Ui_Dialog):
         self.retranslateUi(self)
 
 
-class SVFI_Preview_Args_Dialog(QDialog, SVFI_preview_args.Ui_Dialog):
+class UiPreviewArgsDialog(QDialog, SVFI_preview_args.Ui_Dialog):
     def __init__(self, parent=None):
-        super(SVFI_Preview_Args_Dialog, self).__init__(parent)
+        super(UiPreviewArgsDialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
         _app.installTranslator(translator)  # 重新翻译主界面
         self.retranslateUi(self)
         self.default_args = self.ArgsLabel.text()
-        self.args_list = re.findall("\{(.*?)\}", self.default_args)
+        self.args_list = re.findall("{(.*?)}", self.default_args)
         self.ArgumentsPreview()
 
     def ArgumentsPreview(self):
@@ -103,11 +102,11 @@ class SVFI_Preview_Args_Dialog(QDialog, SVFI_preview_args.Ui_Dialog):
         self.ArgsLabel.setText(args_string)
 
 
-class SVFI_Preference_Dialog(QDialog, SVFI_preference.Ui_Dialog):
+class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
     preference_signal = pyqtSignal(dict)
 
     def __init__(self, parent=None, preference_dict=None):
-        super(SVFI_Preference_Dialog, self).__init__(parent)
+        super(UiPreferenceDialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
@@ -145,6 +144,7 @@ class SVFI_Preference_Dialog(QDialog, SVFI_preference.Ui_Dialog):
         self.UseGlobalSettingsChecker.setChecked(self.preference_dict["use_global_settings"])
         pass
 
+    # noinspection PyUnresolvedReferences
     def request_preference(self):
         """
         申请偏好设置更改
@@ -165,7 +165,8 @@ class SVFI_Preference_Dialog(QDialog, SVFI_preference.Ui_Dialog):
         self.preference_signal.emit(preference_dict)
 
 
-class SVFI_Run_Others(QThread):
+# noinspection PyUnresolvedReferences
+class UiRunThread(QThread):
     run_signal = pyqtSignal(dict)
 
     def __init__(self, command, task_id=0, data=None, parent=None):
@@ -176,7 +177,7 @@ class SVFI_Run_Others(QThread):
         :param data: 信息回传时的数据
         :param parent:
         """
-        super(SVFI_Run_Others, self).__init__(parent)
+        super(UiRunThread, self).__init__(parent)
         self.command = command
         self.task_id = task_id
         self.data = data
@@ -195,7 +196,7 @@ class SVFI_Run_Others(QThread):
     pass
 
 
-class SVFI_Run(QThread):
+class UiRun(QThread):
     run_signal = pyqtSignal(str)
 
     def __init__(self, parent=None, concat_only=False, extract_only=False, render_only=False, task_list: list = None):
@@ -207,7 +208,7 @@ class SVFI_Run(QThread):
         :param render_only:
         :param task_list: [int], only execute selected task
         """
-        super(SVFI_Run, self).__init__(parent)
+        super(UiRun, self).__init__(parent)
         self.concat_only = concat_only
         self.extract_only = extract_only
         self.render_only = render_only
@@ -223,7 +224,7 @@ class SVFI_Run(QThread):
 
     def build_command(self, item_data: dict) -> (str, str):
         global appData
-        config_manager = SVFI_Config_Manager(item_data, dname)
+        config_manager = SVFI_Config_Manager(item_data, appDir)
         config_path = config_manager.FetchConfig()
         if config_path is None:
             logger.error(f"Invalid Task: {item_data}")
@@ -282,12 +283,14 @@ class SVFI_Run(QThread):
         emit_json = json.dumps(emit_json)
         self.run_signal.emit(emit_json)
 
-    def maintain_multitask(self):
+    @staticmethod
+    def maintain_multitask():
         appData.setValue("output_chunk_cnt", 1)
         appData.setValue("interp_start", 0)
         appData.setValue("input_start_point", "00:00:00")
         appData.setValue("input_end_point", "00:00:00")
 
+    # noinspection PyBroadException
     def run(self):
         try:
             logger.info("SVFI Task Run")
@@ -428,7 +431,7 @@ class SVFI_Run(QThread):
     pass
 
 
-class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
+class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     kill_proc = pyqtSignal(int)
     notfound = pyqtSignal(int)
 
@@ -447,7 +450,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         添加新选项/变量 3/3 实现先于load_current_settings的特殊新配置
         :param parent:
         """
-        super(RIFE_GUI_BACKEND, self).__init__()
+        super(UiBackend, self).__init__()
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
         _app.installTranslator(translator)  # 重新翻译主界面
@@ -548,7 +551,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                         self.function_send_msg(warning_title, warning_msg)
                         return
 
-        os.chdir(dname)
+        os.chdir(appDir)
 
     def settings_change_lang(self, lang: str):
         logger.debug(f"Translate To Lang = {lang}")
@@ -665,7 +668,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 input_list_data = json.loads(appData.value("gui_inputs", ""))
                 if not self.InputFileName.count():
                     for item_data in input_list_data['inputs']:
-                        config_maintainer = SVFI_Config_Manager(item_data, dname)
+                        config_maintainer = SVFI_Config_Manager(item_data, appDir)
                         input_path = config_maintainer.FetchConfig()
                         if input_path is not None and os.path.exists(input_path):
                             self.InputFileName.addFileItem(item_data['input_path'],
@@ -802,9 +805,9 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
 
-        appData.setValue("app_dir", ddname)
+        appData.setValue("app_dir", appDir)
         appData.setValue("ols_path", ols_potential)
-        appData.setValue("ffmpeg", dname)
+        appData.setValue("ffmpeg", appDir)
         if not os.path.exists(ols_potential):
             appData.setValue("ols_path",
                              r"D:\60-fps-Project\Projects\RIFE GUI\one_line_shot_args.py")
@@ -1080,6 +1083,46 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_set_start_info(last_frame + 1, chunk_cnt + 1, False)
         return
 
+    def settings_load_config(self, config_path: str):
+        """
+
+        :param config_path:
+        :return:
+        """
+        global appData
+        appData = QSettings(config_path, QSettings.IniFormat)
+        appData.setIniCodec("UTF-8")
+
+    def settings_maintain_item_settings(self, widget_data: dict):
+        global appData
+        if self.use_global_settings:
+            """First detect using use global settings"""
+            self.settings_load_config(appDataPath)  # change to root settings
+        self.settings_load_current()  # 保存跳转前设置
+        if self.last_item is None:
+            self.last_item = widget_data
+        config_maintainer = SVFI_Config_Manager(self.last_item, appDir)
+        config_maintainer.DuplicateConfig()  # 将当前设置保存到上一任务的配置文件，并准备跳转到新任务
+        if not self.use_global_settings:
+            config_maintainer = SVFI_Config_Manager(widget_data, appDir)
+            config_path = config_maintainer.FetchConfig()
+            if config_path is None:
+                config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
+                config_path = config_maintainer.FetchConfig()
+            self.settings_load_config(config_path)
+            self.settings_update_pack(item_update=self.use_global_settings)
+        self.last_item = widget_data
+
+    @pyqtSlot(bool)
+    def settings_load_settings_templates(self):
+        config_dir = os.path.join(appDir, 'Configs', "SVFI_Config_Template_*.ini")
+        template_paths = glob.glob(config_dir)
+        self.SettingsTemplateSelector.clear()
+        for tp in template_paths:
+            template_name = re.findall('SVFI_Config_Template_(.*?)\.ini', tp)
+            if len(template_name):
+                self.SettingsTemplateSelector.addItem(template_name[0])
+
     def settings_update_gpu_info(self, item_update=False):
         if item_update:
             card_id = appData.value("use_specific_gpu", 0, type=int)
@@ -1182,13 +1225,39 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         for model in model_list:
             self.AiSrModuleSelector.addItem(f"{model}")
 
+    def settings_link_shortcut(self):
+        self.homeActionButton.setShortcut("ctrl+1")
+        self.outputActionButton.setShortcut("ctrl+2")
+        self.resumeActionButton.setShortcut("ctrl+3")
+        self.scdetActionButton.setShortcut("ctrl+4")
+        self.resolutionActionButton.setShortcut("ctrl+5")
+        self.renderActionButton.setShortcut("ctrl+6")
+        self.rifeActionButton.setShortcut("ctrl+7")
+        self.presetActionButton.setShortcut("ctrl+8")
+        self.toolboxActionButton.setShortcut("ctrl+9")
+        self.homeActionButton.clicked.connect(lambda i=0: self.tabWidget.setCurrentIndex(i))
+        self.outputActionButton.clicked.connect(lambda i=1: self.tabWidget.setCurrentIndex(i))
+        self.resumeActionButton.clicked.connect(lambda i=0: self.toolBox.setCurrentIndex(i))
+        self.scdetActionButton.clicked.connect(lambda i=1: self.toolBox.setCurrentIndex(i))
+        self.resolutionActionButton.clicked.connect(lambda i=2: self.toolBox.setCurrentIndex(i))
+        self.renderActionButton.clicked.connect(lambda i=3: self.toolBox.setCurrentIndex(i))
+        self.rifeActionButton.clicked.connect(lambda i=4: self.toolBox.setCurrentIndex(i))
+        self.presetActionButton.clicked.connect(lambda i=5: self.toolBox.setCurrentIndex(i))
+        self.toolboxActionButton.clicked.connect(lambda i=6: self.toolBox.setCurrentIndex(i))
+
+    def settings_windows_ontop(self):
+        if not self.is_windows_ontop:
+            self.setWindowFlags(QtCore.Qt.Widget)  # 取消置顶
+        else:
+            self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)  # 置顶
+
     def function_generate_log(self, mode=0):
         """
         生成日志并提示用户
         :param mode:0 Error Log 1 Settings Log
         :return:
         """
-        preview_args = SVFI_Preview_Args_Dialog(self).ArgsLabel.text()
+        preview_args = UiPreviewArgsDialog(self).ArgsLabel.text()
         preview_args = html.unescape("\n".join(re.findall('">(.*?)</span>', preview_args)))
         _msg1 = _translate('', '[导出设置预览]')
         status_check = f"{_msg1}\n\n{preview_args}\n\n"
@@ -1292,12 +1361,11 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_send_msg("Parameters unfilled", _translate('', "请填写输入或输出视频路径！"))
             return
 
-        ffmpeg_command = f"""
-            {self.ffmpeg} -i {Tools.fillQuotation(input_a)} -i {Tools.fillQuotation(input_v)} 
-            -map 1:v:0 -map 0:a:0 -c:v copy -c:a copy -shortest {Tools.fillQuotation(output_v)} -y
-        """.strip().strip("\n").replace("\n", "").replace("\\", "/")
+        ffmpeg_command = (f"{self.ffmpeg} -i {Tools.fillQuotation(input_a)} -i {Tools.fillQuotation(input_v)} "
+                          f"-map 1:v:0 -map 0:a:0 -c:v copy -c:a copy "
+                          f"-shortest {Tools.fillQuotation(output_v)} -y").replace("\\", "/")
         logger.info(f"[GUI] concat {ffmpeg_command}")
-        self.chores_thread = SVFI_Run_Others(ffmpeg_command, data={"type": "音视频合并"})
+        self.chores_thread = UiRunThread(ffmpeg_command, data={"type": "音视频合并"})
         self.chores_thread.run_signal.connect(self.function_update_chores_finish)
         self.chores_thread.start()
         self.ConcatButton.setEnabled(False)
@@ -1330,14 +1398,15 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         resize = f"scale={width}:{height},"
         if not all((width, height)):
             resize = ""
-        ffmpeg_command = f"""{self.ffmpeg} -hide_banner -i {Tools.fillQuotation(input_v)} -r {target_fps}
-                         -lavfi "{resize}split[s0][s1];
-                         [s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=floyd_steinberg" 
-                         {"-loop 0" if self.GifLoopChecker.isChecked() else ""}
-                         {Tools.fillQuotation(output_v)} -y""".strip().strip("\n").replace("\n", "").replace("\\", "\\")
+        ffmpeg_command = (f'{self.ffmpeg} -hide_banner -i {Tools.fillQuotation(input_v)} -r {target_fps} '
+                          f'-lavfi "{resize}split[s0][s1];'
+                          f'[s0]palettegen=stats_mode=diff[p];'
+                          f'[s1][p]paletteuse=dither=floyd_steinberg" '
+                          f'{"-loop 0" if self.GifLoopChecker.isChecked() else ""} '
+                          f'{Tools.fillQuotation(output_v)} -y').replace("\\", "/")
 
         logger.info(f"[GUI] create gif: {ffmpeg_command}")
-        self.chores_thread = SVFI_Run_Others(ffmpeg_command, data={"type": "GIF制作"})
+        self.chores_thread = UiRunThread(ffmpeg_command, data={"type": "GIF制作"})
         self.chores_thread.run_signal.connect(self.function_update_chores_finish)
         self.chores_thread.start()
         self.GifButton.setEnabled(False)
@@ -1349,8 +1418,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         :param path_type: 0: algo 1: module
         :return:
         """
-        app_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        ncnn_dir = os.path.join(app_dir, "ncnn")
+        ncnn_dir = os.path.join(appDir, "ncnn")
         sr_ncnn_dir = os.path.join(ncnn_dir, "sr")
         if path_type == 0:
             return sr_ncnn_dir
@@ -1376,6 +1444,21 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 task_list.append(self.InputFileName.getWidgetData(task_current_item)['row'])
             pass
         return task_list
+
+    def function_get_templates(self):
+        templates = [self.SettingsTemplateSelector.itemText(i) for i in range(self.SettingsTemplateSelector.count())]
+        return templates
+
+    def steam_update_achv(self):
+        if not self.is_steam:
+            return
+        ACHV_Use_MX250 = self.STEAM.GetAchv("ACHV_Use_MX250")
+        ACHV_Use_RTX2060 = self.STEAM.GetAchv("ACHV_Use_RTX2060")
+        if all([i in self.DiscreteCardSelector.currentText() for i in ['MX', '250']]) and not ACHV_Use_MX250:
+            self.STEAM.SetAchv("ACHV_Use_MX250")
+        if all([i in self.DiscreteCardSelector.currentText() for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
+            self.STEAM.SetAchv("ACHV_Use_RTX2060")
+        self.STEAM.Store()
 
     def process_update_rife(self, json_data):
         """
@@ -1429,10 +1512,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 return
             elif "error" in data.get("subprocess", "").lower():
                 logger.error(f"[At the end of One Line Shot]: \n {data.get('subprocess')}")
-                _msg1 = _translate('', '程序运行出现错误！')
-                _msg2 = _translate('', '联系开发人员解决')
+                __msg1 = _translate('', '程序运行出现错误！')
+                __msg2 = _translate('', '联系开发人员解决')
                 self.function_send_msg("Something Went Wrong",
-                                       f"{_msg1}\n{data.get('subprocess')}\n{_msg2}", )
+                                       f"{__msg1}\n{data.get('subprocess')}\n{__msg2}", )
                 self.current_failed = True
                 return
 
@@ -1446,7 +1529,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if len(data.get("subprocess", "")):
             dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
-                             "AppID"]
+                             "AppID", "SteamInternal"]
             if any([i in data["subprocess"] for i in dup_keys_list]):
                 tmp = ""
                 lines = data["subprocess"].splitlines()
@@ -1600,7 +1683,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_load_current()  # update settings
 
         if self.preview_args and not self.is_gui_quiet:
-            SVFI_preview_args_form = SVFI_Preview_Args_Dialog(self)
+            SVFI_preview_args_form = UiPreviewArgsDialog(self)
             SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
             # SVFI_preview_args_form.setWindowModality(Qt.ApplicationModal)
             SVFI_preview_args_form.exec_()
@@ -1615,7 +1698,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AllInOne.setEnabled(False)
         self.InputFileName.setEnabled(False)
         self.progressBar.setValue(0)
-        RIFE_thread = SVFI_Run(task_list=task_list)
+        RIFE_thread = UiRun(task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
 
@@ -1639,10 +1722,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         self.settings_auto_set()
 
-    def function_get_templates(self):
-        templates = [self.SettingsTemplateSelector.itemText(i) for i in range(self.SettingsTemplateSelector.count())]
-        return templates
-
     @pyqtSlot(bool)
     def on_AddTemplateButton_clicked(self):
         template_name = self.EditTemplateName.text()
@@ -1654,8 +1733,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         self.settings_load_config(appDataPath)  # appoint appData to root
         self.settings_load_current()  # update appData to current Settings
-        template_config = SVFI_Config_Manager({'input_path': 'Template', 'task_id': f'Template_{template_name}'}, dname,
-                                              logger)
+        template_config = SVFI_Config_Manager({'input_path': 'Template',
+                                               'task_id': f'Template_{template_name}'}, appDir, logger)
         template_config.DuplicateConfig()  # write template settings
         self.SettingsTemplateSelector.addItem(template_name)
         _msg1 = _translate('', '已保存指定预设：')
@@ -1668,7 +1747,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         template_config = SVFI_Config_Manager({'input_path': 'Template',
                                                'task_id': f'Template_{self.SettingsTemplateSelector.currentText()}'},
-                                              dname, logger)
+                                              appDir, logger)
         self.SettingsTemplateSelector.removeItem(self.SettingsTemplateSelector.currentIndex())
         template_config.RemoveConfig()
         self.function_send_msg("Remove Template", _translate('', "已移除指定预设~"), 2)
@@ -1682,8 +1761,8 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         if template_name is None:
             self.function_send_msg("Invalid Template", _translate('', "请先指定预设~"))
             return
-        template_config = SVFI_Config_Manager({'input_path': 'Template', 'task_id': f'Template_{template_name}'}, dname,
-                                              logger)
+        template_config = SVFI_Config_Manager({'input_path': 'Template',
+                                               'task_id': f'Template_{template_name}'}, appDir, logger)
         config_path = template_config.FetchConfig()
         if config_path is None:
             self.function_send_msg("Invalid Config", _translate('', "指定预设不见啦~"))
@@ -1692,20 +1771,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_initiation(item_update=True, template_update=True)
         self.function_send_msg("Config Loaded", _translate('', "已载入指定预设~"), 2)
         if not self.is_gui_quiet:
-            SVFI_preview_args_form = SVFI_Preview_Args_Dialog(self)
+            SVFI_preview_args_form = UiPreviewArgsDialog(self)
             SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
             SVFI_preview_args_form.exec_()
         self.settings_load_config(appDataPath)  # 将appData指针指回root
-
-    @pyqtSlot(bool)
-    def settings_load_settings_templates(self):
-        config_dir = os.path.join(dname, 'Configs', "SVFI_Config_Template_*.ini")
-        template_paths = glob.glob(config_dir)
-        self.SettingsTemplateSelector.clear()
-        for tp in template_paths:
-            template_name = re.findall('SVFI_Config_Template_(.*?)\.ini', tp)
-            if len(template_name):
-                self.SettingsTemplateSelector.addItem(template_name[0])
 
     @pyqtSlot(bool)
     def on_MBufferChecker_clicked(self):
@@ -1905,10 +1974,10 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         # self.settings_free_hide()
 
     @pyqtSlot(int)
-    def on_tabWidget_currentChanged(self, tabIndex):
-        if tabIndex in [2, 3]:
+    def on_tabWidget_currentChanged(self, tab_index):
+        if tab_index in [2, 3]:
             """Step 3"""
-            if tabIndex == 1:
+            if tab_index == 1:
                 self.progressBar.setValue(0)
             logger.info("[Main]: Start Loading Settings")
             self.settings_load_current()
@@ -1957,7 +2026,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ConcatAllButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
         self.progressBar.setValue(0)
-        RIFE_thread = SVFI_Run(concat_only=True, task_list=task_list)
+        RIFE_thread = UiRun(concat_only=True, task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
@@ -1975,7 +2044,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.StartExtractButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
         self.progressBar.setValue(0)
-        RIFE_thread = SVFI_Run(extract_only=True, task_list=task_list)
+        RIFE_thread = UiRun(extract_only=True, task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
@@ -1993,7 +2062,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.StartRenderButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
         self.progressBar.setValue(0)
-        RIFE_thread = SVFI_Run(render_only=True, task_list=task_list)
+        RIFE_thread = UiRun(render_only=True, task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
@@ -2023,32 +2092,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.pause = False
                 self.PauseProcess.setText(_translate('', "暂停补帧！"))
 
-    def settings_load_config(self, config_path: str):
-        """
-
-        :param config_path:
-        :return:
-        """
-        global appData
-        appData = QSettings(config_path, QSettings.IniFormat)
-        appData.setIniCodec("UTF-8")
-
-    def settings_maintain_item_settings(self, widget_data: dict):
-        global appData
-        self.settings_load_current()  # 保存跳转前设置
-        if self.last_item is None:
-            self.last_item = widget_data
-        config_maintainer = SVFI_Config_Manager(self.last_item, dname)
-        config_maintainer.DuplicateConfig()  # 将当前设置保存到上一任务的配置文件，并准备跳转到新任务
-        config_maintainer = SVFI_Config_Manager(widget_data, dname)
-        config_path = config_maintainer.FetchConfig()
-        if config_path is None:
-            config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
-            config_path = config_maintainer.FetchConfig()
-        self.settings_load_config(config_path)
-        self.settings_update_pack(item_update=self.use_global_settings)
-        self.last_item = widget_data
-
     @pyqtSlot(bool)
     def on_ShowAdvance_clicked(self):
         bool_result = self.AdvanceSettingsArea.isVisible()
@@ -2059,9 +2102,6 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.ShowAdvance.setText(_translate('', "显示高级设置"))
         self.splitter.moveSplitter(10000000, 1)
-
-    def SaveInputSettingsProcess(self, current_filename):
-        return
 
     @pyqtSlot(bool)
     def on_SaveCurrentSettings_clicked(self):
@@ -2090,13 +2130,13 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def on_actionManualGuide_triggered(self):
-        SVFI_help_form = SVFI_Help_Dialog(self)
+        SVFI_help_form = UiHelpDialog(self)
         SVFI_help_form.setWindowTitle("SVFI Quick Guide")
         SVFI_help_form.show()
 
     @pyqtSlot(bool)
     def on_actionAbout_triggered(self):
-        SVFI_about_form = SVFI_About_Dialog(self)
+        SVFI_about_form = UiAboutDialog(self)
         SVFI_about_form.setWindowTitle("About")
         SVFI_about_form.show()
 
@@ -2116,7 +2156,7 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             preference_dict["use_global_settings"] = self.use_global_settings
             return preference_dict
 
-        self.SVFI_Preference_form = SVFI_Preference_Dialog(preference_dict=generate_preference_dict())
+        self.SVFI_Preference_form = UiPreferenceDialog(preference_dict=generate_preference_dict())
         self.SVFI_Preference_form.setWindowTitle("Preference")
         self.SVFI_Preference_form.preference_signal.connect(self.on_Preference_changed)
         self.SVFI_Preference_form.show()
@@ -2224,56 +2264,19 @@ class RIFE_GUI_BACKEND(QMainWindow, SVFI_UI.Ui_MainWindow):
             event.ignore()
         pass
 
-    def settings_link_shortcut(self):
-        self.homeActionButton.setShortcut("ctrl+1")
-        self.outputActionButton.setShortcut("ctrl+2")
-        self.resumeActionButton.setShortcut("ctrl+3")
-        self.scdetActionButton.setShortcut("ctrl+4")
-        self.resolutionActionButton.setShortcut("ctrl+5")
-        self.renderActionButton.setShortcut("ctrl+6")
-        self.rifeActionButton.setShortcut("ctrl+7")
-        self.presetActionButton.setShortcut("ctrl+8")
-        self.toolboxActionButton.setShortcut("ctrl+9")
-        self.homeActionButton.clicked.connect(lambda i=0: self.tabWidget.setCurrentIndex(i))
-        self.outputActionButton.clicked.connect(lambda i=1: self.tabWidget.setCurrentIndex(i))
-        self.resumeActionButton.clicked.connect(lambda i=0: self.toolBox.setCurrentIndex(i))
-        self.scdetActionButton.clicked.connect(lambda i=1: self.toolBox.setCurrentIndex(i))
-        self.resolutionActionButton.clicked.connect(lambda i=2: self.toolBox.setCurrentIndex(i))
-        self.renderActionButton.clicked.connect(lambda i=3: self.toolBox.setCurrentIndex(i))
-        self.rifeActionButton.clicked.connect(lambda i=4: self.toolBox.setCurrentIndex(i))
-        self.presetActionButton.clicked.connect(lambda i=5: self.toolBox.setCurrentIndex(i))
-        self.toolboxActionButton.clicked.connect(lambda i=6: self.toolBox.setCurrentIndex(i))
-
-    def settings_windows_ontop(self):
-        if not self.is_windows_ontop:
-            self.setWindowFlags(QtCore.Qt.Widget)  # 取消置顶
-        else:
-            self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)  # 置顶
-
     @pyqtSlot(bool)
     def on_tutorialLinkButton_clicked(self):
-        tutorial_path = os.path.join(dname, "SVFI_Tutorial.pdf")
+        tutorial_path = os.path.join(appDir, "SVFI_Tutorial.pdf")
         if os.path.exists(tutorial_path):
             os.startfile(f'"{tutorial_path}"')
         else:
             self.function_send_msg("Not Find Tutorial", _translate("", "未能找到SVFI教程"))
 
-    def steam_update_achv(self):
-        if not self.is_steam:
-            return
-        ACHV_Use_MX250 = self.STEAM.GetAchv("ACHV_Use_MX250")
-        ACHV_Use_RTX2060 = self.STEAM.GetAchv("ACHV_Use_RTX2060")
-        if all([i in self.DiscreteCardSelector.currentText() for i in ['MX', '250']]) and not ACHV_Use_MX250:
-            self.STEAM.SetAchv("ACHV_Use_MX250")
-        if all([i in self.DiscreteCardSelector.currentText() for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
-            self.STEAM.SetAchv("ACHV_Use_RTX2060")
-        self.STEAM.Store()
-
 
 if __name__ == "__main__":
     try:
         app = QApplication(sys.argv)
-        form = RIFE_GUI_BACKEND()
+        form = UiBackend()
         form.show()
         app.exec_()
         sys.exit()

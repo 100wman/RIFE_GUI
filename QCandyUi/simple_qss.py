@@ -127,6 +127,7 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
         color: {normal};
         background: {light};
         border: 2px solid {light};
+        font: bold;
     }}
     
     QPushButton:hover {{
@@ -145,12 +146,13 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
     }}
     """
     custom_button_qss_list = ["RefreshStartInfo", "OutputSettingsButton", "InputDirButton", "OutputButton",
-                              "InputButton", "ClearInputButton"]
+                              "InputButton", "ClearInputButton", "RemoveTemplateButton", "AddTemplateButton"]
     for q in custom_button_qss_list:
         qss += f"""
         QPushButton#{q} {{
             background: {disDark};
             border: 2px solid {disDark};
+            font: light;
         }}
         """
 
