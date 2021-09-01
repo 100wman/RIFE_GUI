@@ -608,22 +608,20 @@ class ArgumentManager:
 
     """Release Version Control"""
     is_steam = False
-    is_free = True
+    is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.13"
+    gui_version = "3.5.14"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.16"
+    ols_version = "6.9.17"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix No Audio Output under Render-Only Mode
-    - Fix Global Settings Mode(make it online)
-    - Reduce Scene Death Threshold under Auto mode to increase result credulity
-    - Add Timer for all mission
-    - UI modification
+    - Add Valid Path warning (+1)
+    - Add RealESRGan 4x anime model (6B)
+    - Reduce Queue Len to avoid clogging
     """
 
     path_len_limit = 230

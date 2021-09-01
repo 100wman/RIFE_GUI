@@ -964,6 +964,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_send_msg("Empty Input", _translate('', "请输入要补帧的文件和输出文件夹"))
             return False
 
+        if ' ' in output_dir and '.' in output_dir:
+            self.function_send_msg("Invalid Output Folder", _translate('', "输出文件夹同时存在空格和'.'，请删除路径空格"))
+            return False
+
         if Tools.check_non_ascii(output_dir):
             reply = self.function_send_msg("Non ASCII Detected",
                                            _translate('', "输出路径存在非英文字符，这可能导致程序异常\n(不支持Dolby Vision)\n是否继续？"), 4)

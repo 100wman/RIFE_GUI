@@ -171,23 +171,24 @@ class InterpWorkFlow:
             mem = psutil.virtual_memory()
             free_mem = round(mem.free / 1024 / 1024)
         if self.ARGS.resize_width != 0 and self.ARGS.resize_height != 0:
+            """规整化输出输入分辨率"""
             if self.ARGS.resize_width % 2 != 0:
                 self.ARGS.resize_width += 1
             if self.ARGS.resize_height % 2 != 0:
                 self.ARGS.resize_height += 1
-            self.frames_output_size = round(free_mem / (sys.getsizeof(
+            self.frames_queue_len = round(free_mem / (sys.getsizeof(
                 np.random.rand(3, round(self.ARGS.resize_width),
-                               round(self.ARGS.resize_height))) / 1024 / 1024) * 0.8)
+                               round(self.ARGS.resize_height))) / 1024 / 1024) * 0.5)
         else:
-            self.frames_output_size = round(free_mem / (sys.getsizeof(
+            self.frames_queue_len = round(free_mem / (sys.getsizeof(
                 np.random.rand(3, round(self.video_info["size"][0]),
-                               round(self.video_info["size"][1]))) / 1024 / 1024) * 0.8)
+                               round(self.video_info["size"][1]))) / 1024 / 1024) * 0.5)
         if not self.ARGS.use_manual_buffer:
-            self.frames_output_size = int(max(10.0, self.frames_output_size * 0.9))
-        self.logger.info(f"Buffer Size to {self.frames_output_size}")
+            self.frames_queue_len = int(max(10.0, self.frames_queue_len * 0.9))
+        self.logger.info(f"Buffer Size to {self.frames_queue_len}")
 
-        self.frames_output = Queue(maxsize=self.frames_output_size)  # 补出来的帧序列队列（消费者）
-        self.rife_task_queue = Queue(maxsize=self.frames_output_size)  # 补帧任务队列（生产者）
+        self.frames_output = Queue(maxsize=self.frames_queue_len)  # 补出来的帧序列队列（消费者）
+        self.rife_task_queue = Queue(maxsize=self.frames_queue_len)  # 补帧任务队列（生产者）
         self.rife_thread = None  # 帧插值预处理线程（生产者）
         self.rife_work_event = threading.Event()
         self.rife_work_event.clear()
@@ -764,6 +765,7 @@ class InterpWorkFlow:
                     ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
         self.logger.debug(ffmpeg_customized_command)
         output_dict.update(ffmpeg_customized_command)
+        # output_path = Tools.fillQuotation(output_path)
         if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
             return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
         elif self.ARGS.render_hwaccel_mode in ["SVT"]:
@@ -1118,7 +1120,7 @@ class InterpWorkFlow:
             return prediction
 
         use_flow = True
-        check_queue_size = min(self.frames_output_size, 1000)  # 预处理长度
+        check_queue_size = min(self.frames_queue_len, 1000)  # 预处理长度
         check_frame_list = list()  # 采样图片帧数序列,key ~ LabData
         scene_frame_list = list()  # 转场图片帧数序列,key,和check_frame_list同步
         input_frame_data = dict()  # 输入图片数据
@@ -1604,6 +1606,10 @@ class InterpWorkFlow:
                     add_scene = task["add_scene"]
 
                     debug = False
+                    """Test
+                    1. 正常4K，解码编码
+                    2. 一拍N卡顿
+                    """
 
                     if img1 is None:
                         self.feed_to_render([None], is_end=True)
