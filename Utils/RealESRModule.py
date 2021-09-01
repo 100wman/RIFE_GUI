@@ -21,7 +21,18 @@ class RealESRGANer:
 
         # initialize model
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=scale)
+
+        num_block = 23
+        net_scale = scale
+        if 'RealESRGAN_x4plus_anime_6B.pth' in model_path:
+            num_block = 6
+        elif 'RealESRGAN_x2plus.pth' in model_path:
+            """Double Check"""
+            net_scale = 2
+        # debug
+        # num_block = 23
+
+        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=num_block, num_grow_ch=32, scale=net_scale)
         loadnet = torch.load(model_path)
         if 'params_ema' in loadnet:
             keyname = 'params_ema'
@@ -134,7 +145,7 @@ class RealESRGANer:
         h_input, w_input = img.shape[0:2]
         # img: numpy
         img = img.astype(np.float32)
-        if np.max(img) > 255:  # 16-bit image
+        if np.max(img) > 256:  # 16-bit image
             max_range = 65535
             print('\tInput is a 16-bit image')
         else:
@@ -266,7 +277,7 @@ class SvfiRealESR:
 
 
 if __name__ == '__main__':
-    test = SvfiRealESR(model="RealESRGAN_x2plus.pth", )
+    test = SvfiRealESR(model="RealESRGAN_x4plus_anime_6B.pth", )
     # test.svfi_process(cv2.imread(r"D:\60-fps-Project\Projects\RIFE GUI\Utils\RealESRGAN\input\used\input.png"))
     o = test.svfi_process(
         cv2.imread(r"D:\60-fps-Project\Projects\RIFE GUI\test\images\0.png", cv2.IMREAD_UNCHANGED))
