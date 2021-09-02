@@ -20,10 +20,8 @@ print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.t
 # TODO Fix up SVT-HEVC
 
 """设置环境路径"""
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-os.chdir(os.path.dirname(dname))
-sys.path.append(dname)
+os.chdir(appDir)
+sys.path.append(appDir)
 
 """输入命令行参数"""
 parser = argparse.ArgumentParser(prog="#### SVFI CLI tool by Jeanna ####",
@@ -65,19 +63,21 @@ class InterpWorkFlow:
     def __init__(self, __args: ArgumentManager, **kwargs):
         self.ARGS = __args
 
+        """EULA"""
+        self.eula = EULAWriter()
+        self.eula.boom()
+
         """获得补帧输出路径"""
         if os.path.isfile(self.ARGS.output_dir):
             self.ARGS.output_dir = os.path.dirname(self.ARGS.output_dir)
         self.project_name = f"{Tools.get_filename(self.ARGS.input)}_{self.ARGS.task_id}"
         self.project_dir = os.path.join(self.ARGS.output_dir, self.project_name)
-
         if not os.path.exists(self.project_dir):
             os.makedirs(self.project_dir, exist_ok=True)
+        sys.path.append(self.project_dir)
 
         """Set Logger"""
-        sys.path.append(self.project_dir)
         self.logger = Tools.get_logger("[ARGS]", self.project_dir, debug=self.ARGS.debug)
-
         self.logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
                          self.ARGS.input)
 
@@ -94,14 +94,10 @@ class InterpWorkFlow:
         """Set input output and initiate environment"""
         self.input = self.ARGS.input
         self.output = self.ARGS.output_dir
+        self.ARGS.is_img_input = not os.path.isfile(self.input)
         if self.ARGS.is_img_output:
             self.output = os.path.join(self.output, self.project_name)
             os.makedirs(self.output, exist_ok=True)
-
-        self.ARGS.is_img_input = not os.path.isfile(self.input)
-
-        """Load Interpolation Exp"""
-        self.rife_exp = self.ARGS.rife_exp
 
         """Get input's info"""
         self.video_info_instance = VideoInfo(file_input=self.input, logger=self.logger, project_dir=self.project_dir,
@@ -111,9 +107,11 @@ class InterpWorkFlow:
         if self.ARGS.hdr_mode == 0:  # Auto
             self.hdr_check_status = self.video_info['hdr_mode']
             # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
+            # hdr_check_status indicates the final process mode for (hdr) input
         else:
             self.hdr_check_status = self.ARGS.hdr_mode
 
+        """Set input and target(output) fps"""
         if not self.ARGS.is_img_input:  # 输入不是文件夹，使用检测到的帧率
             self.input_fps = self.video_info["fps"]
         elif self.ARGS.input_fps:
@@ -131,21 +129,24 @@ class InterpWorkFlow:
             if self.ARGS.target_fps:
                 self.target_fps = self.ARGS.target_fps
             else:
-                self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
+                self.target_fps = (2 ** self.ARGS.rife_exp) * self.input_fps  # default
 
-        self.interpolation_exp = self.target_fps / self.input_fps
+        """Set interpolation exp related to hdr mode"""
+        self.interp_exp = self.target_fps / self.input_fps
         if self.hdr_check_status == 3 or (self.hdr_check_status == 2 and len(self.video_info['hdr10plus_metadata'])):
             """DoVi or Valid HDR10 Metadata Dected"""
-            self.interpolation_exp = int(math.ceil(self.target_fps / self.input_fps))
-            self.target_fps = self.interpolation_exp * self.input_fps
+            self.interp_exp = int(math.ceil(self.target_fps / self.input_fps))
+            self.target_fps = self.interp_exp * self.input_fps
         self.hdr10_metadata_processer = Hdr10PlusProcesser(self.logger, self.project_dir, self.ARGS,
-                                                           self.interpolation_exp, self.video_info)
+                                                           self.interp_exp, self.video_info)
 
         """Update All Frames Count"""
-        self.all_frames_cnt = min(abs(int(self.video_info["duration"] * self.target_fps)),
-                                  10 ** 10)  # constrain frames cnt
+        self.max_frame_cnt = 10 ** 10
+        self.all_frames_cnt = abs(int(self.video_info["duration"] * self.target_fps))
+        if self.all_frames_cnt > self.max_frame_cnt:
+            raise OSError(f"SVFI can't afford input exceeding {self.max_frame_cnt} frames")
 
-        """Crop Video"""
+        """Set Cropping Parameters"""
         self.crop_param = [0, 0]  # crop parameter, 裁切参数
         crop_param = self.ARGS.crop.replace("：", ":")
         if crop_param not in ["", "0", None]:
@@ -155,15 +156,15 @@ class InterpWorkFlow:
             self.crop_param = [width_black, height_black]
             self.logger.info(f"Update Crop Parameters to {self.crop_param}")
 
-        """initiation almost ready"""
+        """Check Initiation Info"""
         self.logger.info(
             f"Check Interpolation Source, FPS: {self.input_fps}, TARGET FPS: {self.target_fps}, "
-            f"FRAMES_CNT: {self.all_frames_cnt}, EXP: {self.rife_exp}")
+            f"FRAMES_CNT: {self.all_frames_cnt}, EXP: {self.ARGS.rife_exp}")
 
-        """RIFE Core"""
+        """Set RIFE Core"""
         self.vfi_core = RifeInterpolation(self.ARGS)  # 用于补帧的模块
 
-        """Guess Memory and Render System"""
+        """Guess Memory and Fix Resolution"""
         if self.ARGS.use_manual_buffer:
             # 手动指定内存占用量
             free_mem = self.ARGS.manual_buffer_size * 1024
@@ -187,13 +188,21 @@ class InterpWorkFlow:
             self.frames_queue_len = int(max(10.0, self.frames_queue_len * 0.9))
         self.logger.info(f"Buffer Size to {self.frames_queue_len}")
 
+        """Set Queues"""
         self.frames_output = Queue(maxsize=self.frames_queue_len)  # 补出来的帧序列队列（消费者）
         self.rife_task_queue = Queue(maxsize=self.frames_queue_len)  # 补帧任务队列（生产者）
         self.rife_thread = None  # 帧插值预处理线程（生产者）
         self.rife_work_event = threading.Event()
         self.rife_work_event.clear()
-        self.sr_module = SuperResolution()  # 超分类
 
+        """Set Render Parameters"""
+        self.frame_reader = None  # 读帧的迭代器／帧生成器
+        self.render_gap = self.ARGS.render_gap  # 每个chunk的帧数
+        self.render_thread = None  # 帧渲染器
+        self.task_info = {"chunk_cnt": -1, "render": -1, "now_frame": -1}  # 有关渲染的实时信息
+
+        """Set Super Resolution"""
+        self.sr_module = SuperResolution()  # 超分类
         if self.ARGS.use_sr:
             try:
                 input_resolution = self.video_info["size"][0] * self.video_info["size"][1]
@@ -237,11 +246,6 @@ class InterpWorkFlow:
                 self.logger.error(
                     f"Import SR Module failed\n{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
 
-        self.frame_reader = None  # 读帧的迭代器／帧生成器
-        self.render_gap = self.ARGS.render_gap  # 每个chunk的帧数
-        self.render_thread = None  # 帧渲染器
-        self.task_info = {"chunk_cnt": -1, "render": -1, "now_frame": -1}  # 有关渲染的实时信息
-
         """Scene Detection"""
         if self.ARGS.scdet_mode == 0:
             """Old Mode"""
@@ -265,7 +269,7 @@ class InterpWorkFlow:
             if k.startswith("-"):
                 self.color_info[k] = self.video_info[k]
 
-        """maintain output extension"""
+        """fix output extension"""
         self.output_ext = "." + self.ARGS.output_ext
         if "ProRes" in self.ARGS.render_encoder and not self.ARGS.is_img_output:
             self.output_ext = ".mov"
@@ -376,7 +380,7 @@ class InterpWorkFlow:
         :return:
         """
         hdr10plus_metadata = self.hdr10_metadata_processer.get_hdr10plus_metadata_at_point(start_frame)
-        params_265s = {
+        params_libx265s = {
             "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
                     "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
                     "min-keyint=1:rc-lookahead=25:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
@@ -405,7 +409,7 @@ class InterpWorkFlow:
                       f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata}"'
         }
 
-        params_264s = {
+        params_libx264s = {
             "fast": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=4:deblock='-1:-1':"
                     "rc-lookahead=30:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:me=hex:merange=16:"
                     "subme=7:psy-rd='1:0.1':mixed-refs=1:trellis=1",
@@ -464,7 +468,7 @@ class InterpWorkFlow:
             input_dict.update({"-r": f"{self.target_fps}"})
         else:
             """Img Input"""
-            input_dict.update({"-r": f"{self.input_fps * 2 ** self.rife_exp}"})
+            input_dict.update({"-r": f"{self.input_fps * 2 ** self.ARGS.rife_exp}"})
 
         """Slow motion design"""
         if self.ARGS.is_render_slow_motion:
@@ -482,38 +486,38 @@ class InterpWorkFlow:
                                 "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
 
         """Assign Render Codec"""
-        """CRF / Bitrate Controll"""
+        """CRF / Bitrate Control"""
         if self.ARGS.render_hwaccel_mode == "CPU":
             if "H264" in self.ARGS.render_encoder:
                 output_dict.update({"-c:v": "libx264", "-preset:v": self.ARGS.render_encoder_preset})
                 if "8bit" in self.ARGS.render_encoder:
                     output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "high",
-                                        "-x264-params": params_264s["8bit"]})
+                                        "-x264-params": params_libx264s["8bit"]})
                 else:
                     """10bit"""
                     output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "high10",
-                                        "-x264-params": params_264s["10bit"]})
+                                        "-x264-params": params_libx264s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
-                    output_dict.update({"-x264-params": params_264s["fast"]})
+                    output_dict.update({"-x264-params": params_libx264s["fast"]})
                 if self.hdr_check_status == 2:
                     """HDR10"""
-                    output_dict.update({"-x264-params": params_264s["hdr10"]})
+                    output_dict.update({"-x264-params": params_libx264s["hdr10"]})
             elif "H265" in self.ARGS.render_encoder:
                 output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
                 if "8bit" in self.ARGS.render_encoder:
                     output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main",
-                                        "-x265-params": params_265s["8bit"]})
+                                        "-x265-params": params_libx265s["8bit"]})
                 else:
                     """10bit"""
                     output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "main10",
-                                        "-x265-params": params_265s["10bit"]})
+                                        "-x265-params": params_libx265s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
-                    output_dict.update({"-x265-params": params_265s["fast"]})
+                    output_dict.update({"-x265-params": params_libx265s["fast"]})
                 if self.hdr_check_status == 2:
                     """HDR10"""
-                    output_dict.update({"-x265-params": params_265s["hdr10"]})
+                    output_dict.update({"-x265-params": params_libx265s["hdr10"]})
                     if os.path.exists(hdr10plus_metadata):
-                        output_dict.update({"-x265-params": params_265s["hdr10+"]})
+                        output_dict.update({"-x265-params": params_libx265s["hdr10+"]})
             else:
                 """ProRes"""
                 if "-preset" in output_dict:
@@ -630,7 +634,6 @@ class InterpWorkFlow:
             if "10bit" in self.ARGS.render_encoder:
                 _output_dict.update({"--output-depth": "10"})
             if "H264" in self.ARGS.render_encoder:
-                # TODO Preset is dead
                 _output_dict.update({f"-c": f"h264",
                                      "--profile": "high", "--repartition-check": "", "--trellis": "all"})
             elif "H265" in self.ARGS.render_encoder:
@@ -644,10 +647,7 @@ class InterpWorkFlow:
                                      "--max-cll": "1000,100",
                                      "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
                                      })
-            # if self.ARGS.render_encoder_preset != "loseless":
-            #     _output_dict.update({"--preset": self.ARGS.render_encoder_preset})
-            # else:
-            #     _output_dict.update({"--lossless": "", "--preset": self.ARGS.render_encoder_preset})
+            _output_dict.update({"--quality": self.ARGS.render_encoder_preset})
 
             input_dict = _input_dict
             output_dict = _output_dict
@@ -1227,7 +1227,7 @@ class InterpWorkFlow:
     # @profile
     def rife_run(self):
         """
-        Go through all procedures to produce interpolation result
+        Go through all procedures to produce interpolation result in dedup mode
         :return:
         """
 
@@ -1353,7 +1353,7 @@ class InterpWorkFlow:
     # @profile
     def rife_run_any_fps(self):
         """
-        Go through all procedures to produce interpolation result
+        Go through all procedures to produce interpolation result in any fps mode(from a fps to b fps)
         :return:
         """
 
@@ -1475,6 +1475,8 @@ class InterpWorkFlow:
     # @profile
     def run(self):
         run_all_time = datetime.datetime.now()
+
+        """Check Steam Validation"""
         if self.ARGS.is_steam:
             if not self.STEAM.steam_valid:
                 error = self.STEAM.steam_error.split('\n')[-1]
@@ -1499,6 +1501,7 @@ class InterpWorkFlow:
                 if self.ARGS.use_rife_multi_cards:
                     raise GenericSteamException(f"{_msg} Multi Video Cards Work flow Unavailable")
 
+        """Go through the process"""
         if self.ARGS.concat_only:
             self.concat_all()
         elif self.ARGS.extract_only:
@@ -1533,10 +1536,9 @@ class InterpWorkFlow:
                 if self.hdr_check_status == 3:
                     """Dolby Vision"""
                     dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS,
-                                               self.interpolation_exp)
+                                               self.interp_exp)
                     dovi_maker.run()
             else:
-
                 """Load RIFE Model"""
                 if self.ARGS.use_ncnn:
                     self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
@@ -1673,6 +1675,10 @@ class InterpWorkFlow:
         pass
 
     def steam_update_achv(self):
+        """
+        Update Steam Achievement
+        :return:
+        """
         if not self.ARGS.is_steam:
             return
         """Get Stat"""
@@ -1702,6 +1708,7 @@ class InterpWorkFlow:
             reply = self.STEAM.SetAchv("ACHV_Task_10")
         if STAT_INT_FINISHED_CNT > 50 and not ACHV_Task_50:
             reply = self.STEAM.SetAchv("ACHV_Task_50")
+        # TODO if reply indicates failure, store to local(crypted)
         self.STEAM.Store()
         pass
 
@@ -1880,7 +1887,7 @@ class InterpWorkFlow:
         sp.wait()
         if self.hdr_check_status == 3:
             dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS,
-                                       self.interpolation_exp)
+                                       self.interp_exp)
             dovi_maker.run()
         if self.ARGS.is_output_only and os.path.exists(concat_filepath):
             if not os.path.getsize(concat_filepath):

@@ -20,10 +20,13 @@ from queue import Queue
 import cv2
 import numpy as np
 from sklearn import linear_model
-from skvideo.utils import check_output
 
+from skvideo.utils import check_output
 from steamworks import STEAMWORKS
 from steamworks.exceptions import *
+
+abspath = os.path.abspath(__file__)
+appDir = os.path.dirname(os.path.dirname(abspath))
 
 
 class AiModulePaths:
@@ -607,27 +610,26 @@ class ArgumentManager:
     pro_dlc_id = [1718750]
 
     """Release Version Control"""
-    is_steam = False
-    is_free = False
+    is_steam = True
+    is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.14"
+    gui_version = "3.5.15"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.17"
+    ols_version = "6.9.18"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add Valid Path warning (+1)
-    - Add RealESRGan 4x anime model (6B)
-    - Reduce Queue Len to avoid clogging
+    - Fix QSVEnCc Preset Support
+    - Add Custom skvideo package to git
     """
 
     path_len_limit = 230
 
     def __init__(self, args: dict):
-        self.app_dir = args.get("app_dir", "")
+        self.app_dir = args.get("app_dir", appDir)
         self.ols_path = args.get("ols_path", "")
         self.batch = args.get("batch", False)
         self.ffmpeg = args.get("ffmpeg", "")
@@ -652,13 +654,13 @@ class ArgumentManager:
             self.input_end_point = None
         self.output_chunk_cnt = args.get("output_chunk_cnt", 0)
         self.interp_start = args.get("interp_start", 0)
-        self.risk_resume_mode = args.get("risk_resume_mode", True)
+        self.risk_resume_mode = args.get("risk_resume_mode", False)
 
         self.is_no_scdet = args.get("is_no_scdet", False)
         self.is_scdet_mix = args.get("is_scdet_mix", False)
         self.use_scdet_fixed = args.get("use_scdet_fixed", False)
-        self.is_scdet_output = args.get("is_scdet_output", True)
-        self.scdet_threshold = args.get("scdet_threshold", 10)
+        self.is_scdet_output = args.get("is_scdet_output", False)
+        self.scdet_threshold = args.get("scdet_threshold", 12)
         self.scdet_fixed_max = args.get("scdet_fixed_max", 40)
         self.scdet_flow_cnt = args.get("scdet_flow_cnt", 4)
         self.scdet_mode = args.get("scdet_mode", 0)
@@ -686,7 +688,7 @@ class ArgumentManager:
         self.render_gap = args.get("render_gap", 1000)
         self.use_crf = args.get("use_crf", True)
         self.use_bitrate = args.get("use_bitrate", False)
-        self.render_crf = args.get("render_crf", 14)
+        self.render_crf = args.get("render_crf", 16)
         self.render_bitrate = args.get("render_bitrate", 90)
         self.render_encoder_preset = args.get("render_encoder_preset", "slow")
         self.render_encoder = args.get("render_encoder", "")
@@ -738,6 +740,7 @@ class ArgumentManager:
         self.render_only = args.get("render_only", False)
         self.version = args.get("version", "0.0.0 beta")
 
+
 class Hdr10PlusProcesser:
     def __init__(self, logger: logging, project_dir: str, args: ArgumentManager,
                  interpolation_exp: int, video_info: dict, **kwargs):
@@ -771,20 +774,22 @@ class Hdr10PlusProcesser:
                 self.hdr10plus_metadata_4interp.append(_m)
         return
 
-    def get_hdr10plus_metadata_at_point(self, start_frame:0):
+    def get_hdr10plus_metadata_at_point(self, start_frame: 0):
         """
 
         :return: path of metadata json to use immediately
         """
-        if not len(self.hdr10plus_metadata_4interp) or start_frame < 0 or start_frame > len(self.hdr10plus_metadata_4interp):
+        if not len(self.hdr10plus_metadata_4interp) or start_frame < 0 or start_frame > len(
+                self.hdr10plus_metadata_4interp):
             return ""
         if start_frame + self.ARGS.render_gap < len(self.hdr10plus_metadata_4interp):
-            hdr10plus_metadata = self.hdr10plus_metadata_4interp[start_frame:start_frame+self.ARGS.render_gap]
+            hdr10plus_metadata = self.hdr10plus_metadata_4interp[start_frame:start_frame + self.ARGS.render_gap]
         else:
             hdr10plus_metadata = self.hdr10plus_metadata_4interp[start_frame:]
-        hdr10plus_metadata_path = os.path.join(self.project_dir, f'hdr10plus_metadata_{start_frame}_{start_frame+self.ARGS.render_gap}.json')
+        hdr10plus_metadata_path = os.path.join(self.project_dir,
+                                               f'hdr10plus_metadata_{start_frame}_{start_frame + self.ARGS.render_gap}.json')
         json.dump(hdr10plus_metadata, open(hdr10plus_metadata_path, 'w'))
-        return hdr10plus_metadata_path.replace('/','\\')
+        return hdr10plus_metadata_path.replace('/', '\\')
 
 
 class DoviProcesser:
@@ -815,13 +820,16 @@ class DoviProcesser:
         self.video_info, self.audio_info = {}, {}
         self.dovi_profile = 8
         self.get_input_info()
-        self.concat_video_stream = Tools.fillQuotation(os.path.join(self.project_dir, f"concat_video.{self.video_info['codec_name']}"))
-        self.dv_video_stream = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_video.{self.video_info['codec_name']}"))
+        self.concat_video_stream = Tools.fillQuotation(
+            os.path.join(self.project_dir, f"concat_video.{self.video_info['codec_name']}"))
+        self.dv_video_stream = Tools.fillQuotation(
+            os.path.join(self.project_dir, f"dv_video.{self.video_info['codec_name']}"))
         self.dv_audio_stream = ""
         self.dv_before_rpu = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_before_rpu.rpu"))
         self.rpu_edit_json = os.path.join(self.project_dir, 'rpu_duplicate_edit.json')
         self.dv_after_rpu = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_after_rpu.rpu"))
-        self.dv_injected_video_stream = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_injected_video.{self.video_info['codec_name']}"))
+        self.dv_injected_video_stream = Tools.fillQuotation(
+            os.path.join(self.project_dir, f"dv_injected_video.{self.video_info['codec_name']}"))
         self.dv_concat_output_path = Tools.fillQuotation(f'{os.path.splitext(self.concat_input)[0]}_dovi.mp4')
 
     def get_input_info(self):
@@ -896,7 +904,7 @@ class DoviProcesser:
             dovi_len = int(self.video_info['nb_frames'])
         elif 'r_frame_rate' in self.video_info and 'duration' in self.video_info:
             frame_rate = self.video_info['r_frame_rate'].split('/')
-            frame_rate = int(frame_rate[0])/int(frame_rate[1])
+            frame_rate = int(frame_rate[0]) / int(frame_rate[1])
             dovi_len = int(frame_rate * float(self.video_info['duration']))
 
         duplicate_list = []
@@ -908,7 +916,8 @@ class DoviProcesser:
         command_line = (
             f"{self.dovi_tool} editor -i {self.dv_before_rpu} -j {Tools.fillQuotation(self.rpu_edit_json)} -o {self.dv_after_rpu}")
         check_output(command_line)
-        self.logger.info(f"DV Processing [3] - RPU layer modified with duplication {self.interp_exp - 1} at length {dovi_len}, start RPU Injecting")
+        self.logger.info(
+            f"DV Processing [3] - RPU layer modified with duplication {self.interp_exp - 1} at length {dovi_len}, start RPU Injecting")
 
         pass
 
@@ -927,7 +936,8 @@ class DoviProcesser:
         command_line = f"{self.dovi_muxer} -i {self.dv_injected_video_stream} {audio_path} -o {self.dv_concat_output_path} " \
                        f"--dv-profile {self.dovi_profile} --mpeg4-comp-brand mp42,iso6,isom,msdh,dby1 --overwrite --dv-bl-compatible-id 1"
         check_output(command_line)
-        self.logger.info(f"DV Processing [5] - interpolated stream muxed to destination: {Tools.get_filename(self.dv_concat_output_path)}")
+        self.logger.info(
+            f"DV Processing [5] - interpolated stream muxed to destination: {Tools.get_filename(self.dv_concat_output_path)}")
         self.logger.info(f"DV Processing FINISHED")
         return True
 
@@ -1581,6 +1591,69 @@ class SteamUtils:
         if not self.is_steam:
             return False
         return self.steamworks.UserStats.StoreStats()
+
+
+class EULAWriter:
+    eula_hi = """
+    EULA
+    
+    重要须知——请仔细阅读：请确保仔细阅读并理解《最终用户许可协议》（简称“协议”）中描述的所有权利与限制。
+    
+    协议
+    本协议是您与SDT Core及其附属公司（简称“公司”）之间达成的协议。仅在您接受本协议中包含的所有条件的情况下，您方可使用软件及任何附属印刷材料。
+    安装或使用软件即表明，您同意接受本《协议》各项条款的约束。如果您不同意本《协议》中的条款：(i)请勿安装软件, (ii)如果您已经购买软件，请立即凭购买凭证将其退回购买处，并获得退款。
+    在您安装软件时，会被要求预览并通过点击“我接受”按钮决定接受或不接受本《协议》的所有条款。点击“我接受”按钮，即表明您承认已经阅读过本《协议》，并且理解并同意受其条款与条件的约束。
+    版权
+    软件受版权法、国际协约条例以及其他知识产权法和条例的保护。软件（包括但不限于软件中含有的任何图片、照片、动画、视频、音乐、文字和小型应用程序）及其附属于软件的任何印刷材料的版权均由公司及其许可者拥有。
+    
+    许可证的授予
+    软件的授权与使用须遵从本《协议》。公司授予您有限的、个人的、非独占的许可证，允许您使用软件，并且以将其安装在您的手机上为唯一目的。公司保留一切未在本《协议》中授予您的权利。
+    
+    授权使用
+    1. 如果软件配置为在一个硬盘驱动器上运行，您可以将软件安装在单一电脑上，以便在您的手机上安装和使用它。
+    2. 您可以制作和保留软件的一个副本用于备份和存档，条件是软件及副本归属于您。
+    3. 您可以将您在本《协议》项下的所有权利永久转让，转让的条件是您不得保留副本，转让软件（包括全部组件、媒体、印刷材料及任何升级版本），并且受让人接受本《协议》的各项条款。
+    
+    限制
+    1. 您不得删除或掩盖软件或附属印刷材料注明的版权、商标或其他所有权。
+    2. 您不得对软件进行反编译、修改、逆向工程、反汇编或重制。
+    3. 您不得复制、租赁、发布、散布或公开展示软件，不得制作软件的衍生产品（除非编辑器和本协议最终用户变更部分或其他附属于软件的文件明确许可），或是以商业目的对软件进行开发。
+    4. 您不得通过电子方式或网络将软件从一台电脑、控制台或其他平台传送到另一个上。
+    5. 您不得将软件的备份或存档副本用作其他用途，只可在原始副本被损坏或残缺的情况下，用其替换原始副本。
+    
+    试用版本
+    如果提供给您的软件为试用版，其使用期限或使用数量有限制，您同意在试用期结束后停止使用软件。您知晓并同意软件可能包含用于避免您突破这些限制的代码，并且这些代码会在您删除软件后仍保留在您的电脑上，避免您下载其他副本并重复利用试用期。
+    
+    编辑器和最终用户变更
+    如果软件允许您进行修改或创建新内容（“编辑器”），您可以使用该编辑器修改或优化软件，包括创建新内容（统称“变更”），但必须遵守下列限制。您的变更(i)必须符合已注册的完整版软件；(ii)不得对执行文件进行改动；(iii)不得包含任何诽谤、中伤、违法、损害他人或公众利益的内容；(iv)不得包含任何商标、著作权保护内容或第三方的所有权内容；(v)不得用作商业目的，包括但不限于，出售变更内容、按次计费或分时服务。
+    
+    终止
+    本协议在终止前都是有效的。您可以随时卸载软件来终止该协议。如果您违反了协议的任何条款或条件，本协议将自动终止，恕不另行通知。本协议中涉及到的保证、责任限制和损失赔偿的部分在协议终止后仍然有效。
+    
+    有限保修及免责条款
+    您知道并同意因使用该软件及其记录该软件的媒体所产生的风险由您自行承担。该软件和媒体“照原样”发布。除非有适用法律规定，本公司向此产品的原始购买人保证，在正常使用的情况，该软件媒体存储介质在30天内（自购买之日算起）无缺陷。对于因意外、滥用、疏忽或误用引起的缺陷，该保证无效。如果软件没有达到保证要求，您可能会单方面获得补偿，如果您退回有缺陷的软件，您可以免费获得替换产品。本公司不保证该软件及其操作和功能达到您的要求，也不保证软件的使用不会出现中断或错误。
+    在适用法律许可的最大范围下，除了上述的明确保证之外，本公司不做其他任何保证，包括但不限于暗含性的适销保证、特殊用途保证及非侵权保证。除了上述的明确保证之外，本公司不对软件使用和软件使用结果在正确性、准确性、可靠性、通用性和其他方面做出保证、担保或陈述。部分司法管辖区不允许排除或限制暗含性保证，因此上面的例外和限制情况可能对您不适用。
+    
+    责任范围
+    在任何情况下，本公司及其员工和授权商都不对任何由软件使用或无法使用软件而引起的任何附带、间接、特殊、偶然或惩罚性伤害以及其他伤害（包括但不限于对人身或财产的伤害，利益损失，运营中断，商业信息丢失，隐私侵犯，履行职责失败及疏忽）负责，即使公司或公司授权代表已知悉了存在这种伤害的可能性。部分司法管辖区不允许排除附带或间接伤害，因此，上述例外情况可能对您不适用。
+    
+    在任何情况下，公司承担的和软件伤害相关的费用都不超过您对该软件实际支付的数额。
+    
+    其他
+    如果发现此最终用户许可协议的任意条款或规定违法、无效或因某些原因无法强制执行，该条款和部分将被自动舍弃，不会影响本协议其余规定的有效性和可执行性。
+    本协议包含软您和本软件公司之间的所有协议及其使用方法。
+    
+    eula = true
+    """
+
+    def __init__(self):
+        self.eula_dir = os.path.join(appDir, 'train_log')
+        os.makedirs(self.eula_dir, exist_ok=True)
+        self.eula_path = os.path.join(self.eula_dir, 'md5.svfi')
+
+    def boom(self):
+        with open(self.eula_path, 'w', encoding='utf-8') as w:
+            w.write(self.eula_hi)
 
 
 if __name__ == "__main__":

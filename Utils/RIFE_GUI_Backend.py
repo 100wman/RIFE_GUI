@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFi
 
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator
-from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamUtils
+from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamUtils, appDir
 
 MAC = True
 try:
@@ -33,9 +33,6 @@ except ImportError:
     MAC = False
 
 Utils = Tools()
-abspath = os.path.abspath(__file__)
-appDir = os.path.dirname(os.path.dirname(abspath))
-
 appDataPath = os.path.join(appDir, "SVFI.ini")
 appData = QSettings(appDataPath, QSettings.IniFormat)
 appData.setIniCodec("UTF-8")
@@ -597,6 +594,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.HwaccelSelector.addItem(m)
         self.HwaccelSelector.currentTextChanged.connect(self.on_HwaccelSelector_currentTextChanged)
 
+        ST_HdrMode = ['Auto', 'None']
+        self.HDRModeSelector.clear()
+        for m in ST_HdrMode:
+            self.HDRModeSelector.addItem(m)
+
         self.StartPoint.setVisible(False)
         self.EndPoint.setVisible(False)
         self.StartPointLabel.setVisible(False)
@@ -679,7 +681,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             """Maintain SVFI Startup Resolution"""
             desktop = QApplication.desktop()
             pos = appData.value("pos", QVariant(QPoint(960, 540)))
-            size = appData.value("size", QVariant(QSize(int(desktop.width() * 0.6), int(desktop.height() * 0.5))))
+            size = appData.value("size", QVariant(QSize(int(desktop.width() * 0.8), int(desktop.height() * 0.8))))
             self.resize(size)
             self.move(pos)
 
@@ -1052,7 +1054,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             os.mkdir(project_dir)
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
-            self.function_send_msg(f"Resume Workflow?", f"{_msg1}{widget_data['row']}{_msg2}", 3)
+            self.function_send_msg(f"Resume Workflow?", f"{_msg1}{widget_data['row'] + 1}{_msg2}", 3)
             self.settings_set_start_info(0, 1, False)  # start from zero
             return
 
@@ -1150,10 +1152,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.on_UseNCNNButton_clicked()
             return
         else:
-            if self.UseNCNNButton.isChecked():
-                appData.setValue("use_ncnn", True)
-            else:
-                appData.setValue("use_ncnn", False)
+            appData.setValue("use_ncnn", self.UseNCNNButton.isChecked())
 
         self.DiscreteCardSelector.clear()
         for gpu in cuda_infos:
@@ -2253,6 +2252,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_actionLangEN_triggered(self):
         self.settings_change_lang('en')
 
+    @pyqtSlot(bool)
+    def on_tutorialLinkButton_clicked(self):
+        tutorial_path = os.path.join(appDir, "SVFI_Tutorial.pdf")
+        if os.path.exists(tutorial_path):
+            os.startfile(f'"{tutorial_path}"')
+        else:
+            self.function_send_msg("Not Find Tutorial", _translate("", "未能找到SVFI教程"))
+
     def closeEvent(self, event):
         global appData
         if not self.STEAM.steam_valid:
@@ -2267,14 +2274,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             event.ignore()
         pass
-
-    @pyqtSlot(bool)
-    def on_tutorialLinkButton_clicked(self):
-        tutorial_path = os.path.join(appDir, "SVFI_Tutorial.pdf")
-        if os.path.exists(tutorial_path):
-            os.startfile(f'"{tutorial_path}"')
-        else:
-            self.function_send_msg("Not Find Tutorial", _translate("", "未能找到SVFI教程"))
 
 
 if __name__ == "__main__":
