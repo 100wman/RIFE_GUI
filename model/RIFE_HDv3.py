@@ -1,5 +1,4 @@
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.optim import AdamW
 
 from model.IFNet_HDv3 import *
 from model.loss import *
@@ -18,10 +17,6 @@ class Model:
         else:
             self.flownet = IFNet()
         self.device()
-        self.optimG = AdamW(self.flownet.parameters(), lr=1e-6, weight_decay=1e-4)
-        self.epe = EPE()
-        # self.vgg = VGGPerceptualLoss().to(device)
-        self.sobel = SOBEL()
         if local_rank != -1:
             self.flownet = DDP(self.flownet, device_ids=[local_rank], output_device=local_rank)
 
@@ -69,6 +64,7 @@ class Model:
             img_075 = self.flownet(imgs_r1, scale_list, ensemble=self.forward_ensemble)[2]
             imgs_con = torch.cat((img_025, img_075), 1)
             return self.flownet(imgs_con, scale_list, ensemble=self.forward_ensemble)[2]
+
 
 if __name__ == '__main__':
     _img0 = torch.zeros(1, 3, 256, 256).float().to(device)

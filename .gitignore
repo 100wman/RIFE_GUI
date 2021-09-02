@@ -9,3 +9,4 @@
 /steamworks/
 /QCandyUi/.idea/
 /Utils/log/
+*.pyc
