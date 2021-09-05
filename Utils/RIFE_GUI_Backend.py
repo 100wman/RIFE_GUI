@@ -567,6 +567,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SettingsPresetGroup.setVisible(False)
         self.ShortCutGroup.setVisible(False)
         self.LockWHChecker.setVisible(False)
+        self.UseSobelChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -1923,7 +1924,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_DupRmMode_currentTextChanged(self):
         self.DupFramesTSelector.setVisible(
             self.DupRmMode.currentIndex() == 1)  # Single Threshold Duplicated Frames Removal
-        self.UseSobelChecker.setVisible(self.DupRmMode.currentIndex() > 1)
+        # self.UseSobelChecker.setVisible(self.DupRmMode.currentIndex() > 1)
 
     @pyqtSlot(bool)
     def on_ImgOutputChecker_clicked(self):
