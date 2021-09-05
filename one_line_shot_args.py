@@ -179,13 +179,13 @@ class InterpWorkFlow:
                 self.ARGS.resize_height += 1
             self.frames_queue_len = round(free_mem / (sys.getsizeof(
                 np.random.rand(3, round(self.ARGS.resize_width),
-                               round(self.ARGS.resize_height))) / 1024 / 1024) * 0.5)
+                               round(self.ARGS.resize_height))) / 1024 / 1024))
         else:
             self.frames_queue_len = round(free_mem / (sys.getsizeof(
                 np.random.rand(3, round(self.video_info["size"][0]),
-                               round(self.video_info["size"][1]))) / 1024 / 1024) * 0.5)
+                               round(self.video_info["size"][1]))) / 1024 / 1024))
         if not self.ARGS.use_manual_buffer:
-            self.frames_queue_len = int(max(10.0, self.frames_queue_len * 0.9))
+            self.frames_queue_len = int(max(10.0, self.frames_queue_len))
         self.logger.info(f"Buffer Size to {self.frames_queue_len}")
 
         """Set Queues"""
@@ -345,7 +345,7 @@ class InterpWorkFlow:
         if frame_check:
             """用以一拍二一拍N除重模式的预处理"""
             output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                "-s": "256x256"})
+                                "-s": "300x300"})
         elif self.ARGS.resize_height and self.ARGS.resize_width and not self.ARGS.use_sr:
             h, w = self.video_info["size"][1], self.video_info["size"][0]
             if h != self.ARGS.resize_height or w != self.ARGS.resize_width:
@@ -1120,10 +1120,10 @@ class InterpWorkFlow:
             return prediction
 
         use_flow = True
-        check_queue_size = min(self.frames_queue_len, 1000)  # 预处理长度
+        check_queue_size = max(self.frames_queue_len, 200)  # 预处理长度，非重复帧
         check_frame_list = list()  # 采样图片帧数序列,key ~ LabData
         scene_frame_list = list()  # 转场图片帧数序列,key,和check_frame_list同步
-        input_frame_data = dict()  # 输入图片数据
+        # input_frame_data = dict()  # 输入图片数据
         check_frame_data = dict()  # 用于判断的采样图片数据
         if init:
             self.logger.info("Initiating Duplicated Frames Removal Process...This might take some time")
@@ -1139,11 +1139,12 @@ class InterpWorkFlow:
             check_frame = Tools.gen_next(videogen_check)
             if check_frame is None:
                 break
-            check_frame_data[check_frame_cnt] = check_frame
+            # check_frame_data[check_frame_cnt] = check_frame
             if len(check_frame_list):  # len>1
-                # if Tools.get_norm_img_diff(input_frame_data[check_frame_list[-1]],
-                #                            check_frame) < 0.001:
-                if diff_canny(check_frame_list[-1], check_frame_cnt) < 0.007:
+                # 3.5.16 Change to last type of diff
+                # if diff_canny(check_frame_list[-1], check_frame_cnt) < 0.007:
+                if Tools.get_norm_img_diff(check_frame_data[check_frame_list[-1]],
+                                           check_frame) < 0.001:
                     # do not use pure scene check to avoid too much duplication result
                     # duplicate frames
                     continue
@@ -1151,7 +1152,7 @@ class InterpWorkFlow:
                 pbar.update(1)
                 pbar.set_description(
                     f"Process at Extract Frame {check_frame_cnt}")
-            input_frame_data[check_frame_cnt] = check_frame
+            check_frame_data[check_frame_cnt] = check_frame
             check_frame_list.append(check_frame_cnt)  # key list
         if not len(check_frame_list):
             if init:
@@ -1216,13 +1217,13 @@ class InterpWorkFlow:
             if check_frame_list[d] not in scene_frame_list:
                 check_frame_list[d] = -1
 
-        max_key = np.max(list(input_frame_data.keys()))
+        max_key = np.max(list(check_frame_data.keys()))
         if max_key not in check_frame_list:
             check_frame_list.append(max_key)
         if 0 not in check_frame_list:
             check_frame_list.insert(0, 0)
         check_frame_list = [i for i in check_frame_list if i > -1]
-        return check_frame_list, scene_frame_list, input_frame_data
+        return check_frame_list, scene_frame_list, check_frame_data
 
     # @profile
     def rife_run(self):

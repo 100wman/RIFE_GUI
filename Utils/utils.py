@@ -614,16 +614,17 @@ class ArgumentManager:
     is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.15"
+    gui_version = "3.5.16"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.18"
+    ols_version = "6.9.19"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix QSVEnCc Preset Support
-    - Add Custom skvideo package to git
+    - Fix Queue Len to optimize Dedup Mode (Fix 200 as minimum queue len for 300px img)
+    - Update QSVEnCc Release Version -> 6.0.0
+    - Add shell, process: start, execute, make a copy, rewind, close, rename, release
     """
 
     path_len_limit = 230
