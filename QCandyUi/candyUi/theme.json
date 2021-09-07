@@ -13,10 +13,19 @@
         "fontLight": "#88b5f1",
         "fontDark": "#999999",
         "normal": "white",
-        "light": "#2DA0F7",
+        "light": "#3D19FF",
         "deep": "#131820",
         "disLight": "#1D2839",
         "disDark": "#313C4F"       
+    },
+    "blueDeep_B1": {
+        "fontLight": "#88b5f1",
+        "fontDark": "#999999",
+        "normal": "white",
+        "light": "#2DA0F7",
+        "deep": "#131820",
+        "disLight": "#1D2839",
+        "disDark": "#313C4F"
     },
 	"blueDeep_B": {
         "fontLight": "#FFFFFF",

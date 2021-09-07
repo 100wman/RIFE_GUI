@@ -567,7 +567,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SettingsPresetGroup.setVisible(False)
         self.ShortCutGroup.setVisible(False)
         self.LockWHChecker.setVisible(False)
-        self.UseSobelChecker.setVisible(False)
+        # self.UseSobelChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -575,6 +575,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         if not self.is_free:
+            """Professional Version"""
+            help_txt = self.OutputGuideLabel.text()
+            help_txt = help_txt.replace(str(ArgumentManager.community_qq), str(ArgumentManager.professional_qq))
+            self.OutputGuideLabel.setText(help_txt)
             return
         # self.DupRmChecker.setVisible(False)
         self.DupFramesTSelector.setVisible(False)
@@ -1458,10 +1462,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         ACHV_Use_MX250 = self.STEAM.GetAchv("ACHV_Use_MX250")
         ACHV_Use_RTX2060 = self.STEAM.GetAchv("ACHV_Use_RTX2060")
-        if all([i in self.DiscreteCardSelector.currentText() for i in ['MX', '250']]) and not ACHV_Use_MX250:
-            self.STEAM.SetAchv("ACHV_Use_MX250")
-        if all([i in self.DiscreteCardSelector.currentText() for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
-            self.STEAM.SetAchv("ACHV_Use_RTX2060")
+        current_GPU = self.DiscreteCardSelector.currentText()
+        if all([i in current_GPU for i in ['MX', '250']]) and not ACHV_Use_MX250:
+            reply = self.STEAM.SetAchv("ACHV_Use_MX250")
+        if all([i in current_GPU for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
+            reply = self.STEAM.SetAchv("ACHV_Use_RTX2060")
         self.STEAM.Store()
 
     def process_update_rife(self, json_data):
@@ -2061,7 +2066,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Render Input based on current settings
         :return:
         """
-        task_list = self.function_load_tasks_settings(load_one=True)
+        task_list = self.function_load_tasks_settings()
         self.settings_load_current()
         self.StartRenderButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)

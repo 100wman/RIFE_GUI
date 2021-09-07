@@ -27,6 +27,16 @@ QLabel {
     background: transparent
 }
 
+T {
+    fontLight: #88b5f1;
+    fontDark: #999999;
+    normal: white;
+    light: #3D19FF;
+    deep: #131820;
+    disLight: #1D2839;
+    disDark: #313C4F;
+}
+
 QMenuBar {
     spacing: 5px;
     /* spacing between menu bar items */
@@ -494,7 +504,7 @@ QTabBar::tab:selected {
     border-bottom-color: #313C4F;
 }
 
-QTabBar::tab:!selected {
+QTabBar::tab:! selected {
     margin-top: 3px;
     /* make non-selected tabs look smaller */
 }
@@ -539,7 +549,14 @@ QSlider::handle:horizontal {
     margin-top: -3px;
     margin-bottom: -3px;
     border-radius: 6px;
-    background: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0.6 #FFFFFF, stop:0.8 #2DA0F7);
+    background: qradialgradient(spread:pad,
+    cx: 0.5,
+    cy: 0.5,
+    radius: 0.5,
+    fx: 0.5,
+    fy: 0.5,
+    stop: 0.6 #FFFFFF,
+    stop: 0.8 #2DA0F7);
 }
 
 QScrollBar::handle {
