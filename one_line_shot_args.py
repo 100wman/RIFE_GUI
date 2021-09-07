@@ -4,11 +4,11 @@ import sys
 
 import psutil
 import tqdm
+
+from Utils.utils import *
 # profile line
 # from line_profiler_pycharm import profile
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
-
-from Utils.utils import *
 from steamworks.exceptions import *
 
 try:
@@ -1142,9 +1142,11 @@ class InterpWorkFlow:
             # check_frame_data[check_frame_cnt] = check_frame
             if len(check_frame_list):  # len>1
                 # 3.5.16 Change to last type of diff
-                # if diff_canny(check_frame_list[-1], check_frame_cnt) < 0.007:
-                if Tools.get_norm_img_diff(check_frame_data[check_frame_list[-1]],
-                                           check_frame) < 0.001:
+                # if self.ARGS.use_dedup_sobel:
+                #     diff_result = diff_canny(check_frame_list[-1], check_frame_cnt)
+                # else:
+                diff_result = Tools.get_norm_img_diff(check_frame_data[check_frame_list[-1]], check_frame)
+                if diff_result < 0.001:
                     # do not use pure scene check to avoid too much duplication result
                     # duplicate frames
                     continue
@@ -1689,13 +1691,15 @@ class InterpWorkFlow:
         """Update Stat"""
         STAT_INT_FINISHED_CNT += 1
         reply = self.STEAM.SetStat("STAT_INT_FINISHED_CNT", STAT_INT_FINISHED_CNT)
-        if self.video_info['duration'] >= 0:
-            STAT_FLOAT_FINISHED_MINUTE += self.video_info['duration'] / 60
+        if self.all_frames_cnt >= 0 and not self.ARGS.render_only:
+            """Update Mission Process Time only in interpolation"""
+            STAT_FLOAT_FINISHED_MINUTE += self.all_frames_cnt / self.target_fps
             reply = self.STEAM.SetStat("STAT_FLOAT_FINISHED_MINUTE", STAT_FLOAT_FINISHED_MINUTE)
 
         """Get ACHV"""
         ACHV_Task_Frozen = self.STEAM.GetAchv("ACHV_Task_Frozen")
         ACHV_Task_Cruella = self.STEAM.GetAchv("ACHV_Task_Cruella")
+        ACHV_Task_1000M = self.STEAM.GetAchv("ACHV_Task_1000M")
         ACHV_Task_10 = self.STEAM.GetAchv("ACHV_Task_10")
         ACHV_Task_50 = self.STEAM.GetAchv("ACHV_Task_50")
 
@@ -1707,8 +1711,16 @@ class InterpWorkFlow:
             reply = self.STEAM.SetAchv("ACHV_Task_Cruella")
         if STAT_INT_FINISHED_CNT > 10 and not ACHV_Task_10:
             reply = self.STEAM.SetAchv("ACHV_Task_10")
+        elif ACHV_Task_10:
+            reply = self.STEAM.SetAchv("ACHV_Task_10", True)
         if STAT_INT_FINISHED_CNT > 50 and not ACHV_Task_50:
             reply = self.STEAM.SetAchv("ACHV_Task_50")
+        elif ACHV_Task_50:
+            reply = self.STEAM.SetAchv("ACHV_Task_50", True)
+        if STAT_FLOAT_FINISHED_MINUTE > 1000 and not ACHV_Task_1000M:
+            reply = self.STEAM.SetAchv("ACHV_Task_1000M")
+        elif ACHV_Task_1000M:
+            reply = self.STEAM.SetAchv("ACHV_Task_1000M", True)
         # TODO if reply indicates failure, store to local(crypted)
         self.STEAM.Store()
         pass

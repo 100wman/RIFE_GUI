@@ -694,7 +694,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>416</width>
+                    <width>437</width>
                     <height>724</height>
                    </rect>
                   </property>
@@ -715,7 +715,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>398</width>
+                        <width>419</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -991,7 +991,7 @@
                      <widget class="QWidget" name="ScdetSettings">
                       <property name="geometry">
                        <rect>
-                        <x>-34</x>
+                        <x>0</x>
                         <y>0</y>
                         <width>432</width>
                         <height>378</height>
@@ -1266,7 +1266,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>398</width>
+                        <width>419</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -1628,7 +1628,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>381</width>
+                        <width>402</width>
                         <height>488</height>
                        </rect>
                       </property>
@@ -2205,7 +2205,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>398</width>
+                        <width>419</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -2482,7 +2482,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>398</width>
+                        <width>419</width>
                         <height>395</height>
                        </rect>
                       </property>
@@ -2571,7 +2571,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>381</width>
+                        <width>402</width>
                         <height>460</height>
                        </rect>
                       </property>
@@ -2985,7 +2985,7 @@ p, li { white-space: pre-wrap; }
              <item row="1" column="0">
               <layout class="QGridLayout" name="gridLayout_33">
                <item row="0" column="0">
-                <widget class="QLabel" name="label_15">
+                <widget class="QLabel" name="OutputGuideLabel">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
                    <horstretch>0</horstretch>

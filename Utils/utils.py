@@ -609,22 +609,27 @@ class ArgumentManager:
     app_id = 1692080
     pro_dlc_id = [1718750]
 
+    community_qq = 264023742
+    professional_qq = 1054016374
+
     """Release Version Control"""
     is_steam = True
     is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.16"
+    gui_version = "3.5.17"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.19"
+    ols_version = "6.9.20"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix Queue Len to optimize Dedup Mode (Fix 200 as minimum queue len for 300px img)
-    - Update QSVEnCc Release Version -> 6.0.0
-    - Add shell, process: start, execute, make a copy, rewind, close, rename, release
+    - Fix Steamworks API Unavailable
+    - Add 1000M Achievement for Steam(Finish more than 1000 minutes of interpolation)
+    - Add Render Queue Mode(Support multi missions for render only mode)
+    - Add Back Sobel for dedup
+    - Change Button Color(Optimize UI)
     """
 
     path_len_limit = 230
@@ -1583,9 +1588,11 @@ class SteamUtils:
             return False
         return self.steamworks.UserStats.SetStat(key, value)
 
-    def SetAchv(self, key: str):
+    def SetAchv(self, key: str, clear=False):
         if not self.is_steam:
             return False
+        if clear:
+            return self.steamworks.UserStats.ClearAchievement(key)
         return self.steamworks.UserStats.SetAchievement(key)
 
     def Store(self):
