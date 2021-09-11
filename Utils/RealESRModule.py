@@ -7,6 +7,8 @@ import torch
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from torch.nn import functional as F
 # from line_profiler_pycharm import profile
+from Utils.utils import overtime_reminder_deco
+
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -259,6 +261,7 @@ class SvfiRealESR:
         return img
 
     # @profile
+    @overtime_reminder_deco(300, None, "RealESR", "Low Super-Resolution speed detected, Please Consider tweak tilesize to enhance speed")
     def svfi_process(self, img):
         if all(self.resize_param):
             img = self.resize_esr_img(img)

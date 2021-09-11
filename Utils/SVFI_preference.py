@@ -105,6 +105,10 @@ class Ui_Dialog(object):
         self.ExpertModeChecker.setChecked(False)
         self.ExpertModeChecker.setObjectName("ExpertModeChecker")
         self.gridLayout_4.addWidget(self.ExpertModeChecker, 2, 0, 1, 1)
+        self.RudeExitModeChecker = QtWidgets.QCheckBox(self.groupBox_3)
+        self.RudeExitModeChecker.setChecked(False)
+        self.RudeExitModeChecker.setObjectName("RudeExitModeChecker")
+        self.gridLayout_4.addWidget(self.RudeExitModeChecker, 4, 0, 1, 1)
         self.verticalLayout_3.addWidget(self.groupBox_3)
         self.groupBox_5 = QtWidgets.QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_5.setTitle("")
@@ -149,6 +153,7 @@ class Ui_Dialog(object):
         self.PreviewArgsModeChecker.setText(_translate("Dialog", "开启任务前参数文本预览"))
         self.UseGlobalSettingsChecker.setText(_translate("Dialog", "使用全局设置"))
         self.ExpertModeChecker.setText(_translate("Dialog", "开启专家模式"))
+        self.RudeExitModeChecker.setText(_translate("Dialog", "鲁莽的退出"))
         self.QuietModeChecker.setText(_translate("Dialog", "开启安静模式（不显示弹窗等）"))
         self.WinOnTopChecker.setText(_translate("Dialog", "窗口置顶（下次启动生效）"))
 from Utils.RIFE_GUI_Custom import MySpinBox
