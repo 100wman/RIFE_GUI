@@ -622,7 +622,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.RenderSettingsGroup.setVisible(False)
         # self.RenderOnlyGroupbox.setVisible(False)
         self.UseMultiCardsChecker.setVisible(False)
-        self.TtaModeChecker.setVisible(False)
+        self.TtaModeSelector.setVisible(False)
+        self.TtaIterTimesSelector.setVisible(False)
+        self.TtaModeLabel.setVisible(False)
+        self.EvictFlickerChecker.setVisible(False)
         self.AutoInterpScaleChecker.setVisible(False)
         self.ReverseChecker.setVisible(False)
         self.ProAdLabel_1.setVisible(True)
@@ -660,6 +663,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_InterpExpReminder_toggled()
         self.on_UseAiSR_clicked()
         self.on_ResizeTemplate_activated()
+        self.on_TtaModeSelector_currentTextChanged()
         self.on_ExpertMode_changed()
         self.settings_initiation(item_update=item_update, template_update=False)
         pass
@@ -794,7 +798,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AutoInterpScaleChecker.setChecked(appData.value("use_rife_auto_scale", False, type=bool))
         self.on_AutoInterpScaleChecker_clicked()
         self.UseNCNNButton.setChecked(appData.value("use_ncnn", False, type=bool))
-        self.TtaModeChecker.setChecked(appData.value("use_rife_tta_mode", False, type=bool))
+        self.EvictFlickerChecker.setChecked(appData.value("use_evict_flicker", False, type=bool))
+        self.TtaModeSelector.setCurrentIndex(appData.value("rife_tta_mode", 0, type=int))
+        self.TtaIterTimesSelector.setValue(appData.value("rife_tta_iter", 1, type=int))
         self.ncnnInterpThreadCnt.setValue(appData.value("ncnn_thread", 4, type=int))
         self.ncnnSelectGPU.setValue(appData.value("ncnn_gpu", 0, type=int))
         self.UseMultiCardsChecker.setChecked(appData.value("use_rife_multi_cards", False, type=bool))
@@ -922,7 +928,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_ncnn", self.UseNCNNButton.isChecked())
         appData.setValue("ncnn_thread", self.ncnnInterpThreadCnt.value())
         appData.setValue("ncnn_gpu", self.ncnnSelectGPU.value())
-        appData.setValue("use_rife_tta_mode", self.TtaModeChecker.isChecked())
+        appData.setValue("rife_tta_mode", self.TtaModeSelector.currentIndex())
+        appData.setValue("rife_tta_iter", self.TtaIterTimesSelector.value())
+        appData.setValue("use_evict_flicker", self.EvictFlickerChecker.isChecked())
         appData.setValue("use_rife_fp16", self.FP16Checker.isChecked())
         appData.setValue("rife_scale", self.InterpScaleSelector.currentText())
         appData.setValue("is_rife_reverse", self.ReverseChecker.isChecked())
@@ -1844,21 +1852,29 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             reply = self.function_send_msg(_translate('', f"确定使用NCNN？"),
                                            _translate('', f"你有N卡，确定使用A卡/核显？"), 3)
             if reply == QMessageBox.Yes:
-                logger.info("Switch To NCNN Mode: %s" % self.UseNCNNButton.isChecked())
+                logger.debug("Switch To NCNN Mode: %s" % self.UseNCNNButton.isChecked())
             else:
                 self.UseNCNNButton.setChecked(False)
         else:
-            logger.info("Switch To NCNN Mode: %s" % self.UseNCNNButton.isChecked())
+            logger.debug("Switch To NCNN Mode: %s" % self.UseNCNNButton.isChecked())
         bool_result = not self.UseNCNNButton.isChecked()
+        # self.FP16Checker.setEnabled(bool_result)
+        self.NvidiaRifeSettingsBox.setEnabled(bool_result)
         self.AutoInterpScaleChecker.setEnabled(bool_result)
         self.on_AutoInterpScaleChecker_clicked()
-        self.FP16Checker.setEnabled(bool_result)
-        self.DiscreteCardSelector.setEnabled(bool_result)
-        self.ncnnInterpThreadCnt.setEnabled(not bool_result)
-        self.ncnnSelectGPU.setEnabled(not bool_result)
-        self.ForwardEnsembleChecker.setEnabled(bool_result)
+
+        self.NcnnRifeSettingsBox.setEnabled(not bool_result)
+        # self.ncnnInterpThreadCnt.setEnabled(not bool_result)
+        # self.DiscreteCardSelector.setEnabled(bool_result)
+        # self.ncnnSelectGPU.setEnabled(not bool_result)
+        # self.ForwardEnsembleChecker.setEnabled(bool_result)
         self.settings_update_rife_model_info()
         # self.on_ExpSelecter_currentTextChanged()
+
+    @pyqtSlot(str)
+    def on_TtaModeSelector_currentTextChanged(self):
+        self.TtaIterTimesSelector.setVisible(self.TtaModeSelector.currentIndex() > 0)
+        self.settings_free_hide()
 
     @pyqtSlot(bool)
     def on_UseMultiCardsChecker_clicked(self):
@@ -1954,7 +1970,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_DupRmMode_currentTextChanged(self):
         self.DupFramesTSelector.setVisible(
             self.DupRmMode.currentIndex() == 1)  # Single Threshold Duplicated Frames Removal
-        # self.UseSobelChecker.setVisible(self.DupRmMode.currentIndex() > 1)
+        self.UseSobelChecker.setVisible(self.DupRmMode.currentIndex() > 1)
 
     @pyqtSlot(bool)
     def on_ImgOutputChecker_clicked(self):

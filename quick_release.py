@@ -60,7 +60,7 @@ def change_utils_with_mighty_power():
 
 # steam_ver = [True, False]
 steam_ver = [True]
-free_ver = [False, True]
+free_ver = [True, False]
 for _steam_ver in steam_ver:
     for _free_ver in free_ver:
         ArgumentManager.is_free = _free_ver

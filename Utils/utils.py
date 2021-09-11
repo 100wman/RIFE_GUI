@@ -636,22 +636,17 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.18"
+    gui_version = "3.5.19"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.21"
+    ols_version = "6.9.22"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add OverTime Reminder Module, will reminder user of abnormal TLE
-    - Add Rude Exit Mode, Kill ffmpeg and others to avoid spawning zombie process
-    - Add all update logs since 3.5.2
-    - Add Output extension / Input Extension Synchronization Check
-    - Add Read Tutorial Compulsorily at first start
-    - Update documentations for Super Resolution Module
-    - Update OLS error Information
-    - Fix Steam ACHV, and add more, keep round to 2 digits
+    - Add Remove Flicker Mode
+    - Add new TTA Mode
+    - Fix some bugs of UI
     """
 
     path_len_limit = 230
@@ -738,7 +733,9 @@ class ArgumentManager:
         self.use_ncnn = args.get("use_ncnn", False)
         self.ncnn_thread = args.get("ncnn_thread", 4)
         self.ncnn_gpu = args.get("ncnn_gpu", 0)
-        self.use_rife_tta_mode = args.get("use_rife_tta_mode", False)
+        self.rife_tta_mode = args.get("rife_tta_mode", 0)
+        self.rife_tta_iter = args.get("rife_tta_iter", 1)
+        self.use_evict_flicker = args.get("use_evict_flicker", False)
         self.use_rife_fp16 = args.get("use_rife_fp16", False)
         self.rife_scale = args.get("rife_scale", 1.0)
         self.rife_model_dir = args.get("rife_model_dir", "")
