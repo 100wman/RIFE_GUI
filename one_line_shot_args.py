@@ -1634,13 +1634,19 @@ class InterpWorkFlow:
                             else:
                                 interp_list = self.vfi_core.generate_n_interp(img0, img1, n=n, scale=scale, debug=debug)
                                 frames_list.extend(interp_list)
-                        if add_scene:
+                        if add_scene:  # [AA BBB CC DDD] E
                             frames_list.append(img1)
                         self.reminder_bearer.terminate_reminder(reminder_id)
                     feed_list = list()
                     for i in frames_list:
                         feed_list.append([now_frame, i])
                         now_frame += 1
+                    if self.ARGS.use_evict_flicker:
+                        img_ori = frames_list[0].copy()
+                        frames_list[0] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale, debug=debug)
+                        if add_scene:
+                            img_ori = frames_list[-1].copy()
+                            frames_list[-1] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale, debug=debug)
 
                     self.feed_to_render(feed_list, is_end=is_end)
                     process_time = time.time() - process_time
@@ -1839,8 +1845,8 @@ class InterpWorkFlow:
                 output_filepath += "_[RR]"
             if self.ARGS.use_rife_forward_ensemble:
                 output_filepath += "_[RFE]"
-            if self.ARGS.use_rife_tta_mode:
-                output_filepath += "_[TTA]"
+            if self.ARGS.rife_tta_mode:
+                output_filepath += f"_[TTA-{self.ARGS.rife_tta_mode}]"
             if self.ARGS.remove_dup_mode:  # 去重模式
                 output_filepath += f"_[RD-{self.ARGS.remove_dup_mode}]"
         if self.ARGS.use_sr:  # 使用超分
