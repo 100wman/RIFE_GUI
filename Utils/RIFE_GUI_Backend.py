@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess as sp
 import sys
 import time
@@ -135,6 +136,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         self.ForceCpuChecker.setChecked(self.preference_dict["rife_use_cpu"])
         self.ExpertModeChecker.setChecked(self.preference_dict["expert"])
         self.PreviewArgsModeChecker.setChecked(self.preference_dict["is_preview_args"])
+        self.RudeExitModeChecker.setChecked(self.preference_dict["is_rude_exit"])
         self.QuietModeChecker.setChecked(self.preference_dict["is_gui_quiet"])
         self.WinOnTopChecker.setChecked(self.preference_dict["is_windows_ontop"])
         self.OneWayModeChecker.setChecked(self.preference_dict["use_clear_inputs"])
@@ -154,6 +156,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         preference_dict["rife_use_cpu"] = self.ForceCpuChecker.isChecked()
         preference_dict["expert"] = self.ExpertModeChecker.isChecked()
         preference_dict["is_preview_args"] = self.PreviewArgsModeChecker.isChecked()
+        preference_dict["is_rude_exit"] = self.RudeExitModeChecker.isChecked()
         preference_dict["is_gui_quiet"] = self.QuietModeChecker.isChecked()
         preference_dict["is_windows_ontop"] = self.WinOnTopChecker.isChecked()
         preference_dict["use_clear_inputs"] = self.OneWayModeChecker.isChecked()
@@ -386,7 +389,7 @@ class UiRun(QThread):
             if self.current_proc is None:
                 """Not one single task ever started"""
                 logger.error("Task List Empty, Please Check Your Settings! (input fps for example)")
-                _msg = _translate('', '请点击输入条目以更新设置，并确认输入输出帧率不为0')
+                _msg = _translate('', '请点击要进行的任务条目以更新设置，并确认输入输出帧率不为0后再点击补帧按钮')
                 self.update_status(True, f"\nTask List is Empty!\n{_msg}",
                                    returncode=404)
                 return
@@ -479,6 +482,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.force_cpu = False
         self.expert_mode = True
         self.preview_args = False
+        self.is_rude_exit = False
         self.is_gui_quiet = False
         self.is_windows_ontop = False
         self.use_clear_inputs = False
@@ -549,6 +553,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                         return
 
         os.chdir(appDir)
+        self.function_check_read_tutorial()
 
     def settings_change_lang(self, lang: str):
         logger.debug(f"Translate To Lang = {lang}")
@@ -715,6 +720,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.force_cpu = appData.value("rife_use_cpu", False, type=bool)
             self.expert_mode = appData.value("expert_mode", True, type=bool)
             self.preview_args = appData.value("is_preview_args", False, type=bool)
+            self.is_rude_exit = appData.value("is_rude_exit", False, type=bool)
             self.is_gui_quiet = appData.value("is_gui_quiet", False, type=bool)
             self.is_windows_ontop = appData.value("is_windows_ontop", False, type=bool)
             self.use_clear_inputs = appData.value("use_clear_inputs", False, type=bool)
@@ -939,6 +945,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("rife_use_cpu", self.force_cpu)
         appData.setValue("expert_mode", self.expert_mode)
         appData.setValue("is_preview_args", self.preview_args)
+        appData.setValue("is_rude_exit", self.is_rude_exit)
         appData.setValue("is_gui_quiet", self.is_gui_quiet)
         appData.setValue("is_windows_ontop", self.is_windows_ontop)
         appData.setValue("use_clear_inputs", self.use_clear_inputs)
@@ -1457,6 +1464,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         templates = [self.SettingsTemplateSelector.itemText(i) for i in range(self.SettingsTemplateSelector.count())]
         return templates
 
+    def function_check_read_tutorial(self):
+        check_tutorial = os.path.join(appDir, "ReadTutorial.md")
+        if not os.path.exists(check_tutorial):
+            self.function_send_msg("Read Tutorial First", _translate("", "请先仔细阅读教程再使用软件"))
+            self.on_tutorialLinkButton_clicked()
+            with open(check_tutorial, "w", encoding="utf-8") as w:
+                w.write("# This User Has Read Tutorial")
+
     def steam_update_achv(self):
         if not self.is_steam:
             return
@@ -1698,9 +1713,19 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             SVFI_preview_args_form.exec_()
         _msg1 = _translate('', '补帧将会从区块')
         _msg2 = _translate('', '起始帧')
-        msg_3 = _translate('', '启动。请确保上述两者皆不为空。是否执行补帧？')
+        _msg3 = _translate('', '启动。请确保上述两者皆不为空。是否执行补帧？')
+        _msg4 = ""
+        try:
+            current_path = self.InputFileName.itemWidget(self.InputFileName.currentItem()).input_path
+            current_ext = os.path.splitext(current_path)[1]
+            selected_ext = "." + self.ExtSelector.currentText()
+            if current_ext != selected_ext:
+                _msg4 = _translate("", "输出文件格式与源不相同，请注意这有可能导致合并失败！")
+        except Exception:
+            pass
         reply = self.function_send_msg("Confirm Start Info",
-                                       f"{_msg1}[{self.StartChunk.text()}], {_msg2}[{self.StartFrame.text()}]{msg_3}",
+                                       f"{_msg1}[{self.StartChunk.text()}], {_msg2}[{self.StartFrame.text()}]"
+                                       f"{_msg3}\n{_msg4}",
                                        3)
         if reply == QMessageBox.No:
             return
@@ -2159,6 +2184,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             preference_dict["expert"] = self.expert_mode
             preference_dict["rife_use_cpu"] = self.force_cpu
             preference_dict["is_preview_args"] = self.preview_args
+            preference_dict["is_rude_exit"] = self.is_rude_exit
             preference_dict["is_gui_quiet"] = self.is_gui_quiet
             preference_dict["is_windows_ontop"] = self.is_windows_ontop
             preference_dict["use_clear_inputs"] = self.use_clear_inputs
@@ -2178,6 +2204,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.expert_mode = preference_dict["expert"]
         self.force_cpu = preference_dict["rife_use_cpu"]
         self.preview_args = preference_dict["is_preview_args"]
+        self.is_rude_exit = preference_dict["is_rude_exit"]
         self.is_gui_quiet = preference_dict["is_gui_quiet"]
         self.is_windows_ontop = preference_dict["is_windows_ontop"]
         self.use_clear_inputs = preference_dict["use_clear_inputs"]
@@ -2276,6 +2303,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_load_tasks_settings(load_all=True)
             self.settings_load_config(appDataPath)
             self.settings_load_current()
+            if self.is_rude_exit:
+                pids = Tools.get_pids()
+                for pid, pname in pids.items():
+                    if pname in ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
+                                 'SvtHevcEncApp.exe']:
+                        os.kill(pid, signal.SIGABRT)
+                        logger.warning(f"Kill Process before exit: {pname}")
+                pass
             event.accept()
         else:
             event.ignore()

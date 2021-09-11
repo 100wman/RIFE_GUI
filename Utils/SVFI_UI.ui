@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1297</width>
-    <height>846</height>
+    <width>1319</width>
+    <height>861</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -694,8 +694,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>437</width>
-                    <height>724</height>
+                    <width>445</width>
+                    <height>739</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_10">
@@ -708,15 +708,15 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>1</number>
+                      <number>2</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>419</width>
-                        <height>395</height>
+                        <width>427</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -994,7 +994,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>432</width>
-                        <height>378</height>
+                        <height>393</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1266,8 +1266,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>419</width>
-                        <height>395</height>
+                        <width>427</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1423,7 +1423,7 @@
                             <item row="0" column="0">
                              <widget class="QLabel" name="ResizeReminder">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。请注意，RealESR只支持4倍放缩，即，输出分辨率为源分辨率的4倍；&lt;/p&gt;&lt;p&gt;若宽高皆不为0，那么SVFI将会把所有图片超分、放缩至指定分辨率并输出。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>输出文件分辨率 (?)</string>
@@ -1628,7 +1628,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>402</width>
+                        <width>410</width>
                         <height>488</height>
                        </rect>
                       </property>
@@ -2205,8 +2205,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>419</width>
-                        <height>395</height>
+                        <width>427</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2482,8 +2482,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>419</width>
-                        <height>395</height>
+                        <width>427</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2571,7 +2571,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>402</width>
+                        <width>410</width>
                         <height>460</height>
                        </rect>
                       </property>
@@ -3096,7 +3096,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1297</width>
+     <width>1319</width>
      <height>23</height>
     </rect>
    </property>

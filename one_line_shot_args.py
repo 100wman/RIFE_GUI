@@ -2,7 +2,6 @@
 import argparse
 import sys
 
-import psutil
 import tqdm
 
 from Utils.utils import *
@@ -118,7 +117,7 @@ class InterpWorkFlow:
             self.input_fps = self.ARGS.input_fps
         else:  # 用户有毒，未发现有效的输入帧率，用检测到的帧率
             if self.video_info["fps"] is None or not self.video_info["fps"]:
-                raise OSError("Not Find FPS, Input File not valid")
+                raise OSError("Not Find FPS, Input File is not valid")
             self.input_fps = self.video_info["fps"]
 
         if self.ARGS.is_img_input:
@@ -274,6 +273,7 @@ class InterpWorkFlow:
         if "ProRes" in self.ARGS.render_encoder and not self.ARGS.is_img_output:
             self.output_ext = ".mov"
 
+        self.reminder_bearer = OverTimeReminderBearer()
         self.main_error = None
 
     def generate_frame_reader(self, start_frame=-1, frame_check=False):
@@ -865,7 +865,9 @@ class InterpWorkFlow:
             if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
                 self.logger.error(f"Concat Test Error, {output_ext}, empty output")
                 self.main_error = FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
-                raise FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
+                raise FileExistsError(
+                    "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
+                    "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
             self.logger.info("Audio Concat Test Success")
             os.remove(concat_filepath)
 
@@ -902,7 +904,10 @@ class InterpWorkFlow:
                 """先补后超"""
                 frame = self.sr_module.svfi_process(frame)
 
+            reminder_id = self.reminder_bearer.generate_reminder(30, self.logger, "Encoder",
+                                                 "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
             frame_writer.writeFrame(frame)
+            self.reminder_bearer.terminate_reminder(reminder_id)
 
             chunk_frame_cnt += 1
             self.task_info.update({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
@@ -1227,6 +1232,44 @@ class InterpWorkFlow:
         check_frame_list = [i for i in check_frame_list if i > -1]
         return check_frame_list, scene_frame_list, check_frame_data
 
+    def rife_run_rest(self, run_time: float):
+        if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
+                time.time() - run_time > self.ARGS.multi_task_rest_interval * 3600:
+            self.logger.info(
+                f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
+            # TODO Double check before release
+            time.sleep(600)
+            return time.time()
+
+    def rife_run_input_check(self, dedup=False):
+        """
+        perform input availability check and return generator of frames
+        :return: chunk_cnt, start_frame, videogen, videogen_check
+        """
+        _debug = False
+        chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
+        self.logger.info("Resuming Video Frames...")
+
+        """Get Frames to interpolate"""
+        reminder_id = self.reminder_bearer.generate_reminder(300, self.logger, "Decode Input",
+                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
+        videogen = self.generate_frame_reader(start_frame).nextFrame()
+        videogen_check = None
+        if dedup:
+            videogen_check = self.generate_frame_reader(start_frame, frame_check=True).nextFrame()
+        videogen_available_check = self.generate_frame_reader(start_frame, frame_check=True).nextFrame()
+
+        check_img1 = self.crop_read_img(Tools.gen_next(videogen_available_check))
+        self.reminder_bearer.terminate_reminder(reminder_id)
+        if check_img1 is None:
+            self.main_error = OSError(
+                f"Input file is not available: {self.input}, is img input: {self.ARGS.is_img_input},"
+                f"Please Check Your Input Settings"
+                f"(Start Chunk, Start Frame, Start Point, Start Frame)")
+            self.rife_work_event.set()
+            raise self.main_error
+        return chunk_cnt, start_frame, videogen, videogen_check
+
     # @profile
     def rife_run(self):
         """
@@ -1235,27 +1278,7 @@ class InterpWorkFlow:
         """
 
         self.logger.info("Activate Remove Duplicate Frames Mode")
-
-        """Get Start Info"""
-        _debug = False
-        chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-        self.logger.info("Resuming Video Frames...")
-        frame_reader = self.generate_frame_reader(start_frame)
-        frame_check_reader = self.generate_frame_reader(start_frame, frame_check=True)
-        frame_available_check_reader = self.generate_frame_reader(start_frame, frame_check=True)
-
-        """Get Frames to interpolate"""
-        videogen = frame_reader.nextFrame()
-        videogen_check = frame_check_reader.nextFrame()
-        videogen_available_check = frame_available_check_reader.nextFrame()
-
-        check_img1 = self.crop_read_img(Tools.gen_next(videogen_available_check))
-        now_frame_key = start_frame
-        if check_img1 is None:
-            self.main_error = OSError(f"Input file not valid: {self.input}, img_input: {self.ARGS.is_img_input},"
-                                      f"Please Check Your Input Settings(Start Point, Start Frame)")
-            self.rife_work_event.set()
-            raise self.main_error
+        chunk_cnt, now_frame_key, videogen, videogen_check = self.rife_run_input_check(dedup=True)
         self.logger.info("Loaded Input Frames")
         is_end = False
 
@@ -1271,12 +1294,7 @@ class InterpWorkFlow:
                 self.logger.critical("Render Thread Dead Unexpectedly")
                 break
 
-            if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
-                    time.time() - run_time > self.ARGS.multi_task_rest_interval * 3600:
-                self.logger.info(
-                    f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
-                time.sleep(600)
-                run_time = time.time()
+            run_time = self.rife_run_rest(run_time)
 
             check_frame_list, scene_frame_list, input_frame_data = self.remove_duplicate_frames(videogen_check,
                                                                                                 init=first_run)
@@ -1361,22 +1379,8 @@ class InterpWorkFlow:
         """
 
         self.logger.info("Activate Any FPS Mode")
-
-        """Get Start Info"""
-        _debug = False
-        chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-        self.logger.info("Resuming Video Frames...")
-        self.frame_reader = self.generate_frame_reader(start_frame)
-
-        """Get Frames to interpolate"""
-        videogen = self.frame_reader.nextFrame()
+        chunk_cnt, now_frame, videogen, _ = self.rife_run_input_check(dedup=True)
         img1 = self.crop_read_img(Tools.gen_next(videogen))
-        now_frame = start_frame
-        if img1 is None:
-            self.main_error = OSError(f"Input file not valid: {self.input}, img_input: {self.ARGS.is_img_input},"
-                                      f"Please Check Your Input Settings(Start Point, Start Frame)")
-            self.rife_work_event.set()
-            raise self.main_error
         self.logger.info("Loaded Input Frames")
         is_end = False
 
@@ -1397,12 +1401,7 @@ class InterpWorkFlow:
                 self.logger.critical("Render Thread Dead Unexpectedly")
                 break
 
-            if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
-                    time.time() - run_time > self.ARGS.multi_task_rest_interval * 3600:
-                self.logger.info(
-                    f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
-                time.sleep(600)
-                run_time = time.time()
+            run_time = self.rife_run_rest(run_time)
 
             img0 = img1
             img1 = self.crop_read_img(Tools.gen_next(videogen))
@@ -1625,6 +1624,8 @@ class InterpWorkFlow:
                         mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
                         frames_list.extend(mix_list)
                     else:
+                        reminder_id = self.reminder_bearer.generate_reminder(60, self.logger, "Video Frame Interpolation",
+                                                             "Low interpolate speed detected, Please consider lower your output settings to enhance speed")
                         if n > 0:
                             if n > PURE_SCENE_THRESHOLD and Tools.check_pure_img(img0):
                                 """It's Pure Img Sequence, Copy img0"""
@@ -1635,6 +1636,7 @@ class InterpWorkFlow:
                                 frames_list.extend(interp_list)
                         if add_scene:
                             frames_list.append(img1)
+                        self.reminder_bearer.terminate_reminder(reminder_id)
                     feed_list = list()
                     for i in frames_list:
                         feed_list.append([now_frame, i])
@@ -1675,6 +1677,8 @@ class InterpWorkFlow:
         self.steam_update_achv()
         self.logger.info(f"Program finished at {datetime.datetime.now()}: "
                          f"Duration: {datetime.datetime.now() - run_all_time}")
+        self.reminder_bearer.terminate_all()
+        utils_overtime_reminder_bearer.terminate_all()
         pass
 
     def steam_update_achv(self):
@@ -1686,19 +1690,20 @@ class InterpWorkFlow:
             return
         """Get Stat"""
         STAT_INT_FINISHED_CNT = self.STEAM.GetStat("STAT_INT_FINISHED_CNT", int)
-        STAT_FLOAT_FINISHED_MINUTE = self.STEAM.GetStat("STAT_FLOAT_FINISHED_MINUTE", float)
+        STAT_FLOAT_FINISHED_MINUTE = self.STEAM.GetStat("STAT_FLOAT_FINISHED_MIN", float)
 
         """Update Stat"""
         STAT_INT_FINISHED_CNT += 1
         reply = self.STEAM.SetStat("STAT_INT_FINISHED_CNT", STAT_INT_FINISHED_CNT)
         if self.all_frames_cnt >= 0 and not self.ARGS.render_only:
             """Update Mission Process Time only in interpolation"""
-            STAT_FLOAT_FINISHED_MINUTE += self.all_frames_cnt / self.target_fps
-            reply = self.STEAM.SetStat("STAT_FLOAT_FINISHED_MINUTE", STAT_FLOAT_FINISHED_MINUTE)
+            STAT_FLOAT_FINISHED_MINUTE += self.all_frames_cnt / self.target_fps / 60
+            reply = self.STEAM.SetStat("STAT_FLOAT_FINISHED_MIN", round(STAT_FLOAT_FINISHED_MINUTE, 2))
 
         """Get ACHV"""
         ACHV_Task_Frozen = self.STEAM.GetAchv("ACHV_Task_Frozen")
         ACHV_Task_Cruella = self.STEAM.GetAchv("ACHV_Task_Cruella")
+        ACHV_Task_Suzumiya = self.STEAM.GetAchv("ACHV_Task_Suzumiya")
         ACHV_Task_1000M = self.STEAM.GetAchv("ACHV_Task_1000M")
         ACHV_Task_10 = self.STEAM.GetAchv("ACHV_Task_10")
         ACHV_Task_50 = self.STEAM.GetAchv("ACHV_Task_50")
@@ -1709,19 +1714,15 @@ class InterpWorkFlow:
             reply = self.STEAM.SetAchv("ACHV_Task_Frozen")
         if 'Cruella' in output_path and not ACHV_Task_Cruella:
             reply = self.STEAM.SetAchv("ACHV_Task_Cruella")
+        if any([i in output_path for i in ['Suzumiya', 'Haruhi', '涼宮', '涼宮ハルヒの憂鬱', '涼宮ハルヒの消失', '凉宫春日']]) \
+                and not ACHV_Task_Suzumiya:
+            reply = self.STEAM.SetAchv("ACHV_Task_Suzumiya")
         if STAT_INT_FINISHED_CNT > 10 and not ACHV_Task_10:
             reply = self.STEAM.SetAchv("ACHV_Task_10")
-        elif ACHV_Task_10:
-            reply = self.STEAM.SetAchv("ACHV_Task_10", True)
         if STAT_INT_FINISHED_CNT > 50 and not ACHV_Task_50:
             reply = self.STEAM.SetAchv("ACHV_Task_50")
-        elif ACHV_Task_50:
-            reply = self.STEAM.SetAchv("ACHV_Task_50", True)
         if STAT_FLOAT_FINISHED_MINUTE > 1000 and not ACHV_Task_1000M:
             reply = self.STEAM.SetAchv("ACHV_Task_1000M")
-        elif ACHV_Task_1000M:
-            reply = self.STEAM.SetAchv("ACHV_Task_1000M", True)
-        # TODO if reply indicates failure, store to local(crypted)
         self.STEAM.Store()
         pass
 
@@ -1731,8 +1732,9 @@ class InterpWorkFlow:
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
-            raise OSError(f"Input file not valid: {self.input}, "
-                          f"Please Check Your Input Settings(Start Point, Start Frame)")
+            raise OSError(f"Input file is not available: {self.input}, is img input: {self.ARGS.is_img_input},"
+                          f"Please Check Your Input Settings"
+                          f"(Start Chunk, Start Frame, Start Point, Start Frame)")
 
         renderer = ImgSeqIO(folder=self.output, is_read=False,
                             start_frame=self.ARGS.interp_start, logger=self.logger,
@@ -1756,8 +1758,9 @@ class InterpWorkFlow:
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
-            raise OSError(f"Input file not valid: {self.input}, "
-                          f"Please Check Your Input Settings(Start Point, Start Frame)")
+            raise OSError(f"Input file is not available: {self.input}, is img input: {self.ARGS.is_img_input},"
+                          f"Please Check Your Input Settings"
+                          f"(Start Chunk, Start Frame, Start Point, Start Frame)")
 
         render_path, output_ext = self.get_output_path()
         renderer = self.generate_frame_renderer(render_path)
@@ -1847,6 +1850,7 @@ class InterpWorkFlow:
         return output_filepath, output_ext
 
     # @profile
+    @overtime_reminder_deco(300, None, "Concat Chunks", "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
     def concat_all(self):
         """
         Concat all the chunks
@@ -1905,7 +1909,8 @@ class InterpWorkFlow:
         if self.ARGS.is_output_only and os.path.exists(concat_filepath):
             if not os.path.getsize(concat_filepath):
                 self.logger.error(f"Concat Error, {output_ext}, empty output")
-                raise FileExistsError("Concat Error, empty output, Check Output Extension!!!")
+                raise FileExistsError("Concat Error, empty output detected, Please Check Your Output Extension!!!\n"
+                                      "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
             self.check_chunk(del_chunk=True)
 
     def concat_check(self, concat_list, concat_filepath):

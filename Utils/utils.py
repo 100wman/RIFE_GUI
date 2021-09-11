@@ -1,10 +1,12 @@
 # coding: utf-8
 import datetime
+import functools
 import hashlib
 import json
 import logging
 import math
 import os
+import random
 import re
 import shlex
 import shutil
@@ -19,6 +21,7 @@ from queue import Queue
 
 import cv2
 import numpy as np
+import psutil
 from sklearn import linear_model
 
 from skvideo.utils import check_output
@@ -27,6 +30,8 @@ from steamworks.exceptions import *
 
 abspath = os.path.abspath(__file__)
 appDir = os.path.dirname(os.path.dirname(abspath))
+
+
 
 
 class AiModulePaths:
@@ -362,6 +367,20 @@ class Tools:
         m = hashlib.md5(d.encode(encoding='utf-8'))
         return m.hexdigest()
 
+    @staticmethod
+    def get_pids():
+        """
+        get key-value of pids
+        :return: dict {pid: pid-name}
+        """
+        pid_dict = {}
+        pids = psutil.pids()
+        for pid in pids:
+            p = psutil.Process(pid)
+            pid_dict[pid] = p.name()
+            # print("pid-%d,pname-%s" %(pid,p.name()))
+        return pid_dict
+
 
 class ImgSeqIO:
     def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
@@ -614,22 +633,25 @@ class ArgumentManager:
 
     """Release Version Control"""
     is_steam = True
-    is_free = True
+    is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.17"
+    gui_version = "3.5.18"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.20"
+    ols_version = "6.9.21"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix Steamworks API Unavailable
-    - Add 1000M Achievement for Steam(Finish more than 1000 minutes of interpolation)
-    - Add Render Queue Mode(Support multi missions for render only mode)
-    - Add Back Sobel for dedup
-    - Change Button Color(Optimize UI)
+    - Add OverTime Reminder Module, will reminder user of abnormal TLE
+    - Add Rude Exit Mode, Kill ffmpeg and others to avoid spawning zombie process
+    - Add all update logs since 3.5.2
+    - Add Output extension / Input Extension Synchronization Check
+    - Add Read Tutorial Compulsorily at first start
+    - Update documentations for Super Resolution Module
+    - Update OLS error Information
+    - Fix Steam ACHV, and add more, keep round to 2 digits
     """
 
     path_len_limit = 230
@@ -737,6 +759,7 @@ class ArgumentManager:
         self.force_cpu = args.get("force_cpu", False)
         self.expert_mode = args.get("expert_mode", False)
         self.preview_args = args.get("preview_args", False)
+        self.is_rude_exit = args.get("is_rude_exit", False)
         self.pos = args.get("pos", "")
         self.size = args.get("size", "")
 
@@ -1518,8 +1541,81 @@ class TransitionDetection:
     def get_scene_status(self):
         return self.scedet_info
 
+class OverTimeReminderBearer:
+    reminders = {}
+
+    def generate_reminder(self, *args, **kwargs):
+        while True:
+            t = random.randrange(100000, 999999)
+            if t not in self.reminders:
+                reminder = OvertimeReminder(*args, **kwargs)
+                self.reminders[t] = reminder
+                return t
+
+    def terminate_reminder(self, reminder_id: int):
+        if reminder_id not in self.reminders:
+            raise threading.ThreadError(f"Do not exist reminder {reminder_id}")
+        self.reminders[reminder_id].terminate()
+
+    def terminate_all(self):
+        for reminder in self.reminders.values():
+            reminder.terminate()
+
+
+class OvertimeReminder(threading.Thread):
+    def __init__(self, interval: int, logger=None, msg_1="Function Type", msg_2="Function Warning", callback=None,
+                 *args, **kwargs):
+        super().__init__()
+        self.logger = logger
+        if self.logger is None:
+            self.logger = Tools.get_logger("OverTime Reminder", "")
+        self.interval = interval
+        self.msg_1 = msg_1
+        self.msg_2 = msg_2
+        self.callback = callback
+        self.args = args
+        self.kwargs = kwargs
+        self.terminated = False
+        self.start()
+
+    def run(self):
+        start_time = 0
+        while start_time < self.interval:
+            time.sleep(1)
+            if self.terminated:
+                return
+        if not self.terminated:
+            self.logger.warning(f"Function [{self.msg_1}] exceeds {self.interval} seconds, {self.msg_2}")
+        if self.callback is not None:
+            self.logger.debug(f"OvertimeReminder Callback launch: type {type(self.callback)}")
+            self.callback(*self.args, **self.kwargs)
+        return
+
+    def terminate(self):
+        self.terminated = True
+
+utils_overtime_reminder_bearer = OverTimeReminderBearer()
+def overtime_reminder_deco(interval: int, logger=None, msg_1="Function Type", msg_2="Function Warning"):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            reminder_id = utils_overtime_reminder_bearer.generate_reminder(interval, logger, msg_1, msg_2)
+            result = func(*args, **kwargs)
+            utils_overtime_reminder_bearer.terminate_reminder(reminder_id)
+            return result
+        return wrapper
+    return decorator
 
 class SteamUtils:
+
+    def CheckModuleMd5(self):
+        """
+        Check Integrity of Steam DLLs
+        :return:
+        """
+        steam_api_path = os.path.join(appDir, "steam_api64.dll")
+        steam_py_path = os.path.join(appDir, "steamworks", "SteamworksPy64.dll")
+
     def CheckSteamAuth(self):
         if self.is_steam:
             return 0
