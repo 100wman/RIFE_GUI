@@ -1,5 +1,6 @@
 # coding: utf-8
 import argparse
+import os.path
 import sys
 
 import tqdm
@@ -268,7 +269,9 @@ class InterpWorkFlow:
             if k.startswith("-"):
                 self.color_info[k] = self.video_info[k]
 
-        """fix output extension"""
+        """fix extension"""
+        self.input_ext = os.path.splitext(self.input)[1] if os.path.isfile(self.input) else ""
+        self.input_ext = self.input_ext.lower()
         self.output_ext = "." + self.ARGS.output_ext
         if "ProRes" in self.ARGS.render_encoder and not self.ARGS.is_img_output:
             self.output_ext = ".mov"
@@ -354,7 +357,6 @@ class InterpWorkFlow:
         vf_args = f"copy"
         if self.ARGS.use_deinterlace:
             vf_args += f",yadif=parity=auto"
-        vf_args += f",minterpolate=fps={self.target_fps}:mi_mode=dup"
         if start_frame not in [-1, 0]:
             # not start from the beginning
             if self.ARGS.risk_resume_mode:
@@ -366,6 +368,8 @@ class InterpWorkFlow:
         """Quick Extraction"""
         if not self.ARGS.is_quick_extract:
             vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
+
+        vf_args += f",minterpolate=fps={self.target_fps}:mi_mode=dup"
 
         """Update video filters"""
         output_dict["-vf"] = vf_args
@@ -561,7 +565,7 @@ class InterpWorkFlow:
                 "-pix_fmt": "rgb24",
             }
             _output_dict = {
-                "--chroma-qp-offset": "-2",
+                # "--chroma-qp-offset": "-2",
                 "--lookahead": "16",
                 "--gop-len": "250",
                 "-b": "4",
@@ -1796,6 +1800,9 @@ class InterpWorkFlow:
                 if self.ARGS.input_start_point is not None:
                     map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
 
+            if self.input_ext in ['.vob'] and self.output_ext in ['.mkv']:
+                map_audio += "-map_chapters -1 "
+
             color_info_str = ' '.join(Tools.dict2Args(self.color_info))
             concat_filepath = os.path.splitext(render_path)[0] + '_audio' + output_ext
             ffmpeg_command = f'{self.ffmpeg} -hide_banner -i {Tools.fillQuotation(render_path)} {map_audio} -c:v copy ' \
@@ -1895,6 +1902,10 @@ class InterpWorkFlow:
                     map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
                 if self.ARGS.input_start_point is not None:
                     map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
+
+            if self.input_ext in ['.vob'] and self.output_ext in ['.mkv']:
+                map_audio += "-map_chapters -1 "
+
         else:
             map_audio = ""
 

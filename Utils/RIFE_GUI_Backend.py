@@ -704,8 +704,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.OutputFolder.setText(appData.value("output_dir"))
             self.InputFPS.setText(appData.value("input_fps", "0"))
             self.OutputFPS.setText(appData.value("target_fps", ""))
-            self.InterpExpReminder.setChecked(appData.value("is_exp_prior", False, type=bool))
             self.OutputFPSReminder.setChecked(not appData.value("is_exp_prior", False, type=bool))
+            self.InterpExpReminder.setChecked(appData.value("is_exp_prior", True, type=bool))
             self.ExpSelecter.setCurrentText("x" + str(2 ** int(appData.value("rife_exp", "1"))))
             self.ImgOutputChecker.setChecked(appData.value("is_img_output", False, type=bool))
             appData.setValue("is_img_input", appData.value("is_img_input", False))
@@ -982,9 +982,13 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         input_paths = self.function_get_input_paths()
         output_dir = self.OutputFolder.text()
 
-        if not len(input_paths) or not len(output_dir):
+        if not len(input_paths):
             self.function_send_msg("Empty Input", _translate('', "请输入要补帧的文件和输出文件夹"))
             return False
+
+        if not len(output_dir):
+            self.OutputFolder.setText(os.path.dirname(input_paths[0]))
+            output_dir = self.OutputFolder.text()
 
         if ' ' in output_dir and '.' in output_dir:
             self.function_send_msg("Invalid Output Folder", _translate('', "输出文件夹同时存在空格和'.'，请删除路径空格"))
@@ -1451,11 +1455,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def function_load_tasks_settings(self, load_all=False, load_one=False):
         task_data = self.InputFileName.getItems()
         task_list = list()
+
         for t in task_data:
             if self.InputFileName.itemWidget(t).iniCheck.isChecked():
                 task_list.append(self.InputFileName.getWidgetData(t)['row'])
-        if load_all:
-            """Activate All Tasks"""
+        if load_all or self.InputFileName.count() == 1:
+            """Activate All Tasks when load_all is assigned or only has one input"""
             for it in range(self.InputFileName.count()):
                 self.InputFileName.setCurrentRow(it)
                 self.on_InputFileName_currentItemChanged()
@@ -1824,7 +1829,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         使用自定义内存限制
         :return:
         """
-        logger.info("Switch To Manual Assign Buffer Size Mode: %s" % self.MBufferChecker.isChecked())
+        logger.debug("Switch To Manual Assign Buffer Size Mode: %s" % self.MBufferChecker.isChecked())
         self.BufferSizeSelector.setEnabled(self.MBufferChecker.isChecked())
 
     @pyqtSlot(str)
@@ -1943,7 +1948,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_AutoInterpScaleChecker_clicked(self):
         """使用动态光流"""
-        logger.info("Switch To Auto Scale Mode: %s" % self.AutoInterpScaleChecker.isChecked())
+        logger.debug("Switch To Auto Scale Mode: %s" % self.AutoInterpScaleChecker.isChecked())
         bool_result = not self.AutoInterpScaleChecker.isChecked()
         self.InterpScaleSelector.setEnabled(bool_result)
 
@@ -1953,7 +1958,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def on_UseFixedScdet_clicked(self):
-        logger.info("Switch To FixedScdetThreshold Mode: %s" % self.UseFixedScdet.isChecked())
+        logger.debug("Switch To FixedScdetThreshold Mode: %s" % self.UseFixedScdet.isChecked())
 
     @pyqtSlot(bool)
     def on_ScedetChecker_clicked(self):
