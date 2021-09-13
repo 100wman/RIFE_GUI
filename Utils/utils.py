@@ -636,17 +636,17 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.19"
+    gui_version = "3.5.20"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.22"
+    ols_version = "6.9.23"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add Remove Flicker Mode
-    - Add new TTA Mode
-    - Fix some bugs of UI
+    - Add start mission autofill(limited working)
+    - Add vob supports
+    - Optimize UI(be elaborated later)
     """
 
     path_len_limit = 230
