@@ -8,7 +8,6 @@ import os
 import re
 import shlex
 import shutil
-import signal
 import subprocess as sp
 import sys
 import time
@@ -35,8 +34,11 @@ except ImportError:
 
 Utils = Tools()
 appDataPath = os.path.join(appDir, "SVFI.ini")
+appPrefPath = os.path.join(appDir, "SVFI_Preference.ini")
 appData = QSettings(appDataPath, QSettings.IniFormat)
 appData.setIniCodec("UTF-8")
+appPref = QSettings(appPrefPath, QSettings.IniFormat)
+appPref.setIniCodec("UTF-8")
 
 logger = Utils.get_logger("GUI", appDir)
 ols_potential = os.path.join(appDir, "one_line_shot_args.exe")
@@ -103,14 +105,13 @@ class UiPreviewArgsDialog(QDialog, SVFI_preview_args.Ui_Dialog):
 class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
     preference_signal = pyqtSignal(dict)
 
-    def __init__(self, parent=None, preference_dict=None):
+    def __init__(self, parent=None):
         super(UiPreferenceDialog, self).__init__(parent)
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
         _app.installTranslator(translator)  # 重新翻译主界面
         self.retranslateUi(self)
-        self.preference_dict = preference_dict
         self.update_preference()
         self.ExpertModeChecker.clicked.connect(self.request_preference)
         self.buttonBox.clicked.connect(self.request_preference)
@@ -126,46 +127,38 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         初始化，更新偏好设置
         :return:
         """
-        if self.preference_dict is None:
-            return
-        assert type(self.preference_dict) == dict
-
-        self.MultiTaskRestChecker.setChecked(self.preference_dict["multi_task_rest"])
-        self.MultiTaskRestInterval.setValue(self.preference_dict["multi_task_rest_interval"])
-        self.AfterMission.setCurrentIndex(self.preference_dict["after_mission"])  # None
-        self.ForceCpuChecker.setChecked(self.preference_dict["rife_use_cpu"])
-        self.ExpertModeChecker.setChecked(self.preference_dict["expert"])
-        self.PreviewArgsModeChecker.setChecked(self.preference_dict["is_preview_args"])
-        self.RudeExitModeChecker.setChecked(self.preference_dict["is_rude_exit"])
-        self.QuietModeChecker.setChecked(self.preference_dict["is_gui_quiet"])
-        self.WinOnTopChecker.setChecked(self.preference_dict["is_windows_ontop"])
-        self.OneWayModeChecker.setChecked(self.preference_dict["use_clear_inputs"])
-        self.UseGlobalSettingsChecker.setChecked(self.preference_dict["use_global_settings"])
+        self.MultiTaskRestChecker.setChecked(appPref.value("multi_task_rest", False, type=bool))
+        self.MultiTaskRestInterval.setValue(appPref.value("multi_task_rest_interval", 0, type=int))
+        self.AfterMission.setCurrentIndex(appPref.value("after_mission", False, type=bool))  # None
+        self.ForceCpuChecker.setChecked(appPref.value("rife_use_cpu", False, type=bool))
+        self.ExpertModeChecker.setChecked(appPref.value("expert", True, type=bool))
+        self.PreviewArgsModeChecker.setChecked(appPref.value("is_preview_args", False, type=bool))
+        self.RudeExitModeChecker.setChecked(appPref.value("is_rude_exit", False, type=bool))
+        self.QuietModeChecker.setChecked(appPref.value("is_gui_quiet", False, type=bool))
+        self.WinOnTopChecker.setChecked(appPref.value("is_windows_ontop", False, type=bool))
+        self.OneWayModeChecker.setChecked(appPref.value("use_clear_inputs", False, type=bool))
+        self.UseGlobalSettingsChecker.setChecked(appPref.value("use_global_settings", False, type=bool))
         pass
 
-    # noinspection PyUnresolvedReferences
     def request_preference(self):
         """
         申请偏好设置更改
         :return:
         """
-        preference_dict = dict()
-        preference_dict["multi_task_rest"] = self.MultiTaskRestChecker.isChecked()
-        preference_dict["multi_task_rest_interval"] = self.MultiTaskRestInterval.value()
-        preference_dict["after_mission"] = self.AfterMission.currentIndex()
-        preference_dict["rife_use_cpu"] = self.ForceCpuChecker.isChecked()
-        preference_dict["expert"] = self.ExpertModeChecker.isChecked()
-        preference_dict["is_preview_args"] = self.PreviewArgsModeChecker.isChecked()
-        preference_dict["is_rude_exit"] = self.RudeExitModeChecker.isChecked()
-        preference_dict["is_gui_quiet"] = self.QuietModeChecker.isChecked()
-        preference_dict["is_windows_ontop"] = self.WinOnTopChecker.isChecked()
-        preference_dict["use_clear_inputs"] = self.OneWayModeChecker.isChecked()
-        preference_dict["use_global_settings"] = self.UseGlobalSettingsChecker.isChecked()
-
-        self.preference_signal.emit(preference_dict)
+        appPref.setValue("multi_task_rest", self.MultiTaskRestChecker.isChecked())
+        appPref.setValue("multi_task_rest_interval", self.MultiTaskRestInterval.value())
+        appPref.setValue("after_mission", self.AfterMission.currentIndex())
+        appPref.setValue("rife_use_cpu", self.ForceCpuChecker.isChecked())
+        appPref.setValue("expert", self.ExpertModeChecker.isChecked())
+        appPref.setValue("is_preview_args", self.PreviewArgsModeChecker.isChecked())
+        appPref.setValue("is_rude_exit", self.RudeExitModeChecker.isChecked())
+        appPref.setValue("is_gui_quiet", self.QuietModeChecker.isChecked())
+        appPref.setValue("is_windows_ontop", self.WinOnTopChecker.isChecked())
+        appPref.setValue("use_clear_inputs", self.OneWayModeChecker.isChecked())
+        appPref.setValue("use_global_settings", self.UseGlobalSettingsChecker.isChecked())
+        self.preference_signal.emit({})
 
 
-# noinspection PyUnresolvedReferences
 class UiRunThread(QThread):
     run_signal = pyqtSignal(dict)
 
@@ -192,8 +185,6 @@ class UiRunThread(QThread):
         ps.wait()
         self.fire_finish_signal()
         pass
-
-    pass
 
 
 class UiRun(QThread):
@@ -230,36 +221,20 @@ class UiRun(QThread):
             logger.error(f"Invalid Task: {item_data}")
             return None, ""
 
-        appData = QSettings(config_path, QSettings.IniFormat)
-        appData.setIniCodec("UTF-8")
+        if appData is None:
+            logger.error(f"Invalid appData, check previous mission load")
 
-        if os.path.splitext(appData.value("ols_path"))[-1] == ".exe":
-            self.command = appData.value("ols_path") + " "
+        ols_paths = os.path.splitext(ols_potential)
+        if ols_paths[-1] == ".exe":
+            self.command = ols_potential + " "
         else:
-            self.command = f'python "{appData.value("ols_path")}" '
+            """python script"""
+            self.command = f'python "{ols_potential}" '
 
         input_path = item_data['input_path']
         task_id = item_data['task_id']
 
-        """Some Additional Final Check"""
-        if not len(input_path) or not os.path.exists(input_path):
-            self.command = ""
-            logger.error(f"Invalid Input: {item_data}")
-            return None, ""
-
-        if float(appData.value("input_fps", -1.0, type=float)) <= 0 or float(
-                appData.value("target_fps", -1.0, type=float)) <= 0:
-            logger.error(f"Invalid FPS/Target_FPS: {item_data}")
-            return None, ""
-
         self.command += f'--input {Tools.fillQuotation(input_path)} --task-id {task_id} '
-
-        output_path = appData.value("output_dir")
-        if os.path.isfile(output_path):
-            logger.info("OutputPath with FileName detected")
-            appData.setValue("output_dir", os.path.dirname(output_path))
-
-        self.command += f'--output {Tools.fillQuotation(output_path)} '
         self.command += f'--config {Tools.fillQuotation(config_path)} '
 
         """Alternative Mission Settings"""
@@ -285,12 +260,8 @@ class UiRun(QThread):
 
     @staticmethod
     def maintain_multitask():
-        appData.setValue("output_chunk_cnt", 1)
-        appData.setValue("interp_start", 0)
-        appData.setValue("input_start_point", "00:00:00")
-        appData.setValue("input_end_point", "00:00:00")
+        pass
 
-    # noinspection PyBroadException
     def run(self):
         try:
             logger.info("SVFI Task Run")
@@ -304,8 +275,6 @@ class UiRun(QThread):
             command_list = list()
             for item_data in input_list_data['inputs']:
                 input_path, command = self.build_command(item_data)
-                # if not len(command):
-                #     continue
                 command_list.append((input_path, command))
 
             self.current_step = 0
@@ -357,7 +326,6 @@ class UiRun(QThread):
                                     break
                                 time.sleep(0.2)
                         else:
-                            # line = self.current_proc.stdout.readline().encode('utf-8').decode('unicode_escape')
                             line = self.current_proc.stdout.readline()
                             self.current_proc.stdout.flush()
 
@@ -381,8 +349,8 @@ class UiRun(QThread):
                     self.update_status(False,
                                        f"\nINFO - {datetime.datetime.now()} {input_path} {_msg}\n\n")
                     self.maintain_multitask()
-                    # self.config_maintainer.RemoveConfig()
-
+                    if appPref.value("is_rude_exit", False, type=bool):
+                        Tools.kill_svfi_related()
             except Exception:
                 logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
 
@@ -476,17 +444,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.last_item = None  # 上一次点击的条目
 
         """Preference Maintainer"""
-        self.multi_task_rest = False
-        self.multi_task_rest_interval = 0
-        self.after_mission = 0
-        self.force_cpu = False
-        self.expert_mode = True
-        self.preview_args = False
-        self.is_rude_exit = False
-        self.is_gui_quiet = False
-        self.is_windows_ontop = False
-        self.use_clear_inputs = False
-        self.use_global_settings = False
         self.rife_cuda_cnt = 0
         self.SVFI_Preference_form = None
         self.resize_exp = 0
@@ -494,7 +451,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         """Initiate and Check GPU"""
         self.hasNVIDIA = True
         self.settings_update_pack()
-        # self.function_load_all_tasks_settings()
 
         """Initiate Beautiful Layout and Signals"""
         self.AdvanceSettingsArea.setVisible(False)
@@ -572,7 +528,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SettingsPresetGroup.setVisible(False)
         self.ShortCutGroup.setVisible(False)
         self.LockWHChecker.setVisible(False)
-        # self.UseSobelChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -620,7 +575,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SrField.setVisible(False)
         self.RenderSettingsLabel.setVisible(False)
         self.RenderSettingsGroup.setVisible(False)
-        # self.RenderOnlyGroupbox.setVisible(False)
         self.UseMultiCardsChecker.setVisible(False)
         self.TtaModeSelector.setVisible(False)
         self.TtaIterTimesSelector.setVisible(False)
@@ -634,7 +588,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.FastDenoiseChecker.setVisible(False)
         self.HwaccelDecode.setVisible(False)
         self.EncodeThreadField.setVisible(False)
-        # self.HwaccelEncodeBox.setEnabled(False)
         self.HwaccelPresetLabel.setVisible(False)
         self.HwaccelPresetSelector.setVisible(False)
 
@@ -681,7 +634,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not item_update:
             """New Initiation of GUI"""
             try:
-                input_list_data = json.loads(appData.value("gui_inputs", ""))
+                input_list_data = json.loads(appData.value("gui_inputs", ""))  # TODO move gui inputs to preference
                 if not self.InputFileName.count():
                     for item_data in input_list_data['inputs']:
                         config_maintainer = SVFI_Config_Manager(item_data, appDir)
@@ -709,26 +662,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.ExpSelecter.setCurrentText("x" + str(2 ** int(appData.value("rife_exp", "1"))))
             self.ImgOutputChecker.setChecked(appData.value("is_img_output", False, type=bool))
             appData.setValue("is_img_input", appData.value("is_img_input", False))
-            appData.setValue("batch", False)
             self.KeepChunksChecker.setChecked(not appData.value("is_output_only", True, type=bool))
             self.StartPoint.setTime(QTime.fromString(appData.value("input_start_point", "00:00:00"), "HH:mm:ss"))
             self.EndPoint.setTime(QTime.fromString(appData.value("input_end_point", "00:00:00"), "HH:mm:ss"))
             self.StartChunk.setValue(appData.value("output_chunk_cnt", -1, type=int))
             self.StartFrame.setValue(appData.value("interp_start", -1, type=int))
             self.ResumeRiskChecker.setChecked(appData.value("risk_resume_mode", True, type=bool))
-
-            """Multi Task Configuration"""
-            self.multi_task_rest = appData.value("multi_task_rest", False, type=bool)
-            self.multi_task_rest_interval = appData.value("multi_task_rest_interval", False, type=bool)
-            self.after_mission = appData.value("after_mission", 0, type=int)
-            self.force_cpu = appData.value("rife_use_cpu", False, type=bool)
-            self.expert_mode = appData.value("expert_mode", True, type=bool)
-            self.preview_args = appData.value("is_preview_args", False, type=bool)
-            self.is_rude_exit = appData.value("is_rude_exit", False, type=bool)
-            self.is_gui_quiet = appData.value("is_gui_quiet", False, type=bool)
-            self.is_windows_ontop = appData.value("is_windows_ontop", False, type=bool)
-            self.use_clear_inputs = appData.value("use_clear_inputs", False, type=bool)
-            self.use_global_settings = appData.value("use_global_settings", False, type=bool)
 
         self.DebugChecker.setChecked(appData.value("debug", False, type=bool))
 
@@ -804,6 +743,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ncnnInterpThreadCnt.setValue(appData.value("ncnn_thread", 4, type=int))
         self.ncnnSelectGPU.setValue(appData.value("ncnn_gpu", 0, type=int))
         self.UseMultiCardsChecker.setChecked(appData.value("use_rife_multi_cards", False, type=bool))
+
         # Update RIFE Model
         rife_model_list = []
         for item_data in range(self.ModuleSelector.count()):
@@ -823,14 +763,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         添加新选项/变量 2/3 Options -> appData
         :return:
         """
+        global ols_potential
 
         appData.setValue("app_dir", appDir)
-        appData.setValue("ols_path", ols_potential)
-        appData.setValue("ffmpeg", appDir)
         if not os.path.exists(ols_potential):
-            appData.setValue("ols_path",
-                             r"D:\60-fps-Project\Projects\RIFE GUI\one_line_shot_args.py")
-            appData.setValue("ffmpeg", "ffmpeg")
+            ols_potential = r"D:\60-fps-Project\Projects\RIFE GUI\one_line_shot_args.py"
             logger.info("Change to Debug Path")
 
         """Input Basic Input Information"""
@@ -947,17 +884,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("debug", self.DebugChecker.isChecked())
 
         """Preferences"""
-        appData.setValue("multi_task_rest", self.multi_task_rest)
-        appData.setValue("multi_task_rest_interval", self.multi_task_rest_interval)
-        appData.setValue("after_mission", self.after_mission)
-        appData.setValue("rife_use_cpu", self.force_cpu)
-        appData.setValue("expert_mode", self.expert_mode)
-        appData.setValue("is_preview_args", self.preview_args)
-        appData.setValue("is_rude_exit", self.is_rude_exit)
-        appData.setValue("is_gui_quiet", self.is_gui_quiet)
-        appData.setValue("is_windows_ontop", self.is_windows_ontop)
-        appData.setValue("use_clear_inputs", self.use_clear_inputs)
-        appData.setValue("use_global_settings", self.use_global_settings)
+        for pref_key in appPref.allKeys():
+            appData.setValue(pref_key, appPref.value(pref_key))
 
         """SVFI Main Page Position and Size"""
         appData.setValue("pos", QVariant(self.pos()))
@@ -965,8 +893,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         logger.info("[Main]: Download all settings")
         self.OptionCheck.isReadOnly = True
-        # if not os.path.exists(appData.fileName()):
         appData.sync()
+        appPref.sync()
         try:
             if not os.path.samefile(appData.fileName(), appDataPath):
                 shutil.copy(appData.fileName(), appDataPath)
@@ -1125,7 +1053,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def settings_maintain_item_settings(self, widget_data: dict):
         global appData
-        if self.use_global_settings:
+        use_global_settings = appPref.value("use_global_settings", False, type=bool)
+        if use_global_settings:
             """First detect using use global settings"""
             self.settings_load_config(appDataPath)  # change to root settings
         self.settings_load_current()  # 保存跳转前设置
@@ -1133,14 +1062,16 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.last_item = widget_data
         config_maintainer = SVFI_Config_Manager(self.last_item, appDir)
         config_maintainer.DuplicateConfig()  # 将当前设置保存到上一任务的配置文件，并准备跳转到新任务
-        if not self.use_global_settings:
+        if not use_global_settings:
+            """使用已存在的（上一）任务配置文件载入设置"""
             config_maintainer = SVFI_Config_Manager(widget_data, appDir)
             config_path = config_maintainer.FetchConfig()
             if config_path is None:
                 config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
-                config_path = config_maintainer.FetchConfig()
-            self.settings_load_config(config_path)
-            self.settings_update_pack(item_update=self.use_global_settings)
+                # config_path = config_maintainer.FetchConfig()
+            config_maintainer.UpdateRootConfig()
+            self.settings_load_config(appDataPath)
+            self.settings_update_pack(item_update=use_global_settings)
         self.last_item = widget_data
 
     @pyqtSlot(bool)
@@ -1165,7 +1096,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             card = torch.cuda.get_device_properties(i)
             info = f"{card.name}, {card.total_memory / 1024 ** 3:.1f} GB"
             cuda_infos[f"{i}"] = info
-        logger.info(f"NVIDIA data: {cuda_infos}")
+        logger.debug(f"NVIDIA data: {cuda_infos}")
 
         if not len(cuda_infos):
             self.hasNVIDIA = False
@@ -1273,7 +1204,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.toolboxActionButton.clicked.connect(lambda i=6: self.toolBox.setCurrentIndex(i))
 
     def settings_windows_ontop(self):
-        if not self.is_windows_ontop:
+        if not appPref.value("is_windows_ontop", False, type=bool):
             self.setWindowFlags(QtCore.Qt.Widget)  # 取消置顶
         else:
             self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)  # 置顶
@@ -1329,7 +1260,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :param msg_type: 1 warning 2 info 3 question
         :return:
         """
-        if self.is_gui_quiet:
+        if appPref.value("is_gui_quiet", False, type=bool):
             return QMessageBox.Yes
         QMessageBox.setWindowIcon(self, QIcon(ico_path))
         if msg_type == 1:
@@ -1459,8 +1390,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         for t in task_data:
             if self.InputFileName.itemWidget(t).iniCheck.isChecked():
                 task_list.append(self.InputFileName.getWidgetData(t)['row'])
-        if load_all or self.InputFileName.count() == 1:
-            """Activate All Tasks when load_all is assigned or only has one input"""
+        if load_all or (not len(task_list) and self.InputFileName.count() >= 1):
+            """
+            Activate All Tasks when load_all is assigned or 
+            multiple inputs with no check in (reckoned as mis-operation)
+            """
             for it in range(self.InputFileName.count()):
                 self.InputFileName.setCurrentRow(it)
                 self.on_InputFileName_currentItemChanged()
@@ -1515,14 +1449,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.OptionCheck.setTextCursor(cursor)
 
         def error_handle():
-            now_text = self.OptionCheck.toPlainText()
+            now_text = self.OptionCheck.toPlainText().lower() + data.get("subprocess", "").lower()  # 复合寻找错误
             if self.current_failed:
                 return
-            if "Input File not valid" in now_text:
+            if "input file is not available" in now_text:
                 self.function_send_msg("Inputs Failed", _translate('', "你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符"), )
                 self.current_failed = True
                 return
-            elif "JSON" in now_text:
+            elif "json" in now_text:
                 self.function_send_msg("Input File Failed", _translate('', "文件读取失败，请确保软件有足够权限且输入文件未被其他软件占用"), )
                 self.current_failed = True
                 return
@@ -1530,7 +1464,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.function_send_msg("Software Path Failure", _translate('', "请把软件所在文件夹移到纯英文、无中文、无空格路径下"), )
                 self.current_failed = True
                 return
-            elif "CUDA out of memory" in now_text:
+            elif "cuda out of memory" in now_text:
                 self.function_send_msg("CUDA Failed",
                                        _translate('', "你的显存不够啦！去清一下后台占用显存的程序，或者去'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型~"), )
                 self.current_failed = True
@@ -1539,19 +1473,27 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx"), )
                 self.current_failed = True
                 return
-            elif "Concat Test Error" in now_text:
-                self.function_send_msg("Concat Failed", _translate('', "区块合并音轨测试失败，请检查输出文件格式是否支持源文件音频"), )
+            elif "concat test error" in now_text or "concat error" in now_text:
+                self.function_send_msg("Concat Failed", _translate('', "区块合并音轨失败，请检查输出文件格式是否支持源文件音频"), )
                 self.current_failed = True
                 return
-            elif "Broken Pipe" in now_text:
+            elif "broken pipe" in now_text:
                 self.function_send_msg("Render Failed", _translate('', "请检查渲染设置，确保输出分辨率宽高为偶数，尝试关闭硬件编码以解决问题"), )
                 self.current_failed = True
                 return
-            elif "error" in data.get("subprocess", "").lower():
+            elif "rife_ncnn_vulkan" in now_text:
+                self.function_send_msg("NCNN Import Failed", _translate('', "你的A卡不支持NCNN-RIFE补帧，请更换设备"), )
+                self.current_failed = True
+                return
+            elif "Steam Validation Failed" in now_text:
+                self.function_send_msg("Steam Validation Failed", _translate('', "Steam验证失败，请确保软件联网并退出Steam重试；如有疑问详询开发人员"), )
+                self.current_failed = True
+                return
+            elif "error" in now_text:
                 logger.error(f"[At the end of One Line Shot]: \n {data.get('subprocess')}")
                 __msg1 = _translate('', '程序运行出现错误！')
-                __msg2 = _translate('', '联系开发人员解决')
-                self.function_send_msg("Something Went Wrong",
+                __msg2 = _translate('', '请联系开发人员解决')
+                self.function_send_msg("Something went wrong",
                                        f"{__msg1}\n{data.get('subprocess')}\n{__msg2}", )
                 self.current_failed = True
                 return
@@ -1614,11 +1556,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 complete_msg += _translate('', '成功！')
                 os.startfile(self.OutputFolder.text())
             else:
-                _msg1 = _translate('', '失败, 返回码：')
-                _msg2 = _translate('', '请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度')
-                complete_msg += f"{_msg1}{returncode}\n{_msg2}"
-                error_handle()
-                generate_error_log()
+                if not self.DebugChecker.isChecked():
+                    _msg1 = _translate('', '失败, 返回码：')
+                    _msg2 = _translate('', '请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度')
+                    complete_msg += f"{_msg1}{returncode}\n{_msg2}"
+                    error_handle()
+                    generate_error_log()
 
             self.function_send_msg(_translate('', "任务完成"), complete_msg, 2)
             self.ConcatAllButton.setEnabled(True)
@@ -1630,7 +1573,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             # self.InputFileName.refreshTasks()
             self.on_InputFileName_currentItemChanged()
 
-            if self.use_clear_inputs:
+            if appPref.value("use_clear_inputs", False, type=bool):
                 self.InputFileName.clear()
 
         self.OptionCheck.moveCursor(QTextCursor.End)
@@ -1677,7 +1620,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :param fail_code:
         :return:
         """
-        # TODO: i18n
         if fail_code == 1:
             """Path too long"""
             self.function_send_msg("Path Too Long", _translate('', '输入文件路径过长，请适当缩短文件路径并重试'))
@@ -1719,14 +1661,13 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         self.settings_load_current()  # update settings
 
-        if self.preview_args and not self.is_gui_quiet:
+        if appPref.value("is_preview_args", False, type=bool) and not appPref.value("is_gui_quiet", False, type=bool):
             SVFI_preview_args_form = UiPreviewArgsDialog(self)
             SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
             # SVFI_preview_args_form.setWindowModality(Qt.ApplicationModal)
             SVFI_preview_args_form.exec_()
-        _msg1 = _translate('', '补帧将会从区块')
-        _msg2 = _translate('', '起始帧')
-        _msg3 = _translate('', '启动。请确保上述两者皆不为空。是否执行补帧？')
+        _msg1 = _translate('', '共有{}个任务，第一个任务将会区块[{}]，起始帧[{}]启动。')
+        _msg5 = _translate('', '请确保上述三者皆不为空(-1为自动)，任务计数不为0。\n是否执行补帧？')
         _msg4 = ""
         try:
             current_path = self.InputFileName.itemWidget(self.InputFileName.currentItem()).input_path
@@ -1737,8 +1678,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         except Exception:
             pass
         reply = self.function_send_msg("Confirm Start Info",
-                                       f"{_msg1}[{self.StartChunk.text()}], {_msg2}[{self.StartFrame.text()}]"
-                                       f"{_msg3}\n{_msg4}",
+                                       _msg1.format(len(task_list), self.StartChunk.text(), self.StartFrame.text()) +
+                                       f"\n{_msg5}\n{_msg4}",
                                        3)
         if reply == QMessageBox.No:
             return
@@ -1763,7 +1704,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         自动设置启动信息按钮（点我就完事了）
         :return:
         """
-        # self.function_load_all_tasks_settings()
         if self.InputFileName.currentItem() is None or not len(self.OutputFolder.text()):
             self.function_send_msg("Invalid Inputs", _translate('', "请检查你的输入和输出文件夹"))
             return
@@ -1814,14 +1754,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if config_path is None:
             self.function_send_msg("Invalid Config", _translate('', "指定预设不见啦~"))
             return
-        self.settings_load_config(config_path)
+        template_config.UpdateRootConfig()
+        self.settings_load_config(appDataPath)
         self.settings_initiation(item_update=True, template_update=True)
         self.function_send_msg("Config Loaded", _translate('', "已载入指定预设~"), 2)
-        if not self.is_gui_quiet:
+        if not appPref.value("is_gui_quiet", False, type=bool):
             SVFI_preview_args_form = UiPreviewArgsDialog(self)
             SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
             SVFI_preview_args_form.exec_()
-        self.settings_load_config(appDataPath)  # 将appData指针指回root
+        # self.settings_load_config(appDataPath)  # 将appData指针指回root
 
     @pyqtSlot(bool)
     def on_MBufferChecker_clicked(self):
@@ -1863,18 +1804,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             logger.debug("Switch To NCNN Mode: %s" % self.UseNCNNButton.isChecked())
         bool_result = not self.UseNCNNButton.isChecked()
-        # self.FP16Checker.setEnabled(bool_result)
         self.NvidiaRifeSettingsBox.setEnabled(bool_result)
         self.AutoInterpScaleChecker.setEnabled(bool_result)
         self.on_AutoInterpScaleChecker_clicked()
 
         self.NcnnRifeSettingsBox.setEnabled(not bool_result)
-        # self.ncnnInterpThreadCnt.setEnabled(not bool_result)
-        # self.DiscreteCardSelector.setEnabled(bool_result)
-        # self.ncnnSelectGPU.setEnabled(not bool_result)
-        # self.ForwardEnsembleChecker.setEnabled(bool_result)
         self.settings_update_rife_model_info()
-        # self.on_ExpSelecter_currentTextChanged()
 
     @pyqtSlot(str)
     def on_TtaModeSelector_currentTextChanged(self):
@@ -1916,9 +1851,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         row = self.InputFileName.getWidgetData(current_item)['row']
         input_files = self.function_get_input_paths()
         sample_file = input_files[row]
-        # if not os.path.isfile(sample_file):
-        #     self.function_send_msg("Input File not Video", "输入文件非视频，请手动输入需要的分辨率")
-        #     return
 
         try:
             if not os.path.isfile(sample_file):
@@ -2024,9 +1956,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         presets = EncodePresetAssemply.encoder[currentHwaccel][currentEncoder]
         for preset in presets:
             self.PresetSelector.addItem(preset)
-        # self.HwaccelPresetLabel.setVisible(currentHwaccel == "NVENC")
-        # self.HwaccelPresetSelector.setVisible(currentHwaccel == "NVENC")
-        # self.settings_free_hide()
 
     @pyqtSlot(int)
     def on_tabWidget_currentChanged(self, tab_index):
@@ -2197,61 +2126,32 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def on_actionPreferences_triggered(self):
-        def generate_preference_dict():
-            preference_dict = dict()
-            preference_dict["multi_task_rest"] = self.multi_task_rest
-            preference_dict["multi_task_rest_interval"] = self.multi_task_rest_interval
-            preference_dict["after_mission"] = self.after_mission
-            preference_dict["expert"] = self.expert_mode
-            preference_dict["rife_use_cpu"] = self.force_cpu
-            preference_dict["is_preview_args"] = self.preview_args
-            preference_dict["is_rude_exit"] = self.is_rude_exit
-            preference_dict["is_gui_quiet"] = self.is_gui_quiet
-            preference_dict["is_windows_ontop"] = self.is_windows_ontop
-            preference_dict["use_clear_inputs"] = self.use_clear_inputs
-            preference_dict["use_global_settings"] = self.use_global_settings
-            return preference_dict
-
-        self.SVFI_Preference_form = UiPreferenceDialog(preference_dict=generate_preference_dict())
+        self.SVFI_Preference_form = UiPreferenceDialog()
         self.SVFI_Preference_form.setWindowTitle("Preference")
         self.SVFI_Preference_form.preference_signal.connect(self.on_Preference_changed)
         self.SVFI_Preference_form.show()
 
-    def on_Preference_changed(self, preference_dict: dict):
-
-        self.multi_task_rest = preference_dict["multi_task_rest"]
-        self.multi_task_rest_interval = preference_dict["multi_task_rest_interval"]
-        self.after_mission = preference_dict["after_mission"]
-        self.expert_mode = preference_dict["expert"]
-        self.force_cpu = preference_dict["rife_use_cpu"]
-        self.preview_args = preference_dict["is_preview_args"]
-        self.is_rude_exit = preference_dict["is_rude_exit"]
-        self.is_gui_quiet = preference_dict["is_gui_quiet"]
-        self.is_windows_ontop = preference_dict["is_windows_ontop"]
-        self.use_clear_inputs = preference_dict["use_clear_inputs"]
-        self.use_global_settings = preference_dict["use_global_settings"]
+    def on_Preference_changed(self):
         self.on_ExpertMode_changed()
         self.settings_load_current()
 
     def on_ExpertMode_changed(self):
-        self.UseFixedScdet.setVisible(self.expert_mode)
-        self.ScdetMaxDiffSelector.setVisible(self.expert_mode)
-        self.HwaccelPresetSelector.setVisible(self.expert_mode)
-        self.HwaccelPresetLabel.setVisible(self.expert_mode)
-        self.QuickExtractChecker.setVisible(self.expert_mode)
-        self.HDRModeField.setVisible(self.expert_mode)
-        self.RenderSettingsLabel.setVisible(self.expert_mode)
-        self.RenderSettingsGroup.setVisible(self.expert_mode)
-        # self.HwaccelEncodeBox.setEnabled(False)
-        self.FP16Checker.setVisible(self.expert_mode)
-        self.ReverseChecker.setVisible(self.expert_mode)
-        self.KeepChunksChecker.setVisible(self.expert_mode)
-        self.AutoInterpScaleChecker.setVisible(self.expert_mode)
-        self.ScdetOutput.setVisible(self.expert_mode)
-        self.ScdetUseMix.setVisible(self.expert_mode)
-        self.DeinterlaceChecker.setVisible(self.expert_mode)
-        self.FastDenoiseChecker.setVisible(self.expert_mode)
-        self.EncodeThreadField.setVisible(self.expert_mode)
+        expert_mode = appPref.value("expert", False, type=bool)
+        self.UseFixedScdet.setVisible(expert_mode)
+        self.ScdetMaxDiffSelector.setVisible(expert_mode)
+        self.QuickExtractChecker.setVisible(expert_mode)
+        self.HDRModeField.setVisible(expert_mode)
+        self.RenderSettingsLabel.setVisible(expert_mode)
+        self.RenderSettingsGroup.setVisible(expert_mode)
+        self.FP16Checker.setVisible(expert_mode)
+        self.ReverseChecker.setVisible(expert_mode)
+        self.KeepChunksChecker.setVisible(expert_mode)
+        self.AutoInterpScaleChecker.setVisible(expert_mode)
+        self.ScdetOutput.setVisible(expert_mode)
+        self.ScdetUseMix.setVisible(expert_mode)
+        self.DeinterlaceChecker.setVisible(expert_mode)
+        self.FastDenoiseChecker.setVisible(expert_mode)
+        self.EncodeThreadField.setVisible(expert_mode)
 
         self.settings_free_hide()
         self.settings_dilapidation_hide()
@@ -2286,7 +2186,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_actionClearAllVideos_triggered(self):
         self.InputFileName.clear()
-        # self.settings_maintain_item_settings()
 
     @pyqtSlot(bool)
     def on_actionSaveSettings_triggered(self):
@@ -2295,6 +2194,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(bool)
     def on_actionLoadDefaultSettings_triggered(self):
         appData.clear()
+        appPref.clear()
         self.settings_update_pack()
         self.function_send_msg("Load Success", _translate('', "已载入默认设置"), 3)
 
@@ -2310,7 +2210,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_tutorialLinkButton_clicked(self):
         tutorial_path = os.path.join(appDir, "SVFI_Tutorial.pdf")
         if os.path.exists(tutorial_path):
-            os.startfile(f'"{tutorial_path}"')
+            try:
+                os.startfile(f'"{tutorial_path}"')
+            except:
+                self.function_send_msg("Unable to open tutorial",
+                                       _translate("", "未能打开SVFI教程，请安装pdf阅读器后重试，或在软件根目录下寻找SVFI_tutorial.pdf阅读"))
         else:
             self.function_send_msg("Not Find Tutorial", _translate("", "未能找到SVFI教程"))
 
@@ -2324,13 +2228,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_load_tasks_settings(load_all=True)
             self.settings_load_config(appDataPath)
             self.settings_load_current()
-            if self.is_rude_exit:
-                pids = Tools.get_pids()
-                for pid, pname in pids.items():
-                    if pname in ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
-                                 'SvtHevcEncApp.exe']:
-                        os.kill(pid, signal.SIGABRT)
-                        logger.warning(f"Kill Process before exit: {pname}")
+            if appPref.value("is_rude_exit", False, type=bool):
+                Tools.kill_svfi_related()
                 pass
             event.accept()
         else:

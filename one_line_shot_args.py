@@ -29,8 +29,6 @@ parser = argparse.ArgumentParser(prog="#### SVFI CLI tool by Jeanna ####",
 basic_parser = parser.add_argument_group(title="Basic Settings, Necessary")
 basic_parser.add_argument('-i', '--input', dest='input', type=str, required=True,
                           help="原视频/图片序列文件夹路径")
-basic_parser.add_argument('-o', '--output', dest='output', type=str, required=True,
-                          help="成品输出的路径，注意默认在项目文件夹")
 basic_parser.add_argument("-c", '--config', dest='config', type=str, required=True, help="配置文件路径")
 basic_parser.add_argument("-t", '--task-id', dest='task_id', type=str, required=True, help="任务id")
 basic_parser.add_argument('--concat-only', dest='concat_only', action='store_true', help='只执行合并已有区块操作')
@@ -85,8 +83,8 @@ class InterpWorkFlow:
         self.STEAM = SteamUtils(self.ARGS.is_steam, logger=self.logger)
 
         """Set FFmpeg"""
-        self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "ffmpeg.exe"))
-        self.ffplay = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "ffplay.exe"))
+        self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffmpeg.exe"))
+        self.ffplay = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffplay.exe"))
         if not os.path.exists(self.ffmpeg):
             self.ffmpeg = "ffmpeg"
             self.logger.warning("Not find selected ffmpeg, use default")
@@ -101,7 +99,7 @@ class InterpWorkFlow:
 
         """Get input's info"""
         self.video_info_instance = VideoInfo(file_input=self.input, logger=self.logger, project_dir=self.project_dir,
-                                             ffmpeg=self.ARGS.ffmpeg, img_input=self.ARGS.is_img_input,
+                                             app_dir=self.ARGS.app_dir, img_input=self.ARGS.is_img_input,
                                              hdr_mode=self.ARGS.hdr_mode, exp=self.ARGS.rife_exp)
         self.video_info = self.video_info_instance.get_info()
         if self.ARGS.hdr_mode == 0:  # Auto
@@ -767,7 +765,7 @@ class InterpWorkFlow:
             else:
                 for i in range(int(len(shlex_out) / 2)):
                     ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
-        self.logger.debug(ffmpeg_customized_command)
+        self.logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
         # output_path = Tools.fillQuotation(output_path)
         if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
@@ -817,7 +815,7 @@ class InterpWorkFlow:
 
         def rename_chunk():
             """Maintain Chunk json"""
-            if self.ARGS.is_img_output:
+            if self.ARGS.is_img_output or self.main_error is not None:
                 return
             chunk_desc_path = "chunk-{:0>3d}-{:0>8d}-{:0>8d}{}".format(chunk_cnt, start_frame, now_frame,
                                                                        self.output_ext)
@@ -848,7 +846,7 @@ class InterpWorkFlow:
         # @profile
         def check_audio_concat():
             """Check Input file ext"""
-            if not self.ARGS.is_save_audio:
+            if not self.ARGS.is_save_audio or self.main_error is not None:
                 return
             if self.ARGS.is_img_output:
                 return
@@ -884,6 +882,7 @@ class InterpWorkFlow:
 
         now_frame = start_frame
         is_end = False
+        frame_written = False
         while True:
             if not self.main_event.is_set():
                 self.logger.warning("Main interpolation thread Dead, break")  # 主线程已结束，这里的锁其实没用，调试用的
@@ -894,7 +893,8 @@ class InterpWorkFlow:
 
             frame_data = self.frames_output.get()
             if frame_data is None:
-                frame_writer.close()
+                if frame_written:
+                    frame_writer.close()
                 is_end = True
                 rename_chunk()
                 break
@@ -910,7 +910,9 @@ class InterpWorkFlow:
 
             reminder_id = self.reminder_bearer.generate_reminder(30, self.logger, "Encoder",
                                                  "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
-            frame_writer.writeFrame(frame)
+            if frame is not None:
+                frame_written = True
+                frame_writer.writeFrame(frame)
             self.reminder_bearer.terminate_reminder(reminder_id)
 
             chunk_frame_cnt += 1
@@ -1237,13 +1239,14 @@ class InterpWorkFlow:
         return check_frame_list, scene_frame_list, check_frame_data
 
     def rife_run_rest(self, run_time: float):
+        rest_exp = 3600
         if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
-                time.time() - run_time > self.ARGS.multi_task_rest_interval * 3600:
+                time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
             self.logger.info(
                 f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
-            # TODO Double check before release
             time.sleep(600)
             return time.time()
+        return run_time
 
     def rife_run_input_check(self, dedup=False):
         """
@@ -1265,6 +1268,7 @@ class InterpWorkFlow:
 
         check_img1 = self.crop_read_img(Tools.gen_next(videogen_available_check))
         self.reminder_bearer.terminate_reminder(reminder_id)
+        videogen_available_check.close()
         if check_img1 is None:
             self.main_error = OSError(
                 f"Input file is not available: {self.input}, is img input: {self.ARGS.is_img_input},"
@@ -1372,7 +1376,9 @@ class InterpWorkFlow:
                 self.task_info.update({"now_frame": check_frame_list[-1]})
 
         pass
-        self.rife_task_queue.put(None)  # bad way to end
+        self.rife_task_queue.put(None)
+        videogen.close()
+        videogen_check.close()
         """Wait for Rife and Render Thread to finish"""
 
     # @profile
@@ -1383,7 +1389,7 @@ class InterpWorkFlow:
         """
 
         self.logger.info("Activate Any FPS Mode")
-        chunk_cnt, now_frame, videogen, _ = self.rife_run_input_check(dedup=True)
+        chunk_cnt, now_frame, videogen, videogen_check = self.rife_run_input_check(dedup=True)
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         self.logger.info("Loaded Input Frames")
         is_end = False
@@ -1485,7 +1491,7 @@ class InterpWorkFlow:
         """Check Steam Validation"""
         if self.ARGS.is_steam:
             if not self.STEAM.steam_valid:
-                error = self.STEAM.steam_error.split('\n')[-1]
+                error = str(self.STEAM.steam_error).split('\n')[-1]
                 self.logger.error(f"Steam Validation Failed: {error}")
                 return
             else:
@@ -1645,7 +1651,7 @@ class InterpWorkFlow:
                     for i in frames_list:
                         feed_list.append([now_frame, i])
                         now_frame += 1
-                    if self.ARGS.use_evict_flicker:
+                    if self.ARGS.use_evict_flicker or self.ARGS.use_rife_fp16:
                         img_ori = frames_list[0].copy()
                         frames_list[0] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale, debug=debug)
                         if add_scene:

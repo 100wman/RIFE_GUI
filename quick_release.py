@@ -58,8 +58,9 @@ def change_utils_with_mighty_power():
         w.write(utils_r)
 
 
-# steam_ver = [True, False]
-steam_ver = [True]
+steam_ver = [True, False]
+# steam_ver = [True]
+# steam_ver = [False]
 free_ver = [True, False]
 for _steam_ver in steam_ver:
     for _free_ver in free_ver:

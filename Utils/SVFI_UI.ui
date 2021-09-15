@@ -136,10 +136,10 @@
                        </sizepolicy>
                       </property>
                       <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;请尽量使用输入的文件格式&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="text">
-                       <string>输出文件格式 (?)</string>
+                       <string>输出文件格式 (!)</string>
                       </property>
                       <property name="alignment">
                        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -255,7 +255,7 @@
                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1. 输入为视频，输出为视频或图片序列：实际输出帧率以&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;为准，与补帧倍率无关：&lt;/p&gt;&lt;p&gt;一个长度为1s的24fps输入视频在补帧倍率为x2，输出帧率为60的情况下，会输出&lt;span style=&quot; font-weight:600;&quot;&gt;60fps的视频或者60张图片&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;2. 输入为图片序列，输出为视频：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，再输入到软件进行补帧，并被压制为&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会输出60fps的视频，且&lt;span style=&quot; font-weight:600;&quot;&gt;大于48fps的部分为重复帧&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;3. 输入为图片序列，输出为图片序列：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，并按照补帧倍率输出：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会&lt;span style=&quot; font-weight:600;&quot;&gt;输出48张图片&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="text">
-                       <string>补帧倍率 (?)</string>
+                       <string>补帧倍率 (!)</string>
                       </property>
                       <property name="checked">
                        <bool>true</bool>
@@ -586,7 +586,7 @@
                      <string>ToHome</string>
                     </property>
                     <property name="shortcut">
-                     <string/>
+                     <string>Ctrl+H</string>
                     </property>
                    </widget>
                   </item>
@@ -596,7 +596,7 @@
                      <string>ToOutput</string>
                     </property>
                     <property name="shortcut">
-                     <string>Ctrl+2</string>
+                     <string>Ctrl+P</string>
                     </property>
                    </widget>
                   </item>
@@ -708,15 +708,15 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>4</number>
+                      <number>6</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>246</width>
-                        <height>202</height>
+                        <width>405</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -994,7 +994,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>432</width>
-                        <height>172</height>
+                        <height>393</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1266,8 +1266,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>285</width>
-                        <height>308</height>
+                        <width>405</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1627,8 +1627,8 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
-                        <width>359</width>
+                        <y>-78</y>
+                        <width>388</width>
                         <height>488</height>
                        </rect>
                       </property>
@@ -1647,10 +1647,10 @@
                             <item row="2" column="0">
                              <widget class="QLabel" name="label_26">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;每一chunk的帧数大小&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;每一chunk的帧数大小&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;使用QSVENCC编码器时此值过高可能导致渲染卡死&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
-                               <string>单一输出区块大小： (?)</string>
+                               <string>单一输出区块大小： (!)</string>
                               </property>
                              </widget>
                             </item>
@@ -1927,7 +1927,7 @@
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;减小CPU解码负担，输入为4K时推荐开启&lt;/p&gt;&lt;p&gt;如果无法补帧，请尝试关闭此选项&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>硬件解码 (?)</string>
+                             <string>硬件解码 (!)</string>
                             </property>
                             <property name="checked">
                              <bool>false</bool>
@@ -2007,7 +2007,7 @@
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用cv2的快速降噪，减少画面噪点&lt;/p&gt;&lt;p&gt;会显著降低补帧效率&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>快速降噪 (?)</string>
+                             <string>快速降噪 (!)</string>
                             </property>
                            </widget>
                           </item>
@@ -2171,7 +2171,7 @@
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用ffmpeg的YADIF滤镜对输入进行反交错&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;（仅支持视频输入）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>开启反交错 (?)</string>
+                             <string>开启反交错 (!)</string>
                             </property>
                            </widget>
                           </item>
@@ -2204,7 +2204,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-16</y>
                         <width>388</width>
                         <height>426</height>
                        </rect>
@@ -2386,10 +2386,10 @@
                              <bool>true</bool>
                             </property>
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对N卡生效，节省显存使用量；&lt;/p&gt;&lt;p&gt;处理高分辨率视频时，&lt;span style=&quot; font-weight:600;&quot;&gt;勾选此项可能会导致画面抖动&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS: 该选项同样适用于RealESR模型（专业版/内测版）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对N卡生效，节省显存使用量；&lt;/p&gt;&lt;p&gt;处理高分辨率视频时，&lt;span style=&quot; font-weight:600;&quot;&gt;勾选此项可能会导致画面抖动，将自动启用“消除闪烁选项”以最大限度消除抖动。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;此外有可能导致输出花屏，极其不建议开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS: 该选项同样适用于RealESR模型（专业版/内测版）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>半精度模式 (?)</string>
+                             <string>半精度模式 (!)</string>
                             </property>
                            </widget>
                           </item>
@@ -2399,7 +2399,7 @@
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;该值不是越大或者越小越好&lt;/span&gt;&lt;/p&gt;&lt;p&gt;1080P动漫推荐&lt;span style=&quot; font-weight:600;&quot;&gt;0.5&lt;/span&gt;，实拍推荐&lt;span style=&quot; font-weight:600;&quot;&gt;1.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;分辨率4K及以上的视频推荐&lt;span style=&quot; font-weight:600;&quot;&gt;0.25~0.5&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;其余推荐1.0&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>光流尺度 (?)</string>
+                             <string>光流尺度 (!)</string>
                             </property>
                             <property name="alignment">
                              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -2553,8 +2553,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>256</width>
-                        <height>152</height>
+                        <width>405</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2641,8 +2641,8 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
-                        <width>288</width>
+                        <y>-50</y>
+                        <width>388</width>
                         <height>460</height>
                        </rect>
                       </property>
@@ -2737,7 +2737,7 @@
                                </font>
                               </property>
                               <property name="text">
-                               <string>GIF制作！</string>
+                               <string>GIF制作</string>
                               </property>
                              </widget>
                             </item>
@@ -2838,7 +2838,7 @@
                                  </font>
                                 </property>
                                 <property name="text">
-                                 <string>音视频合并！</string>
+                                 <string>音视频合并</string>
                                 </property>
                                </widget>
                               </item>
@@ -2868,8 +2868,11 @@
                              <verstretch>0</verstretch>
                             </sizepolicy>
                            </property>
+                           <property name="toolTip">
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将下方“输入视频路径”所指素材的第一视频轨与“输入音频路径（视频）”所指素材的第一音频轨合并输出至“输出视频路径”&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           </property>
                            <property name="text">
-                            <string>音视频合并</string>
+                            <string>音视频合并 (?)</string>
                            </property>
                           </widget>
                          </item>
@@ -2888,10 +2891,10 @@
                        <item row="6" column="0">
                         <widget class="QLabel" name="label">
                          <property name="toolTip">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对于专业版/内测版，设置超分选项可以对输入内容超分&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对于专业版/内测版，设置超分选项可以对输入内容超分&lt;/p&gt;&lt;p&gt;若不开启AI超分功能，输出无超分效果。&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;特别注意：&lt;/span&gt;输出帧率为左栏“输出帧率”设置的数值&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                          </property>
                          <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对输入使用&lt;span style=&quot; font-weight:600;&quot;&gt;输出质量设置&lt;/span&gt;内的指定参数压制 (?)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对&lt;span style=&quot; font-weight:600;&quot;&gt;选中输入&lt;/span&gt;使用&lt;span style=&quot; font-weight:600; text-decoration: underline;&quot;&gt;除&lt;/span&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;补帧设置&lt;/span&gt;以外的设置进行（超分）压制 (?)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                          </property>
                         </widget>
                        </item>
