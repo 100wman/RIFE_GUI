@@ -10,6 +10,7 @@ import random
 import re
 import shlex
 import shutil
+import signal
 import string
 import subprocess
 import threading
@@ -381,6 +382,14 @@ class Tools:
             # print("pid-%d,pname-%s" %(pid,p.name()))
         return pid_dict
 
+    @staticmethod
+    def kill_svfi_related():
+        pids = Tools.get_pids()
+        for pid, pname in pids.items():
+            if pname in ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
+                         'SvtHevcEncApp.exe']:
+                os.kill(pid, signal.SIGABRT)
+                print(f"Warning: Kill Process before exit: {pname}")
 
 class ImgSeqIO:
     def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
@@ -632,30 +641,38 @@ class ArgumentManager:
     professional_qq = 1054016374
 
     """Release Version Control"""
-    is_steam = True
+    is_steam = False
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.5.20"
+    gui_version = "3.6.0"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.9.23"
+    ols_version = "6.10.0"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add start mission autofill(limited working)
-    - Add vob supports
-    - Optimize UI(be elaborated later)
+    - Add retry(50) for empty read of frames
+    - Add NCNN-RIFE not support error msg catcher
+    - Optimize CLI params(remove output)
+    - Optimize Error transfer, better error msg display and sub-thread control
+    - Optimize read source control, no redundant ffmpeg flow
+    - Optimize task start info
+    - Optimize Preferences Display and settings
+    - Optimize easy start for new user (auto start mission even no task assigned)
+    - Bundle fp16 mode with flicker-removal    
+    - Rude-mode applied at end of every task
+    - Fix Rest Mode type error (operator float - None)
+    Development:
+    - Optimize Code Structure, replace self.ffmpeg with self.appdir
+    - Split SVFI Preference aside SVFI.ini
     """
 
     path_len_limit = 230
 
     def __init__(self, args: dict):
         self.app_dir = args.get("app_dir", appDir)
-        self.ols_path = args.get("ols_path", "")
-        self.batch = args.get("batch", False)
-        self.ffmpeg = args.get("ffmpeg", "")
 
         self.config = args.get("config", "")
         self.input = args.get("input", "")
@@ -834,10 +851,10 @@ class DoviProcesser:
         self.project_dir = project_dir
         self.ARGS = args
         self.interp_exp = interpolation_exp
-        self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "ffmpeg.exe"))
-        self.ffprobe = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "ffprobe.exe"))
-        self.dovi_tool = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "dovi_tool.exe"))
-        self.dovi_muxer = Tools.fillQuotation(os.path.join(self.ARGS.ffmpeg, "dovi_muxer.exe"))
+        self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffmpeg.exe"))
+        self.ffprobe = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffprobe.exe"))
+        self.dovi_tool = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "dovi_tool.exe"))
+        self.dovi_muxer = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "dovi_muxer.exe"))
         if self.ARGS.ffmpeg == 'ffmpeg':
             self.ffmpeg = "ffmpeg"
             self.ffprobe = "ffprobe"
@@ -969,7 +986,7 @@ class DoviProcesser:
 
 
 class VideoInfo:
-    def __init__(self, file_input: str, logger: Tools.get_logger, project_dir: str, ffmpeg=None, img_input=False,
+    def __init__(self, file_input: str, logger: Tools.get_logger, project_dir: str, app_dir=None, img_input=False,
                  hdr_mode=False, exp=0, **kwargs):
         self.filepath = file_input
         self.img_input = img_input
@@ -979,10 +996,10 @@ class VideoInfo:
         self.hdr10_parser = "hdr10plus_parser"
         self.logger = logger
         self.project_dir = project_dir
-        if ffmpeg is not None:
-            self.ffmpeg = Tools.fillQuotation(os.path.join(ffmpeg, "ffmpeg.exe"))
-            self.ffprobe = Tools.fillQuotation(os.path.join(ffmpeg, "ffprobe.exe"))
-            self.hdr10_parser = Tools.fillQuotation(os.path.join(ffmpeg, "hdr10plus_parser.exe"))
+        if app_dir is not None:
+            self.ffmpeg = Tools.fillQuotation(os.path.join(app_dir, "ffmpeg.exe"))
+            self.ffprobe = Tools.fillQuotation(os.path.join(app_dir, "ffprobe.exe"))
+            self.hdr10_parser = Tools.fillQuotation(os.path.join(app_dir, "hdr10plus_parser.exe"))
         if not os.path.exists(self.ffmpeg):
             self.ffmpeg = "ffmpeg"
             self.ffprobe = "ffprobe"
@@ -1659,7 +1676,7 @@ class SteamUtils:
                 self.logger.info('Steam Stats successfully retrieved!')
             else:
                 self.steam_valid = False
-                self.steam_error = GenericSteamException('Failed to get Stats Error')
+                self.steam_error = GenericSteamException('Failed to get Stats Error, Please Make Sure Steam is On')
                 self.logger.error('Failed to get stats. Shutting down.')
         os.chdir(original_cwd)
 
