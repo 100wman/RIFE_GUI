@@ -1762,17 +1762,25 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_load_config(appDataPath)
         self.settings_initiation(item_update=True, template_update=True)
         self.function_send_msg("Config Loaded", _translate('', "已载入指定预设~"), 2)
-        if not appPref.value("is_gui_quiet", False, type=bool):
-            SVFI_preview_args_form = UiPreviewArgsDialog(self)
-            SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
-            SVFI_preview_args_form.exec_()
+        # if not appPref.value("is_gui_quiet", False, type=bool):
+        #     SVFI_preview_args_form = UiPreviewArgsDialog(self)
+        #     SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
+        #     SVFI_preview_args_form.exec_()
         # self.settings_load_config(appDataPath)  # 将appData指针指回root
 
-    def on_CurrentPreset_changed(self):
+    @pyqtSlot(bool)
+    def on_SettingsPresetsApplyButton_clicked(self):
         """
         载入SVFI官方预设
         :return:
         """
+        presets_tuple = self.SettingsPresetsInputs.currentIndex(), self.SettingsPresetsSQ.currentIndex(), self.SettingsPresetsFluency.currentIndex()
+        presets_name = f"SVFI_Presets_{''.join(map(lambda x: str(x),presets_tuple))}"
+        self.SettingsTemplateSelector.addItem(presets_name)
+        self.SettingsTemplateSelector.setCurrentIndex(self.SettingsTemplateSelector.count() - 1)
+        self.on_UseTemplateButton_clicked()
+        self.SettingsTemplateSelector.removeItem(self.SettingsTemplateSelector.count() - 1)
+
 
     @pyqtSlot(bool)
     def on_MBufferChecker_clicked(self):

@@ -642,21 +642,18 @@ class ArgumentManager:
 
     """Release Version Control"""
     is_steam = False
-    is_free = False
+    is_free = True
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.1"
+    gui_version = "3.6.2"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.1"
+    ols_version = "6.10.2"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix Unable to Concat Current Chunks after output extension is changed #190
-    - Fix Audio Concat Test malfunctioning #191
-    - Add HDR Auto Mode Information
-    - Remove "Remove Configs" after mission is finished
+    - Add Preset Box and update 16 SVFI Presets
     """
 
     path_len_limit = 230

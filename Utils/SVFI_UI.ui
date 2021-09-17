@@ -496,22 +496,6 @@
                   <string/>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_35">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="SettingsPresetLabel">
-                    <property name="toolTip">
-                     <string/>
-                    </property>
-                    <property name="layoutDirection">
-                     <enum>Qt::LeftToRight</enum>
-                    </property>
-                    <property name="text">
-                     <string>预设(定型ing)：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="0" column="3">
                    <widget class="MyComboBox" name="SettingsPresetsFluency">
                     <item>
@@ -524,6 +508,13 @@
                       <string>加强丝滑</string>
                      </property>
                     </item>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QPushButton" name="SettingsPresetsApplyButton">
+                    <property name="text">
+                     <string>应用预设</string>
+                    </property>
                    </widget>
                   </item>
                   <item row="0" column="1">
@@ -718,7 +709,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>6</number>
+                      <number>5</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -2653,7 +2644,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>388</width>
-                        <height>460</height>
+                        <height>489</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2784,6 +2775,19 @@
                            </property>
                            <layout class="QVBoxLayout" name="verticalLayout">
                             <item>
+                             <widget class="QPushButton" name="ConcatAllButton">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="text">
+                               <string>合并已有区块</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
                              <widget class="MyLineWidget" name="ConcatInputV">
                               <property name="sizePolicy">
                                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -2849,19 +2853,6 @@
                                 </property>
                                 <property name="text">
                                  <string>音视频合并</string>
-                                </property>
-                               </widget>
-                              </item>
-                              <item>
-                               <widget class="QPushButton" name="ConcatAllButton">
-                                <property name="sizePolicy">
-                                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                                  <horstretch>0</horstretch>
-                                  <verstretch>0</verstretch>
-                                 </sizepolicy>
-                                </property>
-                                <property name="text">
-                                 <string>合并已有区块</string>
                                 </property>
                                </widget>
                               </item>
@@ -3416,7 +3407,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>ConcatInputA</tabstop>
   <tabstop>OutputConcat</tabstop>
   <tabstop>ConcatButton</tabstop>
-  <tabstop>ConcatAllButton</tabstop>
   <tabstop>StartExtractButton</tabstop>
   <tabstop>StartRenderButton</tabstop>
   <tabstop>OutputFolder</tabstop>
