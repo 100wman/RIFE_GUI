@@ -103,6 +103,7 @@ class InterpWorkFlow:
                                              hdr_mode=self.ARGS.hdr_mode, exp=self.ARGS.rife_exp)
         self.video_info = self.video_info_instance.get_info()
         if self.ARGS.hdr_mode == 0:  # Auto
+            self.logger.info(f"Auto HDR Mode, Set HDR mode to {self.video_info['hdr_mode']}")
             self.hdr_check_status = self.video_info['hdr_mode']
             # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
             # hdr_check_status indicates the final process mode for (hdr) input
@@ -850,9 +851,10 @@ class InterpWorkFlow:
                 return
             if self.ARGS.is_img_output:
                 return
-            output_ext = os.path.splitext(self.input)[-1]
-            if output_ext not in SupportFormat.vid_outputs:
-                output_ext = self.output_ext
+            # output_ext = os.path.splitext(self.input)[-1]
+            # if output_ext not in SupportFormat.vid_outputs:
+            #     output_ext = self.output_ext
+            output_ext = self.output_ext
             if "ProRes" in self.ARGS.render_encoder:
                 output_ext = ".mov"
 
@@ -1687,9 +1689,9 @@ class InterpWorkFlow:
                 if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
                     self.concat_all()
 
-        if os.path.exists(self.ARGS.config):
-            self.logger.info("Successfully Remove Config File")
-            os.remove(self.ARGS.config)
+        # if os.path.exists(self.ARGS.config):
+        #     self.logger.info("Successfully Remove Config File")
+        #     os.remove(self.ARGS.config)
         self.steam_update_achv()
         self.logger.info(f"Program finished at {datetime.datetime.now()}: "
                          f"Duration: {datetime.datetime.now() - run_all_time}")
@@ -1882,13 +1884,15 @@ class InterpWorkFlow:
         concat_list = list()
 
         for f in os.listdir(self.project_dir):
-            chunk_regex = rf"chunk-[\d+].*?\{self.output_ext}"
-            if re.match(chunk_regex, f):
+            if re.match("chunk-\d+-\d+-\d+" , f):
                 concat_list.append(os.path.join(self.project_dir, f))
             else:
                 self.logger.debug(f"concat escape {f}")
 
         concat_list.sort(key=lambda x: int(os.path.basename(x).split('-')[2]))  # sort as start-frame
+
+        if not len(concat_path):
+            raise OSError(f"Could not find any chunks, the chunks could have already been concatenated or removed, please check your output folder.")
 
         if os.path.exists(concat_path):
             os.remove(concat_path)
@@ -1925,15 +1929,17 @@ class InterpWorkFlow:
         self.logger.debug(f"Concat command: {ffmpeg_command}")
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
+        self.logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
         if self.hdr_check_status == 3:
+            self.logger.info("Start DOVI Conversion")
             dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS,
                                        self.interp_exp)
             dovi_maker.run()
-        if self.ARGS.is_output_only and os.path.exists(concat_filepath):
-            if not os.path.getsize(concat_filepath):
-                self.logger.error(f"Concat Error, {output_ext}, empty output")
-                raise FileExistsError("Concat Error, empty output detected, Please Check Your Output Extension!!!\n"
-                                      "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
+            self.logger.error(f"Concat Error, with output extension {output_ext}")
+            raise FileExistsError(f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
+                                  "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+        if self.ARGS.is_output_only:
             self.check_chunk(del_chunk=True)
 
     def concat_check(self, concat_list, concat_filepath):
