@@ -653,20 +653,10 @@ class ArgumentManager:
 
     f"""
     Update Log
-    - Add retry(50) for empty read of frames
-    - Add NCNN-RIFE not support error msg catcher
-    - Optimize CLI params(remove output)
-    - Optimize Error transfer, better error msg display and sub-thread control
-    - Optimize read source control, no redundant ffmpeg flow
-    - Optimize task start info
-    - Optimize Preferences Display and settings
-    - Optimize easy start for new user (auto start mission even no task assigned)
-    - Bundle fp16 mode with flicker-removal    
-    - Rude-mode applied at end of every task
-    - Fix Rest Mode type error (operator float - None)
-    Development:
-    - Optimize Code Structure, replace self.ffmpeg with self.appdir
-    - Split SVFI Preference aside SVFI.ini
+    - Fix Unable to Concat Current Chunks after output extension is changed #190
+    - Fix Audio Concat Test malfunctioning #191
+    - Add HDR Auto Mode Information
+    - Remove "Remove Configs" after mission is finished
     """
 
     path_len_limit = 230

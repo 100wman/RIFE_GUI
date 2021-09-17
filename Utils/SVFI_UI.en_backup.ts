@@ -6,7 +6,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="307"/>
         <source>请点击输入条目以更新设置，并确认输入输出帧率不为0</source>
-        <translation>Click your item to update settings, and make sure input/output fps is not 0</translation>
+        <translation>Click item to update settings, make sure input/output fps is not 0</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="330"/>
@@ -21,17 +21,17 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="364"/>
         <source>完成</source>
-        <translation>Complete</translation>
+        <translation>Mission Accomplished</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="394"/>
         <source>补帧已被强制结束</source>
-        <translation>Mission is killed COMPULSORILY</translation>
+        <translation>Mission is terminated</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="492"/>
         <source>Steam认证出错！SVFI用不了啦！</source>
-        <translation>Steam Validation RuntimeError! Exit now! Test</translation>
+        <translation>Steam Validation RuntimeError! Exit now!</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="502"/>
@@ -46,7 +46,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="505"/>
         <source>白嫖怪爬呀！</source>
-        <translation>Get out!</translation>
+        <translation>Bye!</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="515"/>
@@ -56,12 +56,12 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="524"/>
         <source>未购买专业版！SVFI用不了啦！</source>
-        <translation>Professional Version not purchased! Check your license!</translation>
+        <translation>Pro DLC not purchased! Check your license!</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="525"/>
         <source>请确保专业版DLC已安装</source>
-        <translation>Please make sure your professional DLC is installed</translation>
+        <translation>Please check that your Pro DLC is installed</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="559"/>
@@ -76,7 +76,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="920"/>
         <source>请输入要补帧的文件和输出文件夹</source>
-        <translation>请输入要补帧的文件和输出文件夹</translation>
+        <translation>Check your input file and output folder</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="930"/>
@@ -106,7 +106,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="987"/>
         <source>正在使用队列的第一个任务进行进度检测</source>
-        <translation>Using first task in the queue to resume rate of process</translation>
+        <translation>Using first task in the queue to resume workflow</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1021"/>
@@ -121,12 +121,12 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1010"/>
         <source>检测到未完成的图片序列补帧任务，载入进度？</source>
-        <translation>Detect incomplete img sequence task, load?</translation>
+        <translation>Detect incomplete img sequence task, resume?</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1036"/>
         <source>检测到未完成的补帧任务，载入进度？</source>
-        <translation>Detect unfinished task, load?</translation>
+        <translation>Detect unfinished task, resume?</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1055"/>
@@ -181,12 +181,12 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1345"/>
         <source>请把软件所在文件夹移到纯英文、无中文、无空格路径下</source>
-        <translation>Please replace SVFI to a folder of which path does not contain NON-ASCII characters.</translation>
+        <translation>Please replace SVFI to a NON-ASCII folder characters.</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1349"/>
         <source>你的显存不够啦！去清一下后台占用显存的程序，或者去&apos;高级设置&apos;降低视频分辨率/使用半精度模式/更换补帧模型~</source>
-        <translation>You do not have enough VRAM! Clear out your background softwares that occupy your VRAM, or go to &quot;Advance Settings&quot; to lower your input resolution/Check Half-precision mode/Change model to interpolate</translation>
+        <translation>Not enough VRAM! Clear out your background softwares that occupy your VRAM, or go to &quot;Advance Settings&quot; to lower your input resolution/Check Half-precision mode/Change model to interpolate</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1354"/>
@@ -196,12 +196,12 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1358"/>
         <source>区块合并音轨测试失败，请检查输出文件格式是否支持源文件音频</source>
-        <translation>Chunk Concat Test Failed! Please Check whether your output format support input&apos;s audio\n(e.g. MP4 does not support PCM track)</translation>
+        <translation>Chunk Concat Test Failed! Please Check whether your output format supports input&apos;s audio\n(e.g. MP4 does not support PCM track)</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1362"/>
         <source>请检查渲染设置，确保输出分辨率宽高为偶数，尝试关闭硬件编码以解决问题</source>
-        <translation>Please check your render settings, make sure your output resolution are plurable, try to disable Hardware Accelerating Encode to fix</translation>
+        <translation>Please check your render settings, make sure your output resolution are plurable, try to disable Hardware Acceleration to fix</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1367"/>
@@ -211,7 +211,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1368"/>
         <source>联系开发人员解决</source>
-        <translation>Please contact with developers for support</translation>
+        <translation>Please contact developers for support</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1429"/>
@@ -241,7 +241,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1509"/>
         <source>要输出项目的文件夹</source>
-        <translation>Img Sequence Folder to interpolate</translation>
+        <translation>Output folder</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1528"/>
@@ -251,7 +251,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1529"/>
         <source>起始帧</source>
-        <translation>Start Frame</translation>
+        <translation>START FRAME</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="1530"/>
@@ -391,12 +391,12 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="2083"/>
         <source>已有任务在执行</source>
-        <translation>Mission already Abroad!</translation>
+        <translation>Mission already being executed!</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="2097"/>
         <source>未选中输入项</source>
-        <translation>Select one input item first!</translation>
+        <translation>Select an input item!</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="2116"/>
@@ -419,17 +419,17 @@
     <message>
         <location filename="SVFI_help.py" line="59"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;快速补帧流程：（鼠标悬浮在选项上可见帮助信息）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;1. 选择要补帧的文件。可以选择多个视频文件进行批量补帧，也可以选择包括图片序列的文件夹，后者需要手动填写输入帧率。如果输入的文件有误，&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;需要重新拖动文件或者点击下方的输入按钮&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;2. 确认&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;输入和输出&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;帧率&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;3. 按“&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;一键补帧&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;”完成补帧操作，也可以在&lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;高级设置&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;界面设置相关参数，并在输出界面点击&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;开始补帧&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;按钮补帧（A卡补帧需要在高级设置手动设置参数）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;4. 在&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;工具箱&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;一页进行&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;gif制作&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;、&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;音视频合并&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;及&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;已有区块合并（视频合并失败使用）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;文件命名缩写说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SLM：慢动作输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;DI：DeInterlaced反交错开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;DN：DeNoise降噪开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;NCNN：使用核显或A卡在NCNN架构下补帧&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;FP16：开启N卡半精度模式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SA：Scale Auto动态光流尺度&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RR：RIFE-Reversed反向光流&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RFE：RIFE-Foward Ensemble双向光流&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;TTA：TTA模式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SR：SuperResolution使用超分&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RD：Remove Duplicates去除重复帧模式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;注意事项：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;显示“Programfinished”则任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;如果遇到任何问题，请将基础设置、输出窗口截全图，不要录屏，并导出当前设置为settings.log文件并联系开发人员解决，群号在首页说明&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;参数说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;R:当前渲染的帧数，&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;C:当前处理的帧数，&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;S:最近识别到的转场，&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SC：识别到的转场数量，&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;TAT：TaskAcquireTime，单帧任务获取时间，即任务阻塞时间，如果该值过大，请考虑增加虚拟内存&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;PT：ProcessTime，单帧任务处理时间，单帧补帧（+超分）花费时间&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;QL：QueueLength，任务队列长度&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;如果遇到卡顿或软件卡死，请直接右上角强制终止&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; font-style:italic; color:#ffffff;&quot;&gt;软件最终解释权归SVFI开发团队所有&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;Quick workout:(Suspend your mouse on options to see help info)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;1. Select input file to interpolate, if input is folder of image sequence, input fps shall be entered manually&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;2. Confirm&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Input and output&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;fps&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;3. Press &quot;&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Click once and for all!&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;&quot; to start tasks. You can edit relevant settings at &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;Advance Settings&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;. You can also press&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Start&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;button to run&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;4. You can find useful tools at &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Tool Box&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; including &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;GIF Maker&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;, &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;VA Concat&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;and&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Chunks Concat(use it when automatic concat failed)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Abbreviation:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SLM：Slow-motion&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;DI：DeInterlaced&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;DN：DeNoise&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;NCNN：Use NCNN Structure for interpolating&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;FP16：Half-precision mode applied&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SA：Auto Scale for interpolating&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RR：RIFE-Reversed flow&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RFE：RIFE-Foward Ensemble flow&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;TTA：TTA applied&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SR：SuperResolution applied&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RD：Remove Duplicates Mode applied&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; font-style:italic; color:#ffffff;&quot;&gt;SDT Core reserve all the right for the final explanation&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;Quick workout:(Suspend your mouse on options for help info)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;1. Select input file to interpolate, if input is folder of image sequence, input fps shall be entered manually&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;2. Confirm &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Input and output &lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;fps&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;3. Press &amp;quot;&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Click once and for all!&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;&amp;quot; to start interpolation. You can edit relevant settings at &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;Advance Settings&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;. You can also press &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Start &lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;button to run.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;4. You can find useful tools at &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Tool Box&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; including &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;GIF Maker&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;, &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;VA Concat &lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;and &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Chunks Concat &lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;(use it when automatic concat failed)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Abbreviation of output filename:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SLM：Slow-motion&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;DI：DeInterlaced&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;DN：DeNoise&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;NCNN：Use NCNN Structure for interpolating&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;FP16：Half-precision mode applied(using less VRAM)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SA：Auto Scale for interpolating&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;S-int: RIFE&apos;s Scale&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;(int)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RR：RIFE-Reversed flow&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RFE：RIFE-Foward Ensemble flow&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;TTA：TTA applied&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SR：SuperResolution applied&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RD：Remove Duplicates Mode applied&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; font-style:italic; color:#ffffff;&quot;&gt;SDT Core reserve all the right for the final explanation&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_about.py" line="59"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;本软件 &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-style:italic; color:#ffffff;&quot;&gt;Squirrel Video Frame Interpolation&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;是基于&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;RIFE: Real-Time Intermediate Flow Estimation for Video Frame Interpolation&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; AI补帧算法的可视化图形界面集成.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;RIFE算法作者&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; Zhewei Huang, Tianyuan Zhang, Wen Heng, Boxin Shi, Shuchang Zhou &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;https://github.com/hzwer/arXiv2020-RIFE&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;SVFI作者&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; YiWeiHuang-stack, Justin62628, 穆氏, ABlyh-LEO, NULL204&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;https://github.com/YiWeiHuang-stack/Squirrel-RIFE&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;https://github.com/Justin62628/RIFE_GUI&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;其中RIFE GUI已与SVFI版本合并&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;This software  &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-style:italic; color:#ffffff;&quot;&gt;Squirrel Video Frame Interpolation&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; is based on&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;RIFE: Real-Time Intermediate Flow Estimation for Video Frame Interpolation&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; AI frame interpolation algorithm visual graphical interface integration.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Creator of RIFE algorithm&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; Zhewei Huang, Tianyuan Zhang, Wen Heng, Boxin Shi, Shuchang Zhou &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;https://github.com/hzwer/arXiv2020-RIFE&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Creator of SVFI&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; YiWeiHuang-stack, Justin62628, 穆氏, ABlyh-LEO, NULL204&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;https://github.com/YiWeiHuang-stack/Squirrel-RIFE&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;https://github.com/Justin62628/RIFE_GUI&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;RIFE GUI has been merged with the SVFI version&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;This software &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-style:italic; color:#ffffff;&quot;&gt;Squirrel Video Frame Interpolation&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;is a &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;RIFE: Real-Time Intermediate Flow Estimation for Video Frame Interpolation&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; graphical interface integration.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Creator of RIFE algorithm:&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; Zhewei Huang, Tianyuan Zhang, Wen Heng, Boxin Shi, Shuchang Zhou &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;https://github.com/hzwer/arXiv2020-RIFE&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Creator of SVFI&lt;/span&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt; YiWeiHuang-stack, Justin62628, 穆氏, ABlyh-LEO, NULL204&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;https://github.com/Justin62628/Squirrel-RIFE&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_preference.py" line="131"/>
         <source>多任务休息模式：</source>
-        <translation>Slappy-Rest Mode</translation>
+        <translation>Sloppy-Rest Mode</translation>
     </message>
     <message>
         <location filename="SVFI_preference.py" line="132"/>
@@ -464,7 +464,7 @@
     <message>
         <location filename="SVFI_preference.py" line="138"/>
         <source>实验功能：有N卡但强制使用CPU？</source>
-        <translation>Experimental: Use CPU Compulsorily</translation>
+        <translation>Experimental: Use CPU to interpolate</translation>
     </message>
     <message>
         <location filename="SVFI_preference.py" line="139"/>
@@ -489,7 +489,7 @@
     <message>
         <location filename="SVFI_preview_args.py" line="60"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:16pt; font-weight:600; color:#ffffff;&quot;&gt;任务参数预览：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;SVFI版本：{version}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[基本信息]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;输出格式：{output_ext} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;输入帧率：{input_fps} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;输出帧率：{target_fps} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;补帧倍率：{rife_exp}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;导出带音频字幕：{is_save_audio}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[工作状态恢复]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;补帧时刻：{input_start_point} - {input_end_point}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;起始区块：{output_chunk_cnt} 起始输入帧：{interp_start}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[转场识别与动漫优化]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;关闭转场识别：{is_no_scdet} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;转场识别参数：{scdet_threshold} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;转场使用帧混合：{is_scdet_mix} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;输出转场帧：{is_scdet_output}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;使用固定转场识别：{use_scdet_fixed} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;固定转场识别参数：{scdet_fixed_max}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;重复帧去除模式：{remove_dup_mode}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[输出分辨率]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;宽：{resize_width} 高：{resize_height}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;黑边长度 - 宽：{crop_width} 高：{crop_height}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;使用AI超分：{use_sr}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;使用的超分算法：{use_sr_algo}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;使用的超分模型：{use_sr_model}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;超分模式：{use_sr_mode}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[输出质量控制]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;渲染质量crf：{render_crf}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;目标码率：{render_bitrate}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;编码器：{render_encoder} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;压制编码：{render_encoder_preset} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;N卡硬编预设：{render_hwaccel_preset}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;使用快速拆帧：{is_quick_extract}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;HDR输入严格模式：{is_hdr_strict_mode} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;硬件解码：{use_hwaccel_decode} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;指定编码线程数：{use_manual_encode_thread}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;开启反交错：{use_deinterlace} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;开启快速降噪：{use_fast_denoise}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;输出区块大小：{render_gap} 帧&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;手动指定缓冲区内存：{manual_buffer_size}G&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;时间重映射：{is_render_slow_motion} {render_slow_motion_fps}fps&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;自定义压制参数：{render_ffmpeg_customized}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[补帧参数]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;半精度模式：{use_rife_fp16} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;双向光流：{use_rife_forward_ensemble} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;反向光流：{is_rife_reverse} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;动态光流尺度：{use_rife_auto_scale}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;固定光流尺度：{rife_scale}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;使用的补帧模型：{rife_model_name}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;用于补帧的N卡：{use_specific_gpu}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;使用NCNN补帧：{use_ncnn}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;NCNN补帧线程数：{ncnn_thread}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;NCNN选择的GPU：{ncnn_gpu}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;使用多卡：{use_rife_multi_cards}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;N卡计数：{rife_cuda_cnt}&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:16pt; font-weight:600; color:#ffffff;&quot;&gt;Arguments Preview：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;SVFI version：{version}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Basic Info]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output format：{output_ext} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Input fps = {input_fps} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output fps = {target_fps} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Exp to interpolate = {rife_exp}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output with audio and subtitles = {is_save_audio}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Resume of Workflow]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Input sections = {input_start_point} - {input_end_point}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Start Chunk = {output_chunk_cnt} Start Frame：{interp_start}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Scene Detection and Anime Optimization]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Disable Scene Detection = {is_no_scdet} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Scene Detection Threshold = {scdet_threshold} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Scene Mix = {is_scdet_mix} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output Scene = {is_scdet_output}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Fixed Scene Detection = {use_scdet_fixed} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Fixed-Scene Detection Threshold = {scdet_fixed_max}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Dedup Mode = {remove_dup_mode}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Output Resolution]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Width = {resize_width} | Height = {resize_height}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Black bars - Width = {crop_width} | Height = {crop_height}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Use AI Super Resolution = {use_sr}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Algorithm = {use_sr_algo}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Model = {use_sr_model}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SR Mode = {use_sr_mode}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Quality Control]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Render Quality: CRF：{render_crf}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Target Bitrate：{render_bitrate}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Encoder = {render_encoder} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Encoder Preset：{render_encoder_preset} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;NVENC Preset：{render_hwaccel_preset}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Quick Extract：{is_quick_extract}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;HDR Strict Mode = {is_hdr_strict_mode} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Hardware decode：{use_hwaccel_decode} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Specifies the number of encoding threads：{use_manual_encode_thread}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Turn on deinterlacing：{use_deinterlace} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Turn on fast noise reduction：{use_fast_denoise}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output chunk size：{render_gap} frame&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Manually specify the buffer memory：{manual_buffer_size}G&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Time remapping：{is_render_slow_motion} {render_slow_motion_fps}fps&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Custom suppression parameters：{render_ffmpeg_customized}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Frame interpolation parameter]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Semi-precision mode：{use_rife_fp16} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Bidirectional optical flow：{use_rife_forward_ensemble} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Reverse flow：{is_rife_reverse} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Dynamic optical flow scale：{use_rife_auto_scale}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Fixed optical flow scale：{rife_scale}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;The frame interpolation model used：{rife_model_name}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Nvidia graphic card for frame interpolation：{use_specific_gpu}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Use NCNN frame interpolation：{use_ncnn}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Number of frame interpolation threads for NCNN：{ncnn_thread}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;GPU for NCNN：{ncnn_gpu}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Using multiple card：{use_rife_multi_cards}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Nvidia graphic card counting：{rife_cuda_cnt}&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:16pt; font-weight:600; color:#ffffff;&quot;&gt;Arguments Preview：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;SVFI version：{version}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Basic Info]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output format：{output_ext} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Input fps = {input_fps} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output fps = {target_fps} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Exp to interpolate = {rife_exp}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output with audio and subtitles = {is_save_audio}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Resume of Workflow]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Input sections = {input_start_point} - {input_end_point}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Start Chunk = {output_chunk_cnt} Start Frame：{interp_start}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Scene Detection and Anime Optimization]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Disable Scene Detection = {is_no_scdet} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Scene Detection Threshold = {scdet_threshold} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Scene Mix = {is_scdet_mix} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output Scene = {is_scdet_output}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Fixed-Scene Detection = {use_scdet_fixed} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Fixed-Scene Detection Threshold = {scdet_fixed_max}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Dedup Mode = {remove_dup_mode}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Output Resolution]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Width = {resize_width} | Height = {resize_height}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Black bars - Width = {crop_width} | Height = {crop_height}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Use AI Super Resolution = {use_sr}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Algorithm = {use_sr_algo}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Model = {use_sr_model}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;SR Mode = {use_sr_mode}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Quality Control]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Render Quality: CRF：{render_crf}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Target Bitrate：{render_bitrate}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Encoder = {render_encoder} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Encoder Preset：{render_encoder_preset} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;NVENC Preset：{render_hwaccel_preset}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Quick Extract：{is_quick_extract}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;HDR Strict Mode = {is_hdr_strict_mode} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Hardware decode：{use_hwaccel_decode} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Specifies the number of encoding threads：{use_manual_encode_thread}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Turn on deinterlacing：{use_deinterlace} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Turn on fast noise reduction：{use_fast_denoise}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Output chunk size：{render_gap} frame&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Manually specify the buffer memory：{manual_buffer_size}G&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Time remapping：{is_render_slow_motion} {render_slow_motion_fps}fps&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Custom suppression parameters：{render_ffmpeg_customized}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;[Frame interpolation parameter]&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Semi-precision(FP16) mode：{use_rife_fp16} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Forward Ensemble flow：{use_rife_forward_ensemble} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Reversed flow：{is_rife_reverse} &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Dynamic optical flow scale：{use_rife_auto_scale}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RIFE optical flow scale：{rife_scale}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;RIFE model used：{rife_model_name}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;NVIDIA Card：{use_specific_gpu}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Use NCNN：{use_ncnn}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Number of threads for NCNN：{ncnn_thread}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;GPU for NCNN：{ncnn_gpu}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Using multiple cards：{use_rife_multi_cards}&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Count of NVIDIA Cards：{rife_cuda_cnt}&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
 </context>
 <context>
@@ -535,32 +535,32 @@
     <message>
         <location filename="SVFI_UI.py" line="1456"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;强制使用检测到的A卡或核显进行补帧任务&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Compulsorily use AMD/Intel&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use AMD/Intel compulsorily&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1457"/>
         <source>使用A卡或核显 (?)</source>
-        <translation>Use AMD or Intel Card (?)</translation>
+        <translation>AMD/Intel (?)</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1458"/>
         <source>导出带音频、字幕</source>
-        <translation>Output with audio and subtitles</translation>
+        <translation>Keep Audio &amp; Subs</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1459"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;输出图片序列，输出格式支持png、tiff等&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;命名格式:0&amp;gt;8d,如 00000008.png&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output Image Sequence, supporting png, tiff, etc.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Rules of Names:08d.png,for instance,  00000008.png&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output Image Sequence, supporting png, tiff, etc.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Rules of Names: 08d.png,for instance,  00000008.png&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1460"/>
         <source>输出图片序列 (?)</source>
-        <translation>Output Image Sequence (?)</translation>
+        <translation>Output Img Seq (?)</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1461"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;If there is a problem with audio merging, please try to change the output file format&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt; span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt; is compatible with most audio and video tracks, but not very compatible with subtitle tracks;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600 ;&quot;&gt;mkv&lt;/span&gt; is compatible with most subtitle tracks, but does not support pcm audio output (in this case, please change to mov)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4 &lt;/span&gt;Streaming is supported, and special audio format packaging such as truehd, dts, etc. is not supported&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;If there&apos;s a problem with merge of audi, please try to change output  format&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt; is compatible with most audio and video tracks, but not with subtitle tracks;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt; is compatible with most subtitle tracks, but does not support pcm audio output or Dolby Vision video tracks (in this case, please change to mp4 or mov)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4 &lt;/span&gt;is specialized in streaming, but not compatible with special audio tracks like TrueHD, DTS, FLAC(we don&apos;t use strict -2 mode), etc.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1462"/>
@@ -570,7 +570,7 @@
     <message>
         <location filename="SVFI_UI.py" line="1463"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出&lt;span style=&quot; font-weight:600;&quot;&gt;（这种情况请改为mov）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If there is a problem with audio merging, please try to change  output  format&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt; Compatible with most audio and video tracks, but not  with subtitle tracks;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt; is compatible with most subtitle tracks, but does not support pcm audio track&lt;span style=&quot; font-weight:600;&quot;&gt;(in this case, please change to mov)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4 &lt;/span&gt;Specialized at Streaming.For special audio track such as truehd, dts, etc. is not supported&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;If there&apos;s a problem with merge of audi, please try to change output  format&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt; is compatible with most audio and video tracks, but not with subtitle tracks;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt; is compatible with most subtitle tracks, but does not support pcm audio output or Dolby Vision video tracks (in this case, please change to mp4 or mov)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4 &lt;/span&gt;is specialized in streaming, but not compatible with special audio tracks like TrueHD, DTS, FLAC(we don&apos;t use strict -2 mode), etc.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1464"/>
@@ -600,7 +600,7 @@
     <message>
         <location filename="SVFI_UI.py" line="1469"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1. 输入为视频，输出为视频或图片序列：实际输出帧率以&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;为准，与补帧倍率无关：&lt;/p&gt;&lt;p&gt;一个长度为1s的24fps输入视频在补帧倍率为x2，输出帧率为60的情况下，会输出&lt;span style=&quot; font-weight:600;&quot;&gt;60fps的视频或者60张图片&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;2. 输入为图片序列，输出为视频：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，再输入到软件进行补帧，并被压制为&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会输出60fps的视频，且&lt;span style=&quot; font-weight:600;&quot;&gt;大于48fps的部分为重复帧&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;3. 输入为图片序列，输出为图片序列：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，并按照补帧倍率输出：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会&lt;span style=&quot; font-weight:600;&quot;&gt;输出48张图片&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1. if input is a video, then the output could be a video or image sequence: output fps is based on the &lt;span style=&quot; font-weight:600;&quot;&gt;output frame rate&lt;/span &gt; which has nothing to do with the exp:&lt;/p&gt;&lt;p&gt;A 24fps input video with a length of one second will output &lt;span style=&quot; font-weight:600;&quot;&gt;60fps video or 60 pictures&lt;/span&gt;;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;2. The input is a sequence of pictures, and the output is a video: each input The picture will be &lt;span style=&quot; font-weight:600;&quot;&gt; when the frame magnification is x2 and the output frame rate is 60.Output FPS will be repeated N times according to the frame-filling exp&lt;/span&gt;, then to be fed to SVFI and be interpolated, suppressed as &lt;span style=&quot; font-weight:600; &quot;&gt;Output frame rate&lt;/span&gt;:&lt;/p&gt;&lt;p&gt;A picture sequence with 24 fps with 24 images will output a 60 fps video when the frame magnification is x2 and the output frame rate is 60, whence &lt;span style=&quot; font-weight:600;&quot;&gt;The part greater than 48fps is repeated&lt;/span&gt;;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;3. When the input is a picture sequence with output as image sequence: each image input will be &lt;span style=&quot; font-weight:600;&quot;&gt;repeated N times according to the exp rate&lt;/span&gt;, and fps of which will be stated by the frame exp: &lt;/p&gt;&lt;p&gt;A 24fps image sequence with 24 images will output 48 pictures if the frame exp is x2 and the output frame rate is 60. &gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Input Case:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;1. &lt;span style=&quot; font-weight:600;&quot;&gt;Video&lt;/span&gt;, the output should be a video or image sequence: output fps is based on the &lt;span style=&quot; font-weight:600;&quot;&gt;output frame rate&lt;/span&gt; which has nothing to do with the &lt;span style=&quot; font-weight:600;&quot;&gt;exp&lt;/span&gt;:&lt;/p&gt;&lt;p&gt;A 24fps input video with a length of one second will output &lt;span style=&quot; font-weight:600;&quot;&gt;60fps video or 60  Images&lt;/span&gt;;&lt;/p&gt;&lt;p&gt;2. &lt;span style=&quot; font-weight:600;&quot;&gt;Images&lt;/span&gt;, where output = video, &lt;span style=&quot; font-weight:600;&quot;&gt;exp&lt;/span&gt; = x2 &lt;span style=&quot; font-weight:600;&quot;&gt;and&lt;/span&gt; output frame rate = 60: each input image will be duplicated twice to input pipe then be fed to SVFI and be interpolated, encoded as &lt;span style=&quot; font-weight:600;&quot;&gt;Output frame rate&lt;/span&gt;, which is 60fps in this case:&lt;/p&gt;&lt;p&gt;3. &lt;span style=&quot; font-weight:600;&quot;&gt;Images,&lt;/span&gt; where output = &lt;span style=&quot; font-weight:600;&quot;&gt;Images, exp &lt;/span&gt;= x2 and output frame rate = 60: each image will be duplicated &lt;span style=&quot; font-weight:600;&quot;&gt;N times &lt;/span&gt;according to the exp rate, and fps of which will be stated by the frame exp: &lt;/p&gt;&lt;p&gt;A 24fps image sequence with 24 images will output 48 pictures if the frame exp is x2 and the output frame rate is 60. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1470"/>
@@ -709,13 +709,18 @@
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1490"/>
-        <source>输入文件或文件夹 (?)</source>
-        <translation>Input File or Folder (?)</translation>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;条目勾亮说明设置已保存&lt;/p&gt;&lt;p&gt;点击条目以保存设置&lt;span style=&quot; font-weight:600;&quot;&gt;（无需点勾）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;内测/专业版支持任务队列&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Clip the item to check the Checkbox before item to save settings&lt;/p&gt;&lt;p&gt;Clip the item to save settings&lt;span style=&quot; font-weight:600;&quot;&gt;(Do not try to check the check box)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;(Pro Version supports multi items import)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1491"/>
         <source>清除输入列表</source>
         <translation>Clear Inputs</translation>
+    </message>
+    <message>
+        <location filename="SVFI_UI.py" line="1"/>
+        <source>点击查看使用教程</source>
+        <translation>Tutorial</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1492"/>
@@ -985,7 +990,7 @@
     <message>
         <location filename="SVFI_UI.py" line="1546"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x&lt;/span&gt;适用于2D动漫输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR&lt;/span&gt;适用于3D实拍&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;的GAN渲染效果更清晰，画面偏向细节保留，Net输出模糊，画面偏向涂抹与结构恢复&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：realESR非常慢（是TVE的1/10速度），但效果比TVE好，普适性极强&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x&lt;/span&gt;Suitable for 2D animation input&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR&lt;/span&gt;Suitable for 3D real time shooting&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt; GAN render is clearer, the picture is biased towards detail retention, Net output is blurred, and the picture is biased towards daub and structure restoration&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：RealESR is very slow (1/10 the speed of TVE), but it works better than TVE and is extremely universal&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x &lt;/span&gt;Suitable for 2D animation input&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR &lt;/span&gt;Suitable for 3D real time shooting&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR &lt;/span&gt; GAN render is clearer, the picture is biased towards detail retention, Net&apos;s model output is blurred, and the picture is biased towards daub and structure restoration&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：RealESR is very slow (1/10 the speed of TVE), but it works better than TVE and is extremely universal&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1547"/>
@@ -1333,14 +1338,24 @@
         <translation>Quick Extract (?)</translation>
     </message>
     <message>
+        <location filename="SVFI_UI.py" line="2"/>
+        <source>源HDR (?)</source>
+        <translation>Is Source HDR (?)</translation>
+    </message>
+    <message>
+        <location filename="SVFI_UI.py" line="3"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;指定输出的HDR模式&lt;/p&gt;&lt;p&gt;Auto为自动，检测到HDR内容会切换到CPU渲染&lt;/p&gt;&lt;p&gt;Normal为普通HDR，将不向输出写入元数据（HDR10+、Dolby Vision不适用）&lt;/p&gt;&lt;p&gt;Dolby Vision，HDR10+仅支持倍帧补帧(24-&amp;gt;48, 72fps, 24-x-&amp;gt;60fps)，且不支持划分时间段补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如需要自行操作元数据（包括元数据的保留、迁移、修改，乃至对补帧输出二压，请选择None）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;当编码器为CPU且输入为HDR10+源时，(libx265)渲染有可能出错，出错情况视机器环境而定&lt;/span&gt;&lt;/p&gt;&lt;p&gt;其余选项为手动指定输出为对应HDR模式&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>(?)</translation>
+    </message>
+    <message>
         <location filename="SVFI_UI.py" line="1621"/>
         <source>不懂就百度</source>
-        <translation>Google</translation>
+        <translation>FFmpeg&apos;s CRF/CQP, the smaller value for the greater bitrate (Better Google it)</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1622"/>
         <source>渲染质量CRF：</source>
-        <translation>Render Quality CRF</translation>
+        <translation>Render Quality</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1623"/>
@@ -1354,12 +1369,12 @@
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1625"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅在使用NVENC编码器时生效&lt;/span&gt;&lt;/p&gt;&lt;p&gt;右为编码器辈数（请自行查阅自己显卡的NVENC辈数）&lt;/p&gt;&lt;p&gt;辈数越高，压缩率越好&lt;/p&gt;&lt;p&gt;如果使用此项报Broken Pipe错误，请尝试降级（如7th改为6th）或关闭（调为None）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;恰当选择此项有望显著提高N卡硬编压制质量&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Valid only when the NVENC encoder is used&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The right is the encoder seniority (please check the NVENC seniority of your graphics card)&lt;/p&gt;&lt;p&gt;The higher the generation, the better the compression rate&lt;/p&gt;&lt;p&gt;If the Broken Pipe error occured, please try to downgrade (such as 7th to 6th) or close (to None).&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Proper selection of this item is expected to significantly improve the quality of N card hardware pressing&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅在使用NVENC编码器时生效&lt;/span&gt;&lt;/p&gt;&lt;p&gt;右为编码器辈数（请自行查阅自己显卡的NVENC辈数）&lt;/p&gt;&lt;p&gt;辈数越高，压缩率越好&lt;/p&gt;&lt;p&gt;如果使用此项报Broken Pipe错误，请尝试降级（如7th改为6th）或关闭（调为None）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;恰当选择此项有望显著提高N卡硬编压制质量&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;选择方案请看附赠的NVIDIA NVENC Gen.pdf&lt;/span&gt;&lt;/p&gt;&lt;p&gt;GTX 1050+ 请选5th&lt;/p&gt;&lt;p&gt;GTX 1650+ 请选7th&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Valid only when using NVENC encoder &lt;/span&gt;&lt;/p&gt;&lt;p&gt;The right is the encoder seniority (please check the NVENC seniority of your graphics card)&lt;/p&gt;&lt;p&gt;The higher the generation, the better the compression rate&lt;/p&gt;&lt;p&gt;If the Broken Pipe error occured, please try to downgrade (such as 7th to 6th) or close (to None).&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Proper selection of this item is expected to significantly improve the quality of N card hardware pressing&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1626"/>
-        <source>N卡硬编预设：（老黄送的福利！） (?)</source>
+        <source>N卡硬编预设：(?)</source>
         <translation>NVENC Encode Presets: (?)</translation>
     </message>
     <message>
@@ -1409,7 +1424,7 @@
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1636"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;N卡A卡通用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;用4倍的时间缓解2%的物体消失问题，具体效果视不同输入而定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;N卡A卡通用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;用4倍的时间缓解12%的物体消失问题，具体效果视不同输入而定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NVIDIA AMD  universal&lt;/span&gt;&lt;/p&gt;&lt;p&gt;4 times longer to reduce 2 percent of object disappearance, depending on the input&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
@@ -1463,6 +1478,11 @@
         <translation>NVIDIA Card for interpolation</translation>
     </message>
     <message>
+        <location filename="SVFI_UI.py" line="1647"/>
+        <source>*专业版可使用TTA及动态光流以提升动漫补帧质量</source>
+        <translation>*TTA and Dynamic Scale for anime interp optimization\n*Only available for Pro</translation>
+    </message>
+    <message>
         <location filename="SVFI_UI.py" line="1648"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;可以在软件根目录的train_log文件夹自行修改模型的名字&lt;/p&gt;&lt;p&gt;一般来说，版本号越高代表模型越新&lt;/p&gt;&lt;p&gt;offical：&lt;span style=&quot; font-weight:600;&quot;&gt;官方&lt;/span&gt;发布模型&lt;/p&gt;&lt;p&gt;anime smooth：&lt;span style=&quot; font-weight:600;&quot;&gt;动漫模型&lt;/span&gt;，模糊但动作连贯&lt;/p&gt;&lt;p&gt;anime sharp：更清晰&lt;/p&gt;&lt;p&gt;anime experiment：速度更快，效果更清晰，较不丝滑，属于&lt;span style=&quot; font-weight:600;&quot;&gt;实验&lt;/span&gt;模型&lt;/p&gt;&lt;p&gt;2.x较慢，3.6较快&lt;/p&gt;&lt;p&gt;所有模型（如anime）的获取需要内测资格或者加入订阅。默认完整包仅包括官方模型，请自行下载前往群文件下载模型包&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can change the name of the model in the train_log folder of the software root&lt;/p&gt;&lt;p&gt;In general, the higher the version number, the newer the model&lt;/p&gt;&lt;p&gt;offical：&lt;span style=&quot; font-weight:600;&quot;&gt;The official&lt;/span&gt; release model&lt;/p&gt;&lt;p&gt;anime smooth：&lt;span style=&quot; font-weight:600;&quot;&gt;Animation model&lt;/span&gt;，Vague but coherent&lt;/p&gt;&lt;p&gt;anime sharp：More clearly&lt;/p&gt;&lt;p&gt;anime experiment：Faster, clearer, less silky,Belong to &lt;span style=&quot; font-weight:600;&quot;&gt;experimental&lt;/span&gt; model&lt;/p&gt;&lt;p&gt;2. X is slower, 3.6 is faster&lt;/p&gt;&lt;p&gt;All of the models (like Anime) require either a beta qualification or a subscription to be acquired. By default, only official models are included in the complete package. Please download the package to the group file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
@@ -1504,7 +1524,7 @@
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1656"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;动态选择光流尺度，用于N卡将有效缓解物体消失问题&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;提高光流预测准确性&lt;/p&gt;&lt;p&gt;开启后可有效减轻虚影&lt;/p&gt;&lt;p&gt;速度减慢25%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用，2.x模型不推荐开启&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Only NVIDIA cards are available&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Dynamic selection of optical flow scale for NVIDIA card can effectively alleviate the problem of object disappearance&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
@@ -1733,7 +1753,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="SVFI_UI.py" line="1705"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并向开发人员提交settings和error.log文件，群号264023742&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;Output window&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt; On this page, the different colors of the fonts mean the following:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;Red - error, please export the current Settings on the home page and submit Settings and error.log files to the developer&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;Orange - warning that may affect the final effect, but not the output&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;Green - Current task completed&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;If the program is stuck, please click on the upper right corner of the forcibly end the process button, and restart the frame interpolation program!&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;Output window&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;On this page, different colors indicate:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;Red - error, please submit the error.log to developers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;Orange - warning that may affect final output occurs, but not fatal, needing double check&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;Green - Current task is completed&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;If mission is stuck, please click on &amp;quot;Terminate&amp;quot; button on the right to end process, and restart the task.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1706"/>

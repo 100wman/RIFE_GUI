@@ -513,15 +513,15 @@
                    </widget>
                   </item>
                   <item row="0" column="3">
-                   <widget class="MyComboBox" name="SettingsPresetsEncode">
+                   <widget class="MyComboBox" name="SettingsPresetsFluency">
                     <item>
                      <property name="text">
-                      <string>CPU可以</string>
+                      <string>常规丝滑</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>GPU比CPU强</string>
+                      <string>加强丝滑</string>
                      </property>
                     </item>
                    </widget>
@@ -535,7 +535,7 @@
                     </item>
                     <item>
                      <property name="text">
-                      <string>电影</string>
+                      <string>真人</string>
                      </property>
                     </item>
                    </widget>
@@ -544,12 +544,22 @@
                    <widget class="MyComboBox" name="SettingsPresetsSQ">
                     <item>
                      <property name="text">
+                      <string>质量优先</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>常规质量</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
                       <string>速度优先</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>质量优先</string>
+                      <string>极致速度</string>
                      </property>
                     </item>
                    </widget>
@@ -1627,7 +1637,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-78</y>
+                        <y>0</y>
                         <width>388</width>
                         <height>488</height>
                        </rect>
@@ -2204,7 +2214,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-16</y>
+                        <y>0</y>
                         <width>388</width>
                         <height>426</height>
                        </rect>
@@ -2641,7 +2651,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-50</y>
+                        <y>0</y>
                         <width>388</width>
                         <height>460</height>
                        </rect>

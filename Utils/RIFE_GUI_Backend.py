@@ -131,7 +131,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         self.MultiTaskRestInterval.setValue(appPref.value("multi_task_rest_interval", 0, type=int))
         self.AfterMission.setCurrentIndex(appPref.value("after_mission", False, type=bool))  # None
         self.ForceCpuChecker.setChecked(appPref.value("rife_use_cpu", False, type=bool))
-        self.ExpertModeChecker.setChecked(appPref.value("expert", True, type=bool))
+        self.ExpertModeChecker.setChecked(appPref.value("expert", False, type=bool))
         self.PreviewArgsModeChecker.setChecked(appPref.value("is_preview_args", False, type=bool))
         self.RudeExitModeChecker.setChecked(appPref.value("is_rude_exit", False, type=bool))
         self.QuietModeChecker.setChecked(appPref.value("is_gui_quiet", False, type=bool))
@@ -525,7 +525,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetFlowLen.setVisible(False)
         self.SaveCurrentSettings.setVisible(False)
         self.LoadCurrentSettings.setVisible(False)
-        self.SettingsPresetGroup.setVisible(False)
+        # self.SettingsPresetGroup.setVisible(False)
         self.ShortCutGroup.setVisible(False)
         self.LockWHChecker.setVisible(False)
 
@@ -1076,6 +1076,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def settings_load_settings_templates(self):
+        """
+        读取存在的自定义预设
+        :return:
+        """
         config_dir = os.path.join(appDir, 'Configs', "SVFI_Config_Template_*.ini")
         template_paths = glob.glob(config_dir)
         self.SettingsTemplateSelector.clear()
@@ -1556,14 +1560,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 complete_msg += _translate('', '成功！')
                 os.startfile(self.OutputFolder.text())
             else:
-                if not self.DebugChecker.isChecked():
-                    _msg1 = _translate('', '失败, 返回码：')
-                    _msg2 = _translate('', '请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度')
-                    complete_msg += f"{_msg1}{returncode}\n{_msg2}"
-                    error_handle()
-                    generate_error_log()
-
-            self.function_send_msg(_translate('', "任务完成"), complete_msg, 2)
+                # if not self.DebugChecker.isChecked():
+                _msg1 = _translate('', '失败, 返回码：')
+                _msg2 = _translate('', '请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度')
+                complete_msg += f"{_msg1}{returncode}\n{_msg2}"
+                error_handle()
+                generate_error_log()
+            if not self.DebugChecker.isChecked():
+                self.function_send_msg(_translate('', "任务完成"), complete_msg, 2)
             self.ConcatAllButton.setEnabled(True)
             self.StartExtractButton.setEnabled(True)
             self.StartRenderButton.setEnabled(True)
@@ -1763,6 +1767,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
             SVFI_preview_args_form.exec_()
         # self.settings_load_config(appDataPath)  # 将appData指针指回root
+
+    def on_CurrentPreset_changed(self):
+        """
+        载入SVFI官方预设
+        :return:
+        """
 
     @pyqtSlot(bool)
     def on_MBufferChecker_clicked(self):
