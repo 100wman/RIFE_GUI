@@ -1085,7 +1085,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SettingsTemplateSelector.clear()
         for tp in template_paths:
             template_name = re.findall('SVFI_Config_Template_(.*?)\.ini', tp)
-            if len(template_name):
+            if len(template_name) and "Presets" not in template_name:
                 self.SettingsTemplateSelector.addItem(template_name[0])
 
     def settings_update_gpu_info(self, item_update=False):
@@ -1390,10 +1390,16 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def function_load_tasks_settings(self, load_all=False, load_one=False):
         task_data = self.InputFileName.getItems()
         task_list = list()
-
+        try:
+            self.InputFileName.disconnect()
+        except:
+            pass
         for t in task_data:
             if self.InputFileName.itemWidget(t).iniCheck.isChecked():
-                task_list.append(self.InputFileName.getWidgetData(t)['row'])
+                row_ = self.InputFileName.getWidgetData(t)['row']
+                self.InputFileName.setCurrentRow(row_)
+                self.on_InputFileName_currentItemChanged()
+                task_list.append(row_)
         if load_all or (not len(task_list) and self.InputFileName.count() >= 1):
             """
             Activate All Tasks when load_all is assigned or 
@@ -1402,13 +1408,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             for it in range(self.InputFileName.count()):
                 self.InputFileName.setCurrentRow(it)
                 self.on_InputFileName_currentItemChanged()
-            return list(range(self.InputFileName.count()))
+            task_list = list(range(self.InputFileName.count()))
         elif load_one:
             task_current_item = self.InputFileName.currentItem()
+            self.on_InputFileName_currentItemChanged()
             task_list.clear()
             if task_current_item is not None:
                 task_list.append(self.InputFileName.getWidgetData(task_current_item)['row'])
             pass
+        self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
         return task_list
 
     def function_get_templates(self):
@@ -1559,6 +1567,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 """What the fuck is SWIG?"""
                 complete_msg += _translate('', '成功！')
                 os.startfile(self.OutputFolder.text())
+                self.InputFileName.refreshTasks()
             else:
                 # if not self.DebugChecker.isChecked():
                 _msg1 = _translate('', '失败, 返回码：')
@@ -1574,8 +1583,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.AllInOne.setEnabled(True)
             self.InputFileName.setEnabled(True)
             self.current_failed = False
-            # self.InputFileName.refreshTasks()
-            self.on_InputFileName_currentItemChanged()
+            # self.on_InputFileName_currentItemChanged()
 
             if appPref.value("use_clear_inputs", False, type=bool):
                 self.InputFileName.clear()

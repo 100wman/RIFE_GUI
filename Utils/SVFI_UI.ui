@@ -700,6 +700,54 @@
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_10">
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="AdvanceSettingsLabel">
+                     <property name="text">
+                      <string>高级设置</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="0">
+                    <layout class="QVBoxLayout" name="verticalLayout_8">
+                     <item>
+                      <widget class="QPushButton" name="SaveCurrentSettings">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;为该输入设置单独的参数文件；默认按照全局参数输出&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>单独保存当前选中的输入设置</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="LoadCurrentSettings">
+                       <property name="text">
+                        <string>载入当前选中输入的设置</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="OutputSettingsButton">
+                       <property name="text">
+                        <string>导出当前设置到文本文件</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="DebugChecker">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;除虫模式：&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;该模式启用后将不会弹窗&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>Debug (?)</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
                    <item row="1" column="0">
                     <widget class="QToolBox" name="toolBox">
                      <property name="maximumSize">
@@ -709,7 +757,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>5</number>
+                      <number>3</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -1628,9 +1676,9 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-167</y>
                         <width>388</width>
-                        <height>488</height>
+                        <height>577</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1645,46 +1693,30 @@
                          <layout class="QGridLayout" name="gridLayout_27">
                           <item row="0" column="0">
                            <layout class="QGridLayout" name="gridLayout_12">
-                            <item row="2" column="0">
-                             <widget class="QLabel" name="label_26">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;每一chunk的帧数大小&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;使用QSVENCC编码器时此值过高可能导致渲染卡死&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
+                            <item row="12" column="0">
+                             <widget class="QCheckBox" name="KeepChunksChecker">
                               <property name="text">
-                               <string>单一输出区块大小： (!)</string>
+                               <string>保留中间文件(chunks)</string>
                               </property>
                              </widget>
                             </item>
-                            <item row="8" column="1">
-                             <widget class="MyLineWidget" name="SlowmotionFPS">
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="layoutDirection">
-                               <enum>Qt::LeftToRight</enum>
-                              </property>
-                              <property name="placeholderText">
-                               <string>输入被映射至的帧率</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="10" column="1">
-                             <widget class="MyLineWidget" name="FFmpegCustomer">
+                            <item row="14" column="0">
+                             <widget class="QLabel" name="label_30">
                               <property name="sizePolicy">
                                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                                 <horstretch>0</horstretch>
                                 <verstretch>0</verstretch>
                                </sizepolicy>
                               </property>
-                              <property name="placeholderText">
-                               <string>如输入“-crf 9” 会替换渲染质量的值</string>
+                              <property name="toolTip">
+                               <string>输入项数必须为偶数</string>
+                              </property>
+                              <property name="text">
+                               <string>自定义ffmpeg压制参数： (?)</string>
                               </property>
                              </widget>
                             </item>
-                            <item row="3" column="1">
+                            <item row="5" column="0">
                              <layout class="QHBoxLayout" name="horizontalLayout_28">
                               <item>
                                <widget class="MySpinBox" name="BufferSizeSelector">
@@ -1716,14 +1748,23 @@
                               </item>
                               <item>
                                <widget class="QLabel" name="label_28">
+                                <property name="sizePolicy">
+                                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                                  <horstretch>0</horstretch>
+                                  <verstretch>0</verstretch>
+                                 </sizepolicy>
+                                </property>
                                 <property name="text">
                                  <string>G</string>
+                                </property>
+                                <property name="alignment">
+                                 <set>Qt::AlignCenter</set>
                                 </property>
                                </widget>
                               </item>
                              </layout>
                             </item>
-                            <item row="2" column="1">
+                            <item row="3" column="0">
                              <layout class="QHBoxLayout" name="horizontalLayout_26">
                               <item>
                                <widget class="MySpinBox" name="RenderGapSelector">
@@ -1756,7 +1797,7 @@
                                  </sizepolicy>
                                 </property>
                                 <property name="text">
-                                 <string>帧    </string>
+                                 <string>帧</string>
                                 </property>
                                 <property name="alignment">
                                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -1765,7 +1806,7 @@
                               </item>
                              </layout>
                             </item>
-                            <item row="3" column="0">
+                            <item row="4" column="0">
                              <widget class="QCheckBox" name="MBufferChecker">
                               <property name="toolTip">
                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用指定的内存量进行补帧任务，避免内存不足，一般不需勾选。&lt;span style=&quot; font-weight:600;&quot;&gt;专业人士自用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1776,22 +1817,6 @@
                              </widget>
                             </item>
                             <item row="10" column="0">
-                             <widget class="QLabel" name="label_30">
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="toolTip">
-                               <string>输入项数必须为偶数</string>
-                              </property>
-                              <property name="text">
-                               <string>自定义ffmpeg压制参数： (?)</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="8" column="0">
                              <widget class="QCheckBox" name="slowmotion">
                               <property name="toolTip">
                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用指定帧率输出。效果等同于PR、AE的&lt;span style=&quot; font-weight:600;&quot;&gt;时间重映射&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输出将与右项帧率相同，输出时长与原视频时长的&lt;span style=&quot; font-weight:600;&quot;&gt;比&lt;/span&gt;等于左边的&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率/该项帧率&lt;/span&gt;&lt;/p&gt;&lt;p&gt;e.g.&lt;/p&gt;&lt;p&gt;输出帧率=60fps&lt;/p&gt;&lt;p&gt;时间重映射帧率=30fps&lt;/p&gt;&lt;p&gt;最终输出将为30fps，时长为原输入的两倍&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1807,10 +1832,49 @@
                               </property>
                              </widget>
                             </item>
-                            <item row="9" column="0">
-                             <widget class="QCheckBox" name="KeepChunksChecker">
+                            <item row="2" column="0">
+                             <widget class="QLabel" name="label_26">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;每一chunk的帧数大小&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;使用QSVENCC编码器时此值过高可能导致渲染卡死&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
                               <property name="text">
-                               <string>保留中间文件(chunks)</string>
+                               <string>单一输出区块大小： (!)</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="11" column="0">
+                             <widget class="MyLineWidget" name="SlowmotionFPS">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="layoutDirection">
+                               <enum>Qt::LeftToRight</enum>
+                              </property>
+                              <property name="placeholderText">
+                               <string>输入被映射至的帧率</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="15" column="0">
+                             <widget class="MyLineWidget" name="FFmpegCustomer">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="placeholderText">
+                               <string>如输入“-crf 9” 会替换渲染质量的值</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="13" column="0">
+                             <widget class="Line" name="line">
+                              <property name="orientation">
+                               <enum>Qt::Horizontal</enum>
                               </property>
                              </widget>
                             </item>
@@ -2039,7 +2103,7 @@
                               </widget>
                              </item>
                              <item>
-                              <widget class="QComboBox" name="HDRModeSelector">
+                              <widget class="MyComboBox" name="HDRModeSelector">
                                <item>
                                 <property name="text">
                                  <string>Auto</string>
@@ -2205,9 +2269,9 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-60</y>
                         <width>388</width>
-                        <height>426</height>
+                        <height>470</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2227,20 +2291,13 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_5">
-                          <item row="0" column="1">
-                           <widget class="QCheckBox" name="AutoInterpScaleChecker">
+                          <item row="4" column="0">
+                           <widget class="QCheckBox" name="UseMultiCardsChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;动态选择光流尺度，用于N卡将有效缓解物体消失问题&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用所有能检测到的显卡进行补帧&lt;/p&gt;&lt;p&gt;使用A卡模式（左侧“使用A卡或核显”）将同时调用能识别到的A卡和N卡&lt;/p&gt;&lt;p&gt;不适用A卡模式则只能使用检测到的N卡&lt;/p&gt;&lt;p&gt;速度较单卡慢&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>动态光流尺度 (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="1" column="0">
-                           <widget class="QLabel" name="label_32">
-                            <property name="text">
-                             <string>用于补帧的N卡：</string>
+                             <string>使用多卡 (?)</string>
                             </property>
                            </widget>
                           </item>
@@ -2257,23 +2314,30 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="3" column="0">
-                           <widget class="QCheckBox" name="UseMultiCardsChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用所有能检测到的显卡进行补帧&lt;/p&gt;&lt;p&gt;使用A卡模式（左侧“使用A卡或核显”）将同时调用能识别到的A卡和N卡&lt;/p&gt;&lt;p&gt;不适用A卡模式则只能使用检测到的N卡&lt;/p&gt;&lt;p&gt;速度较单卡慢&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>使用多卡 (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="2" column="0" colspan="2">
+                          <item row="3" column="0" colspan="2">
                            <widget class="MyComboBox" name="DiscreteCardSelector">
                             <property name="sizeAdjustPolicy">
                              <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
                             </property>
                             <property name="minimumContentsLength">
                              <number>20</number>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="2" column="0">
+                           <widget class="QLabel" name="label_32">
+                            <property name="text">
+                             <string>用于补帧的N卡：</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="1" column="0">
+                           <widget class="QCheckBox" name="AutoInterpScaleChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;动态选择光流尺度，用于N卡将有效缓解物体消失问题&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>动态光流尺度 (?)</string>
                             </property>
                            </widget>
                           </item>
@@ -2381,20 +2445,7 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_40">
-                          <item row="0" column="0">
-                           <widget class="QCheckBox" name="FP16Checker">
-                            <property name="acceptDrops">
-                             <bool>true</bool>
-                            </property>
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对N卡生效，节省显存使用量；&lt;/p&gt;&lt;p&gt;处理高分辨率视频时，&lt;span style=&quot; font-weight:600;&quot;&gt;勾选此项可能会导致画面抖动，将自动启用“消除闪烁选项”以最大限度消除抖动。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;此外有可能导致输出花屏，极其不建议开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS: 该选项同样适用于RealESR模型（专业版/内测版）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>半精度模式 (!)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="2" column="0">
+                          <item row="4" column="0">
                            <widget class="QLabel" name="InterpScaleReminder">
                             <property name="toolTip">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;该值不是越大或者越小越好&lt;/span&gt;&lt;/p&gt;&lt;p&gt;1080P动漫推荐&lt;span style=&quot; font-weight:600;&quot;&gt;0.5&lt;/span&gt;，实拍推荐&lt;span style=&quot; font-weight:600;&quot;&gt;1.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;分辨率4K及以上的视频推荐&lt;span style=&quot; font-weight:600;&quot;&gt;0.25~0.5&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;其余推荐1.0&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -2407,90 +2458,7 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="8" column="0">
-                           <widget class="QLabel" name="label_31">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;可以在软件根目录的train_log文件夹自行修改模型的名字&lt;/p&gt;&lt;p&gt;一般来说，版本号越高代表模型越新&lt;/p&gt;&lt;p&gt;offical：&lt;span style=&quot; font-weight:600;&quot;&gt;官方&lt;/span&gt;发布模型&lt;/p&gt;&lt;p&gt;anime smooth：&lt;span style=&quot; font-weight:600;&quot;&gt;动漫模型&lt;/span&gt;，模糊但动作连贯&lt;/p&gt;&lt;p&gt;anime sharp：更清晰&lt;/p&gt;&lt;p&gt;anime experiment：速度更快，效果更清晰，较不丝滑，属于&lt;span style=&quot; font-weight:600;&quot;&gt;实验&lt;/span&gt;模型&lt;/p&gt;&lt;p&gt;2.x较慢，3.6较快&lt;/p&gt;&lt;p&gt;所有模型（如anime）的获取需要内测资格或者加入订阅。默认完整包仅包括官方模型，请自行下载前往群文件下载模型包&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>使用的补帧模型 (?)</string>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="8" column="1">
-                           <widget class="MyComboBox" name="ModuleSelector">
-                            <property name="toolTip">
-                             <string/>
-                            </property>
-                            <property name="sizeAdjustPolicy">
-                             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-                            </property>
-                            <property name="minimumContentsLength">
-                             <number>20</number>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="7" column="0">
-                           <widget class="QLabel" name="TtaModeLabel">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;TTA：Train Time Augmentation，训练数据增强&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;会增加补帧时间以换取更好的补帧效果：如减弱果冻、消失问题&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;设不开启TTA所需计算量为1，旁边的&lt;/span&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;数值输入框&lt;/span&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;的值为t：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;三种模式：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;1. 侧向TTA，计算量为2t + 1；&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;2. 中向TTA，计算量为2t + 2；&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;3. 综合TTA = 侧向TTA + 中向TTA，计算量为4t + 3&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;开启TTA会降低画面锐度，推荐用于2D动画补帧&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;TTA极其耗时，请谨慎使用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>TTA模式 (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="0" column="1">
-                           <widget class="QCheckBox" name="ReverseChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将前一张图片作为补帧的参考，即，&lt;span style=&quot; font-weight:600;&quot;&gt;从后向前补&lt;/span&gt;。&lt;/p&gt;&lt;p&gt;可能会比正向光流更流畅，但会严重影响3D动画补帧的高速运动的画面质量&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>反向光流 (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="2" column="1">
-                           <widget class="MyComboBox" name="InterpScaleSelector">
-                            <property name="currentText">
-                             <string>1.00</string>
-                            </property>
-                            <item>
-                             <property name="text">
-                              <string>1.00</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>0.125</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>0.25</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>0.50</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>2.00</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>4.00</string>
-                             </property>
-                            </item>
-                           </widget>
-                          </item>
-                          <item row="7" column="1">
+                          <item row="9" column="1">
                            <layout class="QHBoxLayout" name="horizontalLayout_18">
                             <item>
                              <widget class="MyComboBox" name="TtaModeSelector">
@@ -2531,7 +2499,67 @@
                             </item>
                            </layout>
                           </item>
-                          <item row="1" column="0">
+                          <item row="10" column="1">
+                           <widget class="MyComboBox" name="ModuleSelector">
+                            <property name="toolTip">
+                             <string/>
+                            </property>
+                            <property name="sizeAdjustPolicy">
+                             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                            </property>
+                            <property name="minimumContentsLength">
+                             <number>20</number>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="9" column="0">
+                           <widget class="QLabel" name="TtaModeLabel">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;TTA：Train Time Augmentation，训练数据增强&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;会增加补帧时间以换取更好的补帧效果：如减弱果冻、消失问题&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;设不开启TTA所需计算量为1，旁边的&lt;/span&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;数值输入框&lt;/span&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;的值为t：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;三种模式：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;1. 侧向TTA，计算量为2t + 1；&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;2. 中向TTA，计算量为2t + 2；&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;3. 综合TTA = 侧向TTA + 中向TTA，计算量为4t + 3&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; color:#121212; background-color:#ffffff;&quot;&gt;开启TTA会降低画面锐度，推荐用于2D动画补帧&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'-apple-system','BlinkMacSystemFont','Helvetica Neue','PingFang SC','Microsoft YaHei','Source Han Sans SC','Noto Sans CJK SC','WenQuanYi Micro Hei','sans-serif'; font-size:15px; font-weight:600; color:#121212; background-color:#ffffff;&quot;&gt;TTA极其耗时，请谨慎使用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>TTA模式 (?)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="4" column="1">
+                           <widget class="MyComboBox" name="InterpScaleSelector">
+                            <property name="currentText">
+                             <string>1.00</string>
+                            </property>
+                            <item>
+                             <property name="text">
+                              <string>1.00</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>0.125</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>0.25</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>0.50</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>2.00</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>4.00</string>
+                             </property>
+                            </item>
+                           </widget>
+                          </item>
+                          <item row="2" column="0">
                            <widget class="QCheckBox" name="EvictFlickerChecker">
                             <property name="acceptDrops">
                              <bool>true</bool>
@@ -2541,6 +2569,42 @@
                             </property>
                             <property name="text">
                              <string>消除闪烁 (?)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="10" column="0">
+                           <widget class="QLabel" name="label_31">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;可以在软件根目录的train_log文件夹自行修改模型的名字&lt;/p&gt;&lt;p&gt;一般来说，版本号越高代表模型越新&lt;/p&gt;&lt;p&gt;offical：&lt;span style=&quot; font-weight:600;&quot;&gt;官方&lt;/span&gt;发布模型&lt;/p&gt;&lt;p&gt;anime smooth：&lt;span style=&quot; font-weight:600;&quot;&gt;动漫模型&lt;/span&gt;，模糊但动作连贯&lt;/p&gt;&lt;p&gt;anime sharp：更清晰&lt;/p&gt;&lt;p&gt;anime experiment：速度更快，效果更清晰，较不丝滑，属于&lt;span style=&quot; font-weight:600;&quot;&gt;实验&lt;/span&gt;模型&lt;/p&gt;&lt;p&gt;2.x较慢，3.6较快&lt;/p&gt;&lt;p&gt;所有模型（如anime）的获取需要内测资格或者加入订阅。默认完整包仅包括官方模型，请自行下载前往群文件下载模型包&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>使用的补帧模型 (?)</string>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="0" column="0">
+                           <widget class="QCheckBox" name="FP16Checker">
+                            <property name="acceptDrops">
+                             <bool>true</bool>
+                            </property>
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对N卡生效，节省显存使用量；&lt;/p&gt;&lt;p&gt;处理高分辨率视频时，&lt;span style=&quot; font-weight:600;&quot;&gt;勾选此项可能会导致画面抖动，将自动启用“消除闪烁选项”以最大限度消除抖动。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;此外有可能导致输出花屏，极其不建议开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS: 该选项同样适用于RealESR模型（专业版/内测版）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>半精度模式 (!)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="3" column="0">
+                           <widget class="QCheckBox" name="ReverseChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将前一张图片作为补帧的参考，即，&lt;span style=&quot; font-weight:600;&quot;&gt;从后向前补&lt;/span&gt;。&lt;/p&gt;&lt;p&gt;可能会比正向光流更流畅，但会严重影响3D动画补帧的高速运动的画面质量&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>反向光流 (?)</string>
                             </property>
                            </widget>
                           </item>
@@ -2642,7 +2706,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-79</y>
                         <width>388</width>
                         <height>489</height>
                        </rect>
@@ -2920,54 +2984,6 @@
                        </item>
                       </layout>
                      </widget>
-                    </widget>
-                   </item>
-                   <item row="4" column="0">
-                    <layout class="QVBoxLayout" name="verticalLayout_8">
-                     <item>
-                      <widget class="QPushButton" name="SaveCurrentSettings">
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;为该输入设置单独的参数文件；默认按照全局参数输出&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>单独保存当前选中的输入设置</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="LoadCurrentSettings">
-                       <property name="text">
-                        <string>载入当前选中输入的设置</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="OutputSettingsButton">
-                       <property name="text">
-                        <string>导出当前设置到文本文件</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="DebugChecker">
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;除虫模式：&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;该模式启用后将不会弹窗&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>Debug (?)</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item row="0" column="0">
-                    <widget class="QLabel" name="AdvanceSettingsLabel">
-                     <property name="text">
-                      <string>高级设置</string>
-                     </property>
-                     <property name="alignment">
-                      <set>Qt::AlignCenter</set>
-                     </property>
                     </widget>
                    </item>
                   </layout>
@@ -3396,9 +3412,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>MBufferChecker</tabstop>
   <tabstop>BufferSizeSelector</tabstop>
   <tabstop>slowmotion</tabstop>
-  <tabstop>SlowmotionFPS</tabstop>
   <tabstop>KeepChunksChecker</tabstop>
-  <tabstop>FFmpegCustomer</tabstop>
   <tabstop>GifInput</tabstop>
   <tabstop>DebugChecker</tabstop>
   <tabstop>GifOutput</tabstop>
