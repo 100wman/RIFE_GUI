@@ -645,17 +645,15 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.3"
+    gui_version = "3.6.4"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.3"
+    ols_version = "6.10.4"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix Task List Empty frequently Crash when iniCheck jumps up and down
-    - Change Task Id after mission is finished
-    - Add Attempted Auto fix for output extension if Audio Concat Test failed
+    - Remove Steam Validation at top layer(reduce initiation time)
     """
 
     path_len_limit = 230
