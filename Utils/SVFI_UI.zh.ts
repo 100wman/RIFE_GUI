@@ -123,257 +123,257 @@
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1103"/>
+        <location filename="RIFE_GUI_Backend.py" line="1107"/>
         <source>未找到N卡，将使用A卡或核显</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1146"/>
+        <location filename="RIFE_GUI_Backend.py" line="1150"/>
         <source>未找到补帧模型路径，请检查！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1171"/>
+        <location filename="RIFE_GUI_Backend.py" line="1175"/>
         <source>未找到超分模型，请检查！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1220"/>
+        <location filename="RIFE_GUI_Backend.py" line="1224"/>
         <source>[导出设置预览]</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1225"/>
+        <location filename="RIFE_GUI_Backend.py" line="1229"/>
         <source>[设置信息]</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1301"/>
+        <location filename="RIFE_GUI_Backend.py" line="1305"/>
         <source>选取文件夹</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1347"/>
+        <location filename="RIFE_GUI_Backend.py" line="1351"/>
         <source>请填写输入或输出视频路径！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1566"/>
+        <location filename="RIFE_GUI_Backend.py" line="1570"/>
         <source>任务完成</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1456"/>
+        <location filename="RIFE_GUI_Backend.py" line="1460"/>
         <source>你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1460"/>
+        <location filename="RIFE_GUI_Backend.py" line="1464"/>
         <source>文件读取失败，请确保软件有足够权限且输入文件未被其他软件占用</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1464"/>
+        <location filename="RIFE_GUI_Backend.py" line="1468"/>
         <source>请把软件所在文件夹移到纯英文、无中文、无空格路径下</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1468"/>
+        <location filename="RIFE_GUI_Backend.py" line="1472"/>
         <source>你的显存不够啦！去清一下后台占用显存的程序，或者去&apos;高级设置&apos;降低视频分辨率/使用半精度模式/更换补帧模型~</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1473"/>
+        <location filename="RIFE_GUI_Backend.py" line="1477"/>
         <source>请前往官网更新驱动www.nvidia.cn/Download/index.aspx</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1481"/>
+        <location filename="RIFE_GUI_Backend.py" line="1485"/>
         <source>请检查渲染设置，确保输出分辨率宽高为偶数，尝试关闭硬件编码以解决问题</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1494"/>
+        <location filename="RIFE_GUI_Backend.py" line="1498"/>
         <source>程序运行出现错误！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1556"/>
+        <location filename="RIFE_GUI_Backend.py" line="1560"/>
         <source>成功！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1560"/>
+        <location filename="RIFE_GUI_Backend.py" line="1564"/>
         <source>失败, 返回码：</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1561"/>
+        <location filename="RIFE_GUI_Backend.py" line="1565"/>
         <source>请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1632"/>
+        <location filename="RIFE_GUI_Backend.py" line="1636"/>
         <source>要补帧的视频</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1642"/>
+        <location filename="RIFE_GUI_Backend.py" line="1646"/>
         <source>要补帧的图片序列文件夹</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1650"/>
+        <location filename="RIFE_GUI_Backend.py" line="1654"/>
         <source>要输出项目的文件夹</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1694"/>
+        <location filename="RIFE_GUI_Backend.py" line="1698"/>
         <source>补帧操作启动</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1708"/>
+        <location filename="RIFE_GUI_Backend.py" line="1712"/>
         <source>请检查你的输入和输出文件夹</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1716"/>
+        <location filename="RIFE_GUI_Backend.py" line="1720"/>
         <source>预设名不能为空~</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1719"/>
+        <location filename="RIFE_GUI_Backend.py" line="1723"/>
         <source>预设名不能与已有预设重复~</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1727"/>
+        <location filename="RIFE_GUI_Backend.py" line="1731"/>
         <source>已保存指定预设：</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1745"/>
+        <location filename="RIFE_GUI_Backend.py" line="1749"/>
         <source>预设为空~</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1740"/>
+        <location filename="RIFE_GUI_Backend.py" line="1744"/>
         <source>已移除指定预设~</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1749"/>
+        <location filename="RIFE_GUI_Backend.py" line="1753"/>
         <source>请先指定预设~</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1755"/>
+        <location filename="RIFE_GUI_Backend.py" line="1759"/>
         <source>指定预设不见啦~</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1760"/>
+        <location filename="RIFE_GUI_Backend.py" line="1764"/>
         <source>已载入指定预设~</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1785"/>
+        <location filename="RIFE_GUI_Backend.py" line="1803"/>
         <source>帧率输入有误</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1785"/>
+        <location filename="RIFE_GUI_Backend.py" line="1803"/>
         <source>请确认输入输出帧率为有效数据</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1798"/>
+        <location filename="RIFE_GUI_Backend.py" line="1816"/>
         <source>确定使用NCNN？</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1798"/>
+        <location filename="RIFE_GUI_Backend.py" line="1816"/>
         <source>你有N卡，确定使用A卡/核显？</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1823"/>
+        <location filename="RIFE_GUI_Backend.py" line="1841"/>
         <source>选择的GPU</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1823"/>
+        <location filename="RIFE_GUI_Backend.py" line="1841"/>
         <source>（使用A卡或核显）拥有的GPU个数</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1977"/>
+        <location filename="RIFE_GUI_Backend.py" line="1995"/>
         <source>请输入要制作成gif的视频文件</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1993"/>
+        <location filename="RIFE_GUI_Backend.py" line="2011"/>
         <source>请输入要进行音视频合并的视频文件</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2017"/>
+        <location filename="RIFE_GUI_Backend.py" line="2035"/>
         <source>仅合并操作启动</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2035"/>
+        <location filename="RIFE_GUI_Backend.py" line="2053"/>
         <source>仅拆帧操作启动</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2053"/>
+        <location filename="RIFE_GUI_Backend.py" line="2071"/>
         <source>仅渲染操作启动</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2074"/>
+        <location filename="RIFE_GUI_Backend.py" line="2092"/>
         <source>继续补帧！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2077"/>
+        <location filename="RIFE_GUI_Backend.py" line="2095"/>
         <source>暂停补帧！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2085"/>
+        <location filename="RIFE_GUI_Backend.py" line="2103"/>
         <source>隐藏高级设置</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2087"/>
+        <location filename="RIFE_GUI_Backend.py" line="2105"/>
         <source>显示高级设置</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2105"/>
+        <location filename="RIFE_GUI_Backend.py" line="2123"/>
         <source>设置导出成功！settings.log即为设置快照</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2166"/>
+        <location filename="RIFE_GUI_Backend.py" line="2184"/>
         <source>已有任务在执行</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2180"/>
+        <location filename="RIFE_GUI_Backend.py" line="2198"/>
         <source>未选中输入项</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2199"/>
+        <location filename="RIFE_GUI_Backend.py" line="2217"/>
         <source>已载入默认设置</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2226"/>
+        <location filename="RIFE_GUI_Backend.py" line="2244"/>
         <source>是否保存当前设置？</source>
         <translation type="unfinished"></translation>
     </message>
@@ -395,63 +395,63 @@
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1417"/>
+        <location filename="RIFE_GUI_Backend.py" line="1421"/>
         <source>请先仔细阅读教程再使用软件</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1477"/>
+        <location filename="RIFE_GUI_Backend.py" line="1481"/>
         <source>区块合并音轨失败，请检查输出文件格式是否支持源文件音频</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1485"/>
+        <location filename="RIFE_GUI_Backend.py" line="1489"/>
         <source>你的A卡不支持NCNN-RIFE补帧，请更换设备</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1489"/>
+        <location filename="RIFE_GUI_Backend.py" line="1493"/>
         <source>Steam验证失败，请确保软件联网并退出Steam重试；如有疑问详询开发人员</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1495"/>
+        <location filename="RIFE_GUI_Backend.py" line="1499"/>
         <source>请联系开发人员解决</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1625"/>
+        <location filename="RIFE_GUI_Backend.py" line="1629"/>
         <source>输入文件路径过长，请适当缩短文件路径并重试</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1628"/>
+        <location filename="RIFE_GUI_Backend.py" line="1632"/>
         <source>请升级专业版以使用任务队列</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1669"/>
+        <location filename="RIFE_GUI_Backend.py" line="1673"/>
         <source>共有{}个任务，第一个任务将会区块[{}]，起始帧[{}]启动。</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1670"/>
+        <location filename="RIFE_GUI_Backend.py" line="1674"/>
         <source>请确保上述三者皆不为空(-1为自动)，任务计数不为0。
 是否执行补帧？</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="1677"/>
+        <location filename="RIFE_GUI_Backend.py" line="1681"/>
         <source>输出文件格式与源不相同，请注意这有可能导致合并失败！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2216"/>
+        <location filename="RIFE_GUI_Backend.py" line="2234"/>
         <source>未能打开SVFI教程，请安装pdf阅读器后重试，或在软件根目录下寻找SVFI_tutorial.pdf阅读</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="RIFE_GUI_Backend.py" line="2219"/>
+        <location filename="RIFE_GUI_Backend.py" line="2237"/>
         <source>未能找到SVFI教程</source>
         <translation type="unfinished"></translation>
     </message>
@@ -722,177 +722,177 @@ p, li { white-space: pre-wrap; }
 <context encoding="UTF-8">
     <name>MainWindow</name>
     <message>
-        <location filename="SVFI_UI.py" line="1530"/>
+        <location filename="SVFI_UI.py" line="1528"/>
         <source>MainWindow</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1531"/>
+        <location filename="SVFI_UI.py" line="1529"/>
         <source>输出文件夹：</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1532"/>
+        <location filename="SVFI_UI.py" line="1530"/>
         <source>一键补帧</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1533"/>
+        <location filename="SVFI_UI.py" line="1531"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;强制使用检测到的A卡或核显进行补帧任务&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1534"/>
+        <location filename="SVFI_UI.py" line="1532"/>
         <source>使用A卡或核显 (?)</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1537"/>
+        <location filename="SVFI_UI.py" line="1535"/>
         <source>导出带音频、字幕</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1538"/>
+        <location filename="SVFI_UI.py" line="1536"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;输出图片序列，输出格式支持png、tiff等&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;命名格式:0&amp;gt;8d,如 00000008.png&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1539"/>
+        <location filename="SVFI_UI.py" line="1537"/>
         <source>输出图片序列 (?)</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1540"/>
+        <location filename="SVFI_UI.py" line="1538"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出&lt;span style=&quot; font-weight:600;&quot;&gt;（这种情况请改为mov）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1541"/>
+        <location filename="SVFI_UI.py" line="1539"/>
         <source>mp4</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1542"/>
+        <location filename="SVFI_UI.py" line="1540"/>
         <source>mkv</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1543"/>
+        <location filename="SVFI_UI.py" line="1541"/>
         <source>mov</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1544"/>
+        <location filename="SVFI_UI.py" line="1542"/>
         <source>输入帧率</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1545"/>
+        <location filename="SVFI_UI.py" line="1543"/>
         <source>一定要确认输入帧率！</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1546"/>
+        <location filename="SVFI_UI.py" line="1544"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1. 输入为视频，输出为视频或图片序列：实际输出帧率以&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;为准，与补帧倍率无关：&lt;/p&gt;&lt;p&gt;一个长度为1s的24fps输入视频在补帧倍率为x2，输出帧率为60的情况下，会输出&lt;span style=&quot; font-weight:600;&quot;&gt;60fps的视频或者60张图片&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;2. 输入为图片序列，输出为视频：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，再输入到软件进行补帧，并被压制为&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会输出60fps的视频，且&lt;span style=&quot; font-weight:600;&quot;&gt;大于48fps的部分为重复帧&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;3. 输入为图片序列，输出为图片序列：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，并按照补帧倍率输出：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会&lt;span style=&quot; font-weight:600;&quot;&gt;输出48张图片&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1548"/>
+        <location filename="SVFI_UI.py" line="1546"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在输出图片序列时，将按照此处设置的补帧倍率对图片序列补帧并输出&lt;/p&gt;&lt;p&gt;输入为图片序列且输出为视频时，软件将按照补帧倍率倍帧后进行补帧，并按照右侧的输出帧率输出视频&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1549"/>
+        <location filename="SVFI_UI.py" line="1547"/>
         <source>x1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1550"/>
+        <location filename="SVFI_UI.py" line="1548"/>
         <source>x2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1551"/>
+        <location filename="SVFI_UI.py" line="1549"/>
         <source>x4</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1552"/>
+        <location filename="SVFI_UI.py" line="1550"/>
         <source>x8</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1553"/>
+        <location filename="SVFI_UI.py" line="1551"/>
         <source>x16</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1554"/>
+        <location filename="SVFI_UI.py" line="1552"/>
         <source>x32</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="SVFI_UI.py" line="1555"/>
+        <location filename="SVFI_UI.py" line="1553"/>
         <source>x64</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1556"/>
+        <location filename="SVFI_UI.py" line="1554"/>
         <source>输出帧率</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1557"/>
+        <location filename="SVFI_UI.py" line="1555"/>
         <source>一定要确认输出帧率</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1558"/>
+        <location filename="SVFI_UI.py" line="1556"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;（支持批处理）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1559"/>
+        <location filename="SVFI_UI.py" line="1557"/>
         <source>输入视频文件 (?)</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1560"/>
+        <location filename="SVFI_UI.py" line="1558"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;不支持交错或带有透明通道的图片&lt;/span&gt;&lt;/p&gt;&lt;p&gt;如要求输入有序，文件命名&lt;span style=&quot; font-weight:600;&quot;&gt;应等长&lt;/span&gt;，如&lt;br/&gt;input_0001.png, input_0002.png, ...&lt;/p&gt;&lt;p&gt;以下输入不保证输入有序：&lt;/p&gt;&lt;p&gt;1.png, 2.png, ..., 10.png, 11.png&lt;/p&gt;&lt;p&gt;应改为：&lt;/p&gt;&lt;p&gt;01.png, 02.png, ..., 10.png&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1561"/>
+        <location filename="SVFI_UI.py" line="1559"/>
         <source>输入帧/图片序列 (?)</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1562"/>
+        <location filename="SVFI_UI.py" line="1560"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;当输出为图片序列，最终输出位置为指定输出文件夹&lt;span style=&quot; font-weight:600;&quot;&gt;内&lt;/span&gt;一个带有&lt;span style=&quot; font-weight:600;&quot;&gt;输入文件夹名称&lt;/span&gt;的子文件夹&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1563"/>
+        <location filename="SVFI_UI.py" line="1561"/>
         <source>设置输出文件夹 (?)</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1564"/>
+        <location filename="SVFI_UI.py" line="1562"/>
         <source>显示高级选项</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1565"/>
+        <location filename="SVFI_UI.py" line="1563"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;“-”&lt;/span&gt;号为删除当前任务条目（Remove）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;“+”&lt;/span&gt;号为以当前任务条目为基础复制生成相同任务（Duplicate）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1566"/>
+        <location filename="SVFI_UI.py" line="1564"/>
         <source>拖入补帧项目输出的文件夹路径（剩余磁盘空间建议20G+）</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1570"/>
+        <location filename="SVFI_UI.py" line="1568"/>
         <source>清除输入列表</source>
         <translation type="unfinished"></translation>
     </message>
@@ -902,23 +902,13 @@ p, li { white-space: pre-wrap; }
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1577"/>
+        <location filename="SVFI_UI.py" line="1574"/>
         <source>质量优先</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1571"/>
-        <source>预设(定型ing)：</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1574"/>
+        <location filename="SVFI_UI.py" line="1572"/>
         <source>动漫</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1575"/>
-        <source>电影</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1677,7 +1667,7 @@ p, li { white-space: pre-wrap; }
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1793"/>
+        <location filename="SVFI_UI.py" line="1794"/>
         <source>输入视频路径</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1692,22 +1682,22 @@ p, li { white-space: pre-wrap; }
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1794"/>
+        <location filename="SVFI_UI.py" line="1795"/>
         <source>输入音频路径（视频）</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1795"/>
+        <location filename="SVFI_UI.py" line="1796"/>
         <source>输出视频路径</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1797"/>
+        <location filename="SVFI_UI.py" line="1793"/>
         <source>合并已有区块</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1796"/>
+        <location filename="SVFI_UI.py" line="1797"/>
         <source>音视频合并</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1936,43 +1926,33 @@ p, li { white-space: pre-wrap; }
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1535"/>
+        <location filename="SVFI_UI.py" line="1533"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;请尽量使用输入的文件格式&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1536"/>
+        <location filename="SVFI_UI.py" line="1534"/>
         <source>输出文件格式 (!)</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1547"/>
+        <location filename="SVFI_UI.py" line="1545"/>
         <source>补帧倍率 (!)</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1567"/>
+        <location filename="SVFI_UI.py" line="1565"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;条目勾亮说明设置已保存&lt;/p&gt;&lt;p&gt;点击条目以保存设置&lt;span style=&quot; font-weight:600;&quot;&gt;（无需点勾）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;内测/专业版支持任务队列&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1568"/>
+        <location filename="SVFI_UI.py" line="1566"/>
         <source>输入文件或文件夹 (?)</source>
         <translation type="unfinished"></translation>
     </message>
     <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1569"/>
+        <location filename="SVFI_UI.py" line="1567"/>
         <source>点击查看使用教程</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1572"/>
-        <source>CPU可以</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message encoding="UTF-8">
-        <location filename="SVFI_UI.py" line="1573"/>
-        <source>GPU比CPU强</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2268,6 +2248,36 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="SVFI_UI.py" line="1846"/>
         <source>Ctrl+Alt+L</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message encoding="UTF-8">
+        <location filename="SVFI_UI.py" line="1569"/>
+        <source>常规丝滑</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message encoding="UTF-8">
+        <location filename="SVFI_UI.py" line="1570"/>
+        <source>加强丝滑</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message encoding="UTF-8">
+        <location filename="SVFI_UI.py" line="1571"/>
+        <source>应用预设</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message encoding="UTF-8">
+        <location filename="SVFI_UI.py" line="1573"/>
+        <source>真人</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message encoding="UTF-8">
+        <location filename="SVFI_UI.py" line="1575"/>
+        <source>常规质量</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message encoding="UTF-8">
+        <location filename="SVFI_UI.py" line="1577"/>
+        <source>极致速度</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

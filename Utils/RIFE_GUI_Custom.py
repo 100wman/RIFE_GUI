@@ -105,7 +105,7 @@ class MyListWidgetItem(QWidget):
     def setTask(self, input_path: str, task_id: str):
         self.task_id = task_id
         self.input_path = input_path
-        len_cut = 100
+        len_cut = 60
         if len(self.input_path) > len_cut:
             self.filename.setText(self.input_path[:len_cut] + "...")
         else:

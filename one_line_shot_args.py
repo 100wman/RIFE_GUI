@@ -867,13 +867,19 @@ class InterpWorkFlow:
             sp = Tools.popen(ffmpeg_command)
             sp.wait()
             if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-                self.logger.error(f"Concat Test Error, {output_ext}, empty output")
-                self.main_error = FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
-                raise FileExistsError(
-                    "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
-                    "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
-            self.logger.info("Audio Concat Test Success")
-            os.remove(concat_filepath)
+                if self.input_ext in SupportFormat.vid_outputs:
+                    self.output_ext = self.input_ext
+                    self.logger.warning(f"Concat Test found unavailable output extension {self.output_ext}, "
+                                        f"changed to {self.input_ext}")
+                else:
+                    self.logger.error(f"Concat Test Error, {output_ext}, empty output")
+                    self.main_error = FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
+                    raise FileExistsError(
+                        "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
+                        "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+            else:
+                self.logger.info("Audio Concat Test Success")
+                os.remove(concat_filepath)
 
         concat_test_flag = True
 
