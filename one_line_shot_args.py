@@ -11,11 +11,7 @@ from Utils.utils import *
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
 from steamworks.exceptions import *
 
-try:
-    _steamworks = STEAMWORKS(ArgumentManager.app_id)
-    _steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-except:
-    pass
+
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 # TODO Fix up SVT-HEVC
 

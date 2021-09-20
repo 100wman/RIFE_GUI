@@ -13,21 +13,6 @@ from Utils.utils import ArgumentManager
 
 version_title = f"Squirrel Video Frame Interpolation {ArgumentManager.version_tag}"
 
-if ArgumentManager.is_steam:
-    """Initiate DLL Env(special bugs here)"""
-    original_cwd = os.getcwd()
-    try:
-        from steamworks import STEAMWORKS  # Import main STEAMWORKS class
-
-        steamworks = STEAMWORKS(ArgumentManager.app_id)
-        steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-    except:
-        pass
-    os.chdir(original_cwd)
-
-# if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-#     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
 try:
     from Utils import RIFE_GUI_Backend
 except ImportError as e:
