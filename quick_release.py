@@ -2,6 +2,7 @@
 import os
 import subprocess
 import time
+
 from Utils.utils import ArgumentManager
 
 root = r"D:\60-fps-Project\Projects\RIFE GUI"
@@ -47,6 +48,7 @@ def generate_release():
     with open(os.path.join(pack_dir, f"启动SVFI.{tag_version}.bat"), "w", encoding="utf-8") as w:
         w.write(f"cd /d %~dp0/Package\nstart SVFI.{tag_version}.exe")
 
+
 def change_utils_with_mighty_power():
     with open('./Utils/utils.py', 'r', encoding='utf-8') as r:
         utils_r = r.read()
@@ -58,8 +60,8 @@ def change_utils_with_mighty_power():
         w.write(utils_r)
 
 
-steam_ver = [True, False]
-# steam_ver = [True]
+# steam_ver = [True, False]
+steam_ver = [True]
 # steam_ver = [False]
 free_ver = [True, False]
 for _steam_ver in steam_ver:

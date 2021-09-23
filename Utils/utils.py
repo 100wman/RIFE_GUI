@@ -33,8 +33,6 @@ abspath = os.path.abspath(__file__)
 appDir = os.path.dirname(os.path.dirname(abspath))
 
 
-
-
 class AiModulePaths:
     """Relevant to root dir(app dir)"""
     sr_algos = ["ncnn/sr", ]
@@ -391,6 +389,7 @@ class Tools:
                 os.kill(pid, signal.SIGABRT)
                 print(f"Warning: Kill Process before exit: {pname}")
 
+
 class ImgSeqIO:
     def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
                  output_ext=".png", exp=2, resize=(0, 0), is_esr=False, **kwargs):
@@ -641,7 +640,7 @@ class ArgumentManager:
     professional_qq = 1054016374
 
     """Release Version Control"""
-    is_steam = False
+    is_steam = True
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
@@ -653,7 +652,15 @@ class ArgumentManager:
 
     f"""
     Update Log
-    - Remove Steam Validation at top layer(reduce initiation time)
+    - Remove Steam Validation at top layer(reduce software startup time)
+    - Add Task Resume Support for Render Only Mode
+    - Add EULA Warning for SVFI's output
+    - Add more Resolution for output
+    - Add shortcut for page switch
+    - Add Steam md5 Validation to protect software integrity
+    - Optimize Output filename's consistency
+    - Optimize UI design
+    - Optimize initiation of tasks(to avoid task list empty exception)
     """
 
     path_len_limit = 230
@@ -1542,6 +1549,7 @@ class TransitionDetection:
     def get_scene_status(self):
         return self.scedet_info
 
+
 class OverTimeReminderBearer:
     reminders = {}
 
@@ -1595,7 +1603,10 @@ class OvertimeReminder(threading.Thread):
     def terminate(self):
         self.terminated = True
 
+
 utils_overtime_reminder_bearer = OverTimeReminderBearer()
+
+
 def overtime_reminder_deco(interval: int, logger=None, msg_1="Function Type", msg_2="Function Warning"):
     def decorator(func):
         @functools.wraps(func)
@@ -1604,8 +1615,11 @@ def overtime_reminder_deco(interval: int, logger=None, msg_1="Function Type", ms
             result = func(*args, **kwargs)
             utils_overtime_reminder_bearer.terminate_reminder(reminder_id)
             return result
+
         return wrapper
+
     return decorator
+
 
 class SteamUtils:
 
@@ -1653,12 +1667,9 @@ class SteamUtils:
         self.steam_valid = True
         self.steam_error = ""
         if self.is_steam:
-            try:
-                self.steamworks = STEAMWORKS(ArgumentManager.app_id)
-                self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-            except Exception:
-                self.steam_valid = False
-                self.steam_error = traceback.format_exc(limit=ArgumentManager.traceback_limit)
+            self.steamworks = STEAMWORKS(ArgumentManager.app_id)
+            self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
+
             if self.steamworks.UserStats.RequestCurrentStats() == True:
                 self.logger.info('Steam Stats successfully retrieved!')
             else:
@@ -1725,6 +1736,7 @@ class EULAWriter:
     3. 您不得复制、租赁、发布、散布或公开展示软件，不得制作软件的衍生产品（除非编辑器和本协议最终用户变更部分或其他附属于软件的文件明确许可），或是以商业目的对软件进行开发。
     4. 您不得通过电子方式或网络将软件从一台电脑、控制台或其他平台传送到另一个上。
     5. 您不得将软件的备份或存档副本用作其他用途，只可在原始副本被损坏或残缺的情况下，用其替换原始副本。
+    6. 您不得将软件的输出结果用于商业用途
     
     试用版本
     如果提供给您的软件为试用版，其使用期限或使用数量有限制，您同意在试用期结束后停止使用软件。您知晓并同意软件可能包含用于避免您突破这些限制的代码，并且这些代码会在您删除软件后仍保留在您的电脑上，避免您下载其他副本并重复利用试用期。
