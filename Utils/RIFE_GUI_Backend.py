@@ -299,9 +299,13 @@ class UiRun(QThread):
                         continue
                     logger.info(f"Designed Command:\n{command}")
                     proc_args = shlex.split(command)
+
+                    startupinfo = sp.STARTUPINFO()
+                    startupinfo.dwFlags = sp.CREATE_NEW_CONSOLE | sp.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = sp.SW_HIDE
                     self.current_proc = sp.Popen(args=proc_args, stdout=sp.PIPE, stderr=sp.STDOUT, encoding='utf-8',
                                                  errors='ignore',
-                                                 universal_newlines=True)
+                                                 universal_newlines=True, startupinfo=startupinfo)
 
                     flush_lines = ""
                     while self.current_proc.poll() is None:
@@ -459,9 +463,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_windows_ontop()
 
         """Link InputFileName Event"""
-        self.InputFileName.failSignal.connect(self.on_InputFileName_failImport)
-        self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
-        self.InputFileName.addSignal.connect(self.on_InputFileName_currentItemChanged)
+        self.function_enable_inputfilename_connection()
 
         """Dilapidation and Free Version Maintainer"""
         self.settings_free_hide()
@@ -525,7 +527,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetFlowLen.setVisible(False)
         self.SaveCurrentSettings.setVisible(False)
         self.LoadCurrentSettings.setVisible(False)
-        # self.SettingsPresetGroup.setVisible(False)
         self.ShortCutGroup.setVisible(False)
         self.LockWHChecker.setVisible(False)
 
@@ -540,7 +541,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             help_txt = help_txt.replace(str(ArgumentManager.community_qq), str(ArgumentManager.professional_qq))
             self.OutputGuideLabel.setText(help_txt)
             return
-        # self.DupRmChecker.setVisible(False)
         self.DupFramesTSelector.setVisible(False)
         self.DupFramesTSelector.setValue(0.2)
         self.DupRmMode.clear()
@@ -1390,10 +1390,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def function_load_tasks_settings(self, load_all=False, load_one=False):
         task_data = self.InputFileName.getItems()
         task_list = list()
-        try:
-            self.InputFileName.disconnect()
-        except:
-            pass
+        self.function_disable_inputfilename_connection()
+
         for t in task_data:
             if self.InputFileName.itemWidget(t).iniCheck.isChecked():
                 row_ = self.InputFileName.getWidgetData(t)['row']
@@ -1416,7 +1414,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if task_current_item is not None:
                 task_list.append(self.InputFileName.getWidgetData(task_current_item)['row'])
             pass
-        self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
+
+        self.function_enable_inputfilename_connection()
         return task_list
 
     def function_get_templates(self):
@@ -1430,6 +1429,23 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.on_tutorialLinkButton_clicked()
             with open(check_tutorial, "w", encoding="utf-8") as w:
                 w.write("# This User Has Read Tutorial")
+
+    def function_disable_inputfilename_connection(self):
+        try:
+            self.InputFileName.disconnect()
+        except:
+            pass
+
+    def function_enable_inputfilename_connection(self):
+        self.function_disable_inputfilename_connection()
+        try:
+            self.InputFileName.failSignal.connect(self.on_InputFileName_failImport)
+            self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
+            self.InputFileName.currentItemChanged.connect(self.on_InputFileName_currentItemChanged)
+            self.InputFileName.addSignal.connect(self.on_InputFileName_currentItemChanged)
+        except:
+            print(traceback.format_exc())
+            pass
 
     def steam_update_achv(self):
         if not self.is_steam:
@@ -1498,7 +1514,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.current_failed = True
                 return
             elif "Steam Validation Failed" in now_text:
-                self.function_send_msg("Steam Validation Failed", _translate('', "Steam验证失败，请确保软件联网并退出Steam重试；如有疑问详询开发人员"), )
+                self.function_send_msg("Steam Validation Failed",
+                                       _translate('', "Steam验证失败，请确保软件联网并退出Steam重试；如有疑问详询开发人员"), )
                 self.current_failed = True
                 return
             elif "error" in now_text:
@@ -1587,6 +1604,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
             if appPref.value("use_clear_inputs", False, type=bool):
                 self.InputFileName.clear()
+            self.function_enable_inputfilename_connection()
 
         self.OptionCheck.moveCursor(QTextCursor.End)
 
@@ -1607,17 +1625,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if widget_data is not None:
             self.settings_maintain_item_settings(widget_data)  # 保存当前设置，并准备跳转到新任务的历史设置（可能没有）
         input_path = widget_data.get('input_path')
-        input_fps = Tools.get_fps(input_path)
         if not len(self.InputFPS.text()):
             self.InputFPS.setText("0")
         if os.path.isfile(input_path):
+            input_fps = Tools.get_fps(input_path)
             self.InputFPS.setText(f"{input_fps:.5f}")
-            if os.path.isfile(input_path):
-                ext = os.path.splitext(input_path)[1]
-                if ext in SupportFormat.vid_outputs:
-                    # self.ExtSelector.setCurrentText(ext.strip("."))
-                    # Locked here
-                    pass
         if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
             try:
                 exp = int(self.ExpSelecter.currentText()[1:])
@@ -1783,12 +1795,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         presets_tuple = self.SettingsPresetsInputs.currentIndex(), self.SettingsPresetsSQ.currentIndex(), self.SettingsPresetsFluency.currentIndex()
-        presets_name = f"SVFI_Presets_{''.join(map(lambda x: str(x),presets_tuple))}"
+        presets_name = f"SVFI_Presets_{''.join(map(lambda x: str(x), presets_tuple))}"
         self.SettingsTemplateSelector.addItem(presets_name)
         self.SettingsTemplateSelector.setCurrentIndex(self.SettingsTemplateSelector.count() - 1)
         self.on_UseTemplateButton_clicked()
         self.SettingsTemplateSelector.removeItem(self.SettingsTemplateSelector.count() - 1)
-
 
     @pyqtSlot(bool)
     def on_MBufferChecker_clicked(self):
@@ -1890,11 +1901,13 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if "SD" in current_template:
             width, height = 480, 270
-        elif "1080p" in current_template:
+        if "HD" in current_template:
+            width, height = 1280, 720
+        elif "FHD" in current_template:
             width, height = 1920, 1080
-        elif "4K" in current_template:
+        elif "UHD" in current_template:
             width, height = 3840, 2160
-        elif "8K" in current_template:
+        elif "FUHD" in current_template:
             width, height = 7680, 4320
         elif "%" in current_template:
             ratio = int(current_template[:-1]) / 100
@@ -2181,6 +2194,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         self.settings_free_hide()
         self.settings_dilapidation_hide()
+
+    @pyqtSlot(bool)
+    def on_actionBack2Home_triggered(self):
+        self.tabWidget.setCurrentIndex(0)
+
+    @pyqtSlot(bool)
+    def on_actionBack2Output_triggered(self):
+        self.tabWidget.setCurrentIndex(1)
 
     @pyqtSlot(bool)
     def on_actionImportVideos_triggered(self):

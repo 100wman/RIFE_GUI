@@ -11,6 +11,10 @@ from Utils.utils import *
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
 from steamworks.exceptions import *
 
+try:
+    _steamworks = STEAMWORKS(ArgumentManager.app_id)
+except:
+    pass
 
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 # TODO Fix up SVT-HEVC
@@ -847,9 +851,6 @@ class InterpWorkFlow:
                 return
             if self.ARGS.is_img_output:
                 return
-            # output_ext = os.path.splitext(self.input)[-1]
-            # if output_ext not in SupportFormat.vid_outputs:
-            #     output_ext = self.output_ext
             output_ext = self.output_ext
             if "ProRes" in self.ARGS.render_encoder:
                 output_ext = ".mov"
@@ -903,17 +904,17 @@ class InterpWorkFlow:
                 rename_chunk()
                 break
 
-            frame = frame_data[1]
             now_frame = frame_data[0]
+            frame = frame_data[1]
 
             if self.ARGS.use_fast_denoise:
                 frame = cv2.fastNlMeansDenoising(frame)
-            if self.ARGS.use_sr and self.ARGS.use_sr_mode == 1:
+            if self.ARGS.use_sr and (self.ARGS.use_sr_mode == 1 or self.ARGS.render_only):
                 """先补后超"""
                 frame = self.sr_module.svfi_process(frame)
 
             reminder_id = self.reminder_bearer.generate_reminder(30, self.logger, "Encoder",
-                                                 "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
+                                                                 "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
             if frame is not None:
                 frame_written = True
                 frame_writer.writeFrame(frame)
@@ -1263,7 +1264,7 @@ class InterpWorkFlow:
 
         """Get Frames to interpolate"""
         reminder_id = self.reminder_bearer.generate_reminder(300, self.logger, "Decode Input",
-                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
+                                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
         videogen = self.generate_frame_reader(start_frame).nextFrame()
         videogen_check = None
         if dedup:
@@ -1638,8 +1639,9 @@ class InterpWorkFlow:
                         mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
                         frames_list.extend(mix_list)
                     else:
-                        reminder_id = self.reminder_bearer.generate_reminder(60, self.logger, "Video Frame Interpolation",
-                                                             "Low interpolate speed detected, Please consider lower your output settings to enhance speed")
+                        reminder_id = self.reminder_bearer.generate_reminder(60, self.logger,
+                                                                             "Video Frame Interpolation",
+                                                                             "Low interpolate speed detected, Please consider lower your output settings to enhance speed")
                         if n > 0:
                             if n > PURE_SCENE_THRESHOLD and Tools.check_pure_img(img0):
                                 """It's Pure Img Sequence, Copy img0"""
@@ -1657,10 +1659,12 @@ class InterpWorkFlow:
                         now_frame += 1
                     if self.ARGS.use_evict_flicker or self.ARGS.use_rife_fp16:
                         img_ori = frames_list[0].copy()
-                        frames_list[0] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale, debug=debug)
+                        frames_list[0] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale,
+                                                                         debug=debug)
                         if add_scene:
                             img_ori = frames_list[-1].copy()
-                            frames_list[-1] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale, debug=debug)
+                            frames_list[-1] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale,
+                                                                              debug=debug)
 
                     self.feed_to_render(feed_list, is_end=is_end)
                     process_time = time.time() - process_time
@@ -1691,12 +1695,15 @@ class InterpWorkFlow:
                 if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
                     self.concat_all()
 
+                self.steam_update_achv()  # TODO Check Steam ACHV available for render only etc.
+
         # if os.path.exists(self.ARGS.config):
         #     self.logger.info("Successfully Remove Config File")
         #     os.remove(self.ARGS.config)
-        self.steam_update_achv()
         self.logger.info(f"Program finished at {datetime.datetime.now()}: "
                          f"Duration: {datetime.datetime.now() - run_all_time}")
+        self.logger.info("Please Note That Merchandise Use of SVFI's Output is Strictly PROHIBITED, "
+                         "Check EULA for more details")
         self.reminder_bearer.terminate_all()
         utils_overtime_reminder_bearer.terminate_all()
         pass
@@ -1773,8 +1780,19 @@ class InterpWorkFlow:
         renderer.close()
 
     def render_only(self):
+        def update_progress():
+            nonlocal render_cnt
+            render_status = self.task_info  # render status quo
+            pbar.set_description(f"Process at Rendering Chunk {render_status['chunk_cnt']}")
+            pbar.update(render_status['render'] - render_cnt)
+            render_cnt = render_status['render']
+            pass
+
         chunk_cnt, start_frame = self.check_chunk()
         videogen = self.generate_frame_reader(start_frame).nextFrame()
+        self.render_thread = threading.Thread(target=self.render, name="[ARGS] RenderThread",
+                                              args=(chunk_cnt, start_frame,))
+        self.render_thread.start()
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
@@ -1782,48 +1800,29 @@ class InterpWorkFlow:
                           f"Please Check Your Input Settings"
                           f"(Start Chunk, Start Frame, Start Point, Start Frame)")
 
-        render_path, output_ext = self.get_output_path()
-        renderer = self.generate_frame_renderer(render_path)
         pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
         pbar.update(n=start_frame)
-        img_cnt = 0
+        previous_cnt = start_frame
+        render_cnt = start_frame
 
         while img1 is not None:
-            if self.ARGS.use_sr:
-                img1 = self.sr_module.svfi_process(img1)
-            renderer.writeFrame(img1)
-            pbar.update(n=1)
-            img_cnt += 1
-            pbar.set_description(
-                f"Process at Rendering {img_cnt}")
+            previous_cnt += 1
+            update_progress()
+            self.feed_to_render([[previous_cnt, img1]])
             img1 = self.crop_read_img(Tools.gen_next(videogen))
+        self.feed_to_render([None], is_end=True)
 
-        renderer.close()
+        while self.render_thread is not None and self.render_thread.is_alive():
+            """等待渲染线程结束"""
+            update_progress()
+            time.sleep(0.1)
 
-        if self.ARGS.is_save_audio:
-            audio_path = self.input
-            map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy '
-            if self.ARGS.input_start_point or self.ARGS.input_end_point:
-                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -c:a aac -ab 640k '
-                if self.ARGS.input_end_point is not None:
-                    map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
-                if self.ARGS.input_start_point is not None:
-                    map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
+        if self.main_error is not None:
+            raise self.main_error
 
-            if self.input_ext in ['.vob'] and self.output_ext in ['.mkv']:
-                map_audio += "-map_chapters -1 "
-
-            color_info_str = ' '.join(Tools.dict2Args(self.color_info))
-            concat_filepath = os.path.splitext(render_path)[0] + '_audio' + output_ext
-            ffmpeg_command = f'{self.ffmpeg} -hide_banner -i {Tools.fillQuotation(render_path)} {map_audio} -c:v copy ' \
-                             f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" ' \
-                             f'{color_info_str} ' \
-                             f'-y'
-            self.logger.info("Concating Audio")
-            self.logger.debug(f"Concat command: {ffmpeg_command}")
-            sp = Tools.popen(ffmpeg_command)
-            sp.wait()
-            os.remove(render_path)
+        """Concat the chunks"""
+        if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
+            self.concat_all()
 
     def get_output_path(self):
         """
@@ -1838,8 +1837,7 @@ class InterpWorkFlow:
         output_filepath = f"{os.path.join(self.output, Tools.get_filename(self.input))}"
         if self.ARGS.render_only:
             output_filepath += "_SVFI_Render"  # 仅渲染
-        else:
-            output_filepath += f"_{int(self.target_fps)}fps"  # 补帧
+        output_filepath += f"_{int(self.target_fps)}fps"  # 补帧
 
         if self.ARGS.is_render_slow_motion:  # 慢动作
             output_filepath += f"_[SLM_{self.ARGS.render_slow_motion_fps}fps]"
@@ -1849,6 +1847,7 @@ class InterpWorkFlow:
             output_filepath += f"_[DN]"
 
         if not self.ARGS.render_only:
+            """RIFE"""
             if self.ARGS.use_rife_auto_scale:
                 output_filepath += f"_[SA]"
             else:
@@ -1863,17 +1862,21 @@ class InterpWorkFlow:
             if self.ARGS.use_rife_forward_ensemble:
                 output_filepath += "_[RFE]"
             if self.ARGS.rife_tta_mode:
-                output_filepath += f"_[TTA-{self.ARGS.rife_tta_mode}]"
+                output_filepath += f"_[TTA-{self.ARGS.rife_tta_mode}-{self.ARGS.rife_tta_iter}]"
             if self.ARGS.remove_dup_mode:  # 去重模式
                 output_filepath += f"_[RD-{self.ARGS.remove_dup_mode}]"
+
         if self.ARGS.use_sr:  # 使用超分
-            output_filepath += f"_[SR-{self.ARGS.use_sr_algo}-{self.ARGS.use_sr_model}]"
+            sr_model = os.path.splitext(self.ARGS.use_sr_model)[0]
+            output_filepath += f"_[SR-{self.ARGS.use_sr_algo}-{sr_model}]"
+
         output_filepath += f"_{self.ARGS.task_id[-6:]}"
         output_filepath += output_ext  # 添加后缀名
         return output_filepath, output_ext
 
     # @profile
-    @overtime_reminder_deco(300, None, "Concat Chunks", "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
+    @overtime_reminder_deco(300, None, "Concat Chunks",
+                            "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
     def concat_all(self):
         """
         Concat all the chunks
@@ -1886,7 +1889,7 @@ class InterpWorkFlow:
         concat_list = list()
 
         for f in os.listdir(self.project_dir):
-            if re.match("chunk-\d+-\d+-\d+" , f):
+            if re.match("chunk-\d+-\d+-\d+", f):
                 concat_list.append(os.path.join(self.project_dir, f))
             else:
                 self.logger.debug(f"concat escape {f}")
@@ -1894,7 +1897,8 @@ class InterpWorkFlow:
         concat_list.sort(key=lambda x: int(os.path.basename(x).split('-')[2]))  # sort as start-frame
 
         if not len(concat_path):
-            raise OSError(f"Could not find any chunks, the chunks could have already been concatenated or removed, please check your output folder.")
+            raise OSError(
+                f"Could not find any chunks, the chunks could have already been concatenated or removed, please check your output folder.")
 
         if os.path.exists(concat_path):
             os.remove(concat_path)
@@ -1939,8 +1943,9 @@ class InterpWorkFlow:
             dovi_maker.run()
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
             self.logger.error(f"Concat Error, with output extension {output_ext}")
-            raise FileExistsError(f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
-                                  "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+            raise FileExistsError(
+                f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
+                "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
         if self.ARGS.is_output_only:
             self.check_chunk(del_chunk=True)
 

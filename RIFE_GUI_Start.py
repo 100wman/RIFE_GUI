@@ -1,4 +1,3 @@
-import os
 import sys
 import traceback
 
@@ -12,6 +11,14 @@ import QCandyUi
 from Utils.utils import ArgumentManager
 
 version_title = f"Squirrel Video Frame Interpolation {ArgumentManager.version_tag}"
+
+"""Initiate DLL Env(special bugs here)"""
+try:
+    from steamworks import STEAMWORKS  # Import main STEAMWORKS class
+
+    _steamworks = STEAMWORKS(ArgumentManager.app_id)
+except:
+    pass
 
 try:
     from Utils import RIFE_GUI_Backend
