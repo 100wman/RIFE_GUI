@@ -293,14 +293,6 @@ class Tools:
         return os.path.splitext(os.path.basename(path))[0]
 
     @staticmethod
-    def get_exp_edge(num):
-        b = 2
-        scale = 0
-        while num > b ** scale:
-            scale += 1
-        return scale
-
-    @staticmethod
     def get_mixed_scenes(img0, img1, n):
         """
         return n-1 images
@@ -644,23 +636,22 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.4"
+    gui_version = "3.6.5"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.4"
+    ols_version = "6.10.5"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Remove Steam Validation at top layer(reduce software startup time)
-    - Add Task Resume Support for Render Only Mode
-    - Add EULA Warning for SVFI's output
-    - Add more Resolution for output
-    - Add shortcut for page switch
-    - Add Steam md5 Validation to protect software integrity
-    - Optimize Output filename's consistency
-    - Optimize UI design
-    - Optimize initiation of tasks(to avoid task list empty exception)
+    - Fix Logger Too many files opened IO Error in time reminder module
+    - Fix Torch - NCNN Auto Error Detection / Switch Error at not updating model path
+    - Fix Steam Achievement Obtain Validation Process (1000 minutes get too quick)
+    - Fix Resolution Presets unable to choose error
+    - Fix Super Resolution false logic on checking scale rate
+    - Optimize UI (Add minimum size of window, etc)
+    - Update About and Help Page
+    - Update Internationalization
     """
 
     path_len_limit = 230
@@ -980,7 +971,7 @@ class DoviProcesser:
 
 
 class VideoInfo:
-    def __init__(self, file_input: str, logger: Tools.get_logger, project_dir: str, app_dir=None, img_input=False,
+    def __init__(self, file_input: str, logger, project_dir: str, app_dir=None, img_input=False,
                  hdr_mode=False, exp=0, **kwargs):
         self.filepath = file_input
         self.img_input = img_input

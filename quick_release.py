@@ -16,6 +16,7 @@ def generate_release():
                   f"{'Steam' if ArgumentManager.is_steam else 'NoSteam'}"
     compile_ols = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports                                      --plugin-enable=qt-plugins                                   --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI CLI" --windows-product-version={ArgumentManager.ols_version} --windows-file-description="SVFI Interpolation CLI"             --windows-company-name="Jeanna-SVFI"  --follow-import-to=Utils,steamworks,model,model_cpu,skvideo --output-dir=release\{tag_version}                           .\one_line_shot_args.py'
     compile_gui = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports --include-qt-plugins=sensible,styles --plugin-enable=qt-plugins  --include-package=QCandyUi,PyQt5 --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI"     --windows-product-version={ArgumentManager.gui_version} --windows-file-description="Squirrel Video Frame Interpolation" --windows-company-name="SVFI"         --follow-import-to=Utils,steamworks,QCandyUi                --output-dir=release\{tag_version} --windows-disable-console .\RIFE_GUI_Start.py'
+    # compile_gui = f'nuitka --standalone --mingw64 --show-memory --show-progress --nofollow-imports --include-qt-plugins=sensible,styles --plugin-enable=qt-plugins  --include-package=QCandyUi,PyQt5 --windows-icon-from-ico="{ico_path}" --windows-product-name="SVFI"     --windows-product-version={ArgumentManager.gui_version} --windows-file-description="Squirrel Video Frame Interpolation" --windows-company-name="SVFI"         --follow-import-to=Utils,steamworks,QCandyUi                --output-dir=release\{tag_version}                           .\RIFE_GUI_Start.py'
     compile_ols_path = fr".\release\{tag_version}\one_line_shot_args.dist\one_line_shot_args.exe"
     compile_gui_path = fr".\release\{tag_version}\RIFE_GUI_Start.dist\RIFE_GUI_Start.exe"
     sp1 = subprocess.Popen(compile_ols, shell=True)
@@ -64,6 +65,7 @@ def change_utils_with_mighty_power():
 steam_ver = [True]
 # steam_ver = [False]
 free_ver = [True, False]
+# free_ver = [False]
 for _steam_ver in steam_ver:
     for _free_ver in free_ver:
         ArgumentManager.is_free = _free_ver
