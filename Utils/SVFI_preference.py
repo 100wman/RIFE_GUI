@@ -14,7 +14,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(400, 458)
+        Dialog.resize(400, 540)
+        Dialog.setMinimumSize(QtCore.QSize(120, 300))
         Dialog.setMaximumSize(QtCore.QSize(600, 23333))
         self.gridLayout = QtWidgets.QGridLayout(Dialog)
         self.gridLayout.setObjectName("gridLayout")
@@ -27,7 +28,7 @@ class Ui_Dialog(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 380, 409))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 380, 491))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_3.setObjectName("verticalLayout_3")

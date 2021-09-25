@@ -1,5 +1,6 @@
 # coding: utf-8
 import argparse
+import math
 import os.path
 import sys
 
@@ -55,10 +56,14 @@ else:
 if ARGS.force_cpu:
     os.environ["CUDA_VISIBLE_DEVICES"] = f""
 
+"""Set Global Logger"""
+logger = Tools.get_logger('TMP', '')
+
 
 class InterpWorkFlow:
     # @profile
     def __init__(self, __args: ArgumentManager, **kwargs):
+        global logger
         self.ARGS = __args
 
         """EULA"""
@@ -75,19 +80,19 @@ class InterpWorkFlow:
         sys.path.append(self.project_dir)
 
         """Set Logger"""
-        self.logger = Tools.get_logger("[ARGS]", self.project_dir, debug=self.ARGS.debug)
-        self.logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
-                         self.ARGS.input)
+        logger = Tools.get_logger("CLI", self.project_dir, debug=self.ARGS.debug)
+        logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
+                    self.ARGS.input)
 
         """Steam Validation"""
-        self.STEAM = SteamUtils(self.ARGS.is_steam, logger=self.logger)
+        self.STEAM = SteamUtils(self.ARGS.is_steam, logger=logger)
 
         """Set FFmpeg"""
         self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffmpeg.exe"))
         self.ffplay = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffplay.exe"))
         if not os.path.exists(self.ffmpeg):
             self.ffmpeg = "ffmpeg"
-            self.logger.warning("Not find selected ffmpeg, use default")
+            logger.warning("Not find selected ffmpeg, use default")
 
         """Set input output and initiate environment"""
         self.input = self.ARGS.input
@@ -98,12 +103,12 @@ class InterpWorkFlow:
             os.makedirs(self.output, exist_ok=True)
 
         """Get input's info"""
-        self.video_info_instance = VideoInfo(file_input=self.input, logger=self.logger, project_dir=self.project_dir,
+        self.video_info_instance = VideoInfo(file_input=self.input, logger=logger, project_dir=self.project_dir,
                                              app_dir=self.ARGS.app_dir, img_input=self.ARGS.is_img_input,
                                              hdr_mode=self.ARGS.hdr_mode, exp=self.ARGS.rife_exp)
         self.video_info = self.video_info_instance.get_info()
         if self.ARGS.hdr_mode == 0:  # Auto
-            self.logger.info(f"Auto HDR Mode, Set HDR mode to {self.video_info['hdr_mode']}")
+            logger.info(f"Auto HDR Mode, Set HDR mode to {self.video_info['hdr_mode']}")
             self.hdr_check_status = self.video_info['hdr_mode']
             # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
             # hdr_check_status indicates the final process mode for (hdr) input
@@ -136,7 +141,7 @@ class InterpWorkFlow:
             """DoVi or Valid HDR10 Metadata Dected"""
             self.interp_exp = int(math.ceil(self.target_fps / self.input_fps))
             self.target_fps = self.interp_exp * self.input_fps
-        self.hdr10_metadata_processer = Hdr10PlusProcesser(self.logger, self.project_dir, self.ARGS,
+        self.hdr10_metadata_processer = Hdr10PlusProcesser(logger, self.project_dir, self.ARGS,
                                                            self.interp_exp, self.video_info)
 
         """Update All Frames Count"""
@@ -153,10 +158,10 @@ class InterpWorkFlow:
             width_black = int(width_black)
             height_black = int(height_black)
             self.crop_param = [width_black, height_black]
-            self.logger.info(f"Update Crop Parameters to {self.crop_param}")
+            logger.info(f"Update Crop Parameters to {self.crop_param}")
 
         """Check Initiation Info"""
-        self.logger.info(
+        logger.info(
             f"Check Interpolation Source, FPS: {self.input_fps}, TARGET FPS: {self.target_fps}, "
             f"FRAMES_CNT: {self.all_frames_cnt}, EXP: {self.ARGS.rife_exp}")
 
@@ -185,7 +190,7 @@ class InterpWorkFlow:
                                round(self.video_info["size"][1]))) / 1024 / 1024))
         if not self.ARGS.use_manual_buffer:
             self.frames_queue_len = int(max(10.0, self.frames_queue_len))
-        self.logger.info(f"Buffer Size to {self.frames_queue_len}")
+        logger.info(f"Buffer Size to {self.frames_queue_len}")
 
         """Set Queues"""
         self.frames_output = Queue(maxsize=self.frames_queue_len)  # 补出来的帧序列队列（消费者）
@@ -211,9 +216,9 @@ class InterpWorkFlow:
                 resolution_rate = output_resolution / input_resolution
                 sr_scale = 0
                 if input_resolution and resolution_rate > 1:
-                    sr_scale = Tools.get_exp_edge(resolution_rate)
+                    sr_scale = int(math.ceil(resolution_rate))
                 if self.ARGS.resize_exp > 1:
-                    """Compulsorily assign scale = resize_exp"""
+                    """Compulsorily assign scale = resize_exp, could be img input"""
                     sr_scale = self.ARGS.resize_exp
                     # eventual output resolution will still be affected by assigned output resolution (if not 0,0)
                 if sr_scale > 1:
@@ -236,13 +241,14 @@ class InterpWorkFlow:
                                                                          scale=sr_scale, tile=self.ARGS.sr_tilesize,
                                                                          half=self.ARGS.use_rife_fp16,
                                                                          resize=resize_param)
-                    self.logger.info(
+                    logger.info(
                         f"Load AI SR at {self.ARGS.use_sr_algo}, {self.ARGS.use_sr_model}, "
                         f"scale = {sr_scale}, resize = {resize_param}")
                 else:
-                    self.logger.warning("Abort to load AI SR since Resolution Rate <= 1")
+                    self.ARGS.use_sr = False
+                    logger.warning("Abort to load AI SR since Resolution Rate <= 1")
             except ImportError:
-                self.logger.error(
+                logger.error(
                     f"Import SR Module failed\n{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
 
         """Scene Detection"""
@@ -288,12 +294,12 @@ class InterpWorkFlow:
         """If input is sequence of frames"""
         if self.ARGS.is_img_input:
             img_io = ImgSeqIO(folder=self.input, is_read=True,
-                              start_frame=self.ARGS.interp_start, logger=self.logger,
+                              start_frame=self.ARGS.interp_start, logger=logger,
                               output_ext=self.ARGS.output_ext, exp=self.ARGS.rife_exp,
                               resize=(self.ARGS.resize_width, self.ARGS.resize_height),
                               is_esr=self.ARGS.use_sr_algo == "realESR")
             self.all_frames_cnt = img_io.get_frames_cnt()
-            self.logger.info(f"Img Input, update frames count to {self.all_frames_cnt}")
+            logger.info(f"Img Input, update frames count to {self.all_frames_cnt}")
             return img_io
 
         """If input is a video"""
@@ -326,17 +332,17 @@ class InterpWorkFlow:
                 clip_duration = end_point - start_point
                 clip_fps = self.target_fps
                 self.all_frames_cnt = round(clip_duration.total_seconds() * clip_fps)
-                self.logger.info(
+                logger.info(
                     f"Update Input Range: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, all_frames_cnt -> {self.all_frames_cnt}")
             else:
                 if '-ss' in input_dict:
                     input_dict.pop('-ss')
                 if '-to' in input_dict:
                     input_dict.pop('-to')
-                self.logger.warning(
+                logger.warning(
                     f"Invalid Input Section, change to original course")
         else:
-            self.logger.info(f"Input Time Section is original course")
+            logger.info(f"Input Time Section is original course")
 
         output_dict = {
             "-vframes": str(10 ** 10), }  # use read frames cnt to avoid ffprobe, fuck
@@ -372,7 +378,7 @@ class InterpWorkFlow:
 
         """Update video filters"""
         output_dict["-vf"] = vf_args
-        self.logger.debug(f"reader: {input_dict} {output_dict}")
+        logger.debug(f"reader: {input_dict} {output_dict}")
         return FFmpegReader(filename=self.input, inputdict=input_dict, outputdict=output_dict)
 
     def generate_frame_renderer(self, output_path, start_frame=0):
@@ -451,7 +457,7 @@ class InterpWorkFlow:
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
             img_io = ImgSeqIO(folder=self.output, is_read=False,
-                              start_frame=start_frame, logger=self.logger,
+                              start_frame=start_frame, logger=logger,
                               output_ext=self.ARGS.output_ext, )
             return img_io
 
@@ -755,18 +761,18 @@ class InterpWorkFlow:
             else:
                 output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
 
-        self.logger.debug(f"writer: {output_dict}, {input_dict}")
+        logger.debug(f"writer: {output_dict}, {input_dict}")
 
         """Customize FFmpeg Render Command"""
         ffmpeg_customized_command = {}
         if len(self.ARGS.render_ffmpeg_customized):
             shlex_out = shlex.split(self.ARGS.render_ffmpeg_customized)
             if len(shlex_out) % 2 != 0:
-                self.logger.warning(f"Customized FFmpeg is invalid: {self.ARGS.render_ffmpeg_customized}")
+                logger.warning(f"Customized FFmpeg is invalid: {self.ARGS.render_ffmpeg_customized}")
             else:
                 for i in range(int(len(shlex_out) / 2)):
                     ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
-        self.logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
+        logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
         # output_path = Tools.fillQuotation(output_path)
         if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
@@ -785,7 +791,7 @@ class InterpWorkFlow:
         if self.ARGS.is_img_output:
             """IMG OUTPUT"""
             img_io = ImgSeqIO(folder=self.output, is_tool=True,
-                              start_frame=self.ARGS.interp_start, logger=self.logger,
+                              start_frame=self.ARGS.interp_start, logger=logger,
                               output_ext=self.ARGS.output_ext, )
             last_img = img_io.get_start_frame()
             if self.ARGS.interp_start not in [-1, ]:
@@ -860,22 +866,22 @@ class InterpWorkFlow:
             ffmpeg_command = f'{self.ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
                              f'{Tools.fillQuotation(concat_filepath)} -y'
 
-            self.logger.info("Start Audio Concat Test")
+            logger.info("Start Audio Concat Test")
             sp = Tools.popen(ffmpeg_command)
             sp.wait()
             if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
                 if self.input_ext in SupportFormat.vid_outputs:
                     self.output_ext = self.input_ext
-                    self.logger.warning(f"Concat Test found unavailable output extension {self.output_ext}, "
-                                        f"changed to {self.input_ext}")
+                    logger.warning(f"Concat Test found unavailable output extension {self.output_ext}, "
+                                   f"changed to {self.input_ext}")
                 else:
-                    self.logger.error(f"Concat Test Error, {output_ext}, empty output")
+                    logger.error(f"Concat Test Error, {output_ext}, empty output")
                     self.main_error = FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
                     raise FileExistsError(
                         "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
                         "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
             else:
-                self.logger.info("Audio Concat Test Success")
+                logger.info("Audio Concat Test Success")
                 os.remove(concat_filepath)
 
         concat_test_flag = True
@@ -890,7 +896,7 @@ class InterpWorkFlow:
         frame_written = False
         while True:
             if not self.main_event.is_set():
-                self.logger.warning("Main interpolation thread Dead, break")  # 主线程已结束，这里的锁其实没用，调试用的
+                logger.warning("Main interpolation thread Dead, break")  # 主线程已结束，这里的锁其实没用，调试用的
                 frame_writer.close()
                 is_end = True
                 rename_chunk()
@@ -913,7 +919,7 @@ class InterpWorkFlow:
                 """先补后超"""
                 frame = self.sr_module.svfi_process(frame)
 
-            reminder_id = self.reminder_bearer.generate_reminder(30, self.logger, "Encoder",
+            reminder_id = self.reminder_bearer.generate_reminder(30, logger, "Encoder",
                                                                  "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
             if frame is not None:
                 frame_written = True
@@ -947,13 +953,13 @@ class InterpWorkFlow:
         for frame_i in range(frames_list_len):
             if frames_list[frame_i] is None:
                 self.frames_output.put(None)
-                self.logger.info("Put None to write_buffer in advance")
+                logger.info("Put None to write_buffer in advance")
                 return
             self.frames_output.put(frames_list[frame_i])  # 往输出队列（消费者）喂正常的帧
             if frame_i == frames_list_len - 1:
                 if is_end:
                     self.frames_output.put(None)
-                    self.logger.info("Put None to write_buffer")
+                    logger.info("Put None to write_buffer")
                     return
         pass
 
@@ -1029,15 +1035,15 @@ class InterpWorkFlow:
             else:
                 w, h = list(map(lambda x: round(x), self.video_info["size"]))
 
-            self.logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
+            logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
                                    np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
-            self.logger.info(f"VRAM Test Success, Resume of workflow ahead")
+            logger.info(f"VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
         except Exception as e:
-            self.logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
+            logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
                 limit=ArgumentManager.traceback_limit))
             raise e
 
@@ -1142,7 +1148,7 @@ class InterpWorkFlow:
         # input_frame_data = dict()  # 输入图片数据
         check_frame_data = dict()  # 用于判断的采样图片数据
         if init:
-            self.logger.info("Initiating Duplicated Frames Removal Process...This might take some time")
+            logger.info("Initiating Duplicated Frames Removal Process...This might take some time")
             pbar = tqdm.tqdm(total=check_queue_size, unit="frames")
         else:
             pbar = None
@@ -1194,7 +1200,7 @@ class InterpWorkFlow:
 
         if init:
             pbar.close()
-            self.logger.info("Start Remove First Batch of Duplicated Frames")
+            logger.info("Start Remove First Batch of Duplicated Frames")
 
         max_epoch = self.ARGS.remove_dup_mode  # 一直去除到一拍N，N为max_epoch，默认去除一拍二
         opt = []  # 已经被标记，识别的帧
@@ -1225,7 +1231,7 @@ class InterpWorkFlow:
                         i += queue_size - 3
                     i += 1
             except:
-                self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+                logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             for x in Current:
                 if x not in opt:  # 优化:该轮一拍N不可能出现在上一轮中
                     for t in range(queue_size - 3):
@@ -1247,7 +1253,7 @@ class InterpWorkFlow:
         rest_exp = 3600
         if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
                 time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
-            self.logger.info(
+            logger.info(
                 f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
             time.sleep(600)
             return time.time()
@@ -1260,10 +1266,10 @@ class InterpWorkFlow:
         """
         _debug = False
         chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-        self.logger.info("Resuming Video Frames...")
+        logger.info("Resuming Video Frames...")
 
         """Get Frames to interpolate"""
-        reminder_id = self.reminder_bearer.generate_reminder(300, self.logger, "Decode Input",
+        reminder_id = self.reminder_bearer.generate_reminder(300, logger, "Decode Input",
                                                              "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
         videogen = self.generate_frame_reader(start_frame).nextFrame()
         videogen_check = None
@@ -1290,9 +1296,9 @@ class InterpWorkFlow:
         :return:
         """
 
-        self.logger.info("Activate Remove Duplicate Frames Mode")
+        logger.info("Activate Remove Duplicate Frames Mode")
         chunk_cnt, now_frame_key, videogen, videogen_check = self.rife_run_input_check(dedup=True)
-        self.logger.info("Loaded Input Frames")
+        logger.info("Loaded Input Frames")
         is_end = False
 
         self.rife_work_event.set()
@@ -1304,7 +1310,7 @@ class InterpWorkFlow:
                 break
 
             if not self.render_thread.is_alive():
-                self.logger.critical("Render Thread Dead Unexpectedly")
+                logger.critical("Render Thread Dead Unexpectedly")
                 break
 
             run_time = self.rife_run_rest(run_time)
@@ -1393,10 +1399,10 @@ class InterpWorkFlow:
         :return:
         """
 
-        self.logger.info("Activate Any FPS Mode")
+        logger.info("Activate Any FPS Mode")
         chunk_cnt, now_frame, videogen, videogen_check = self.rife_run_input_check(dedup=True)
         img1 = self.crop_read_img(Tools.gen_next(videogen))
-        self.logger.info("Loaded Input Frames")
+        logger.info("Loaded Input Frames")
         is_end = False
 
         """Update Interp Mode Info"""
@@ -1413,7 +1419,7 @@ class InterpWorkFlow:
                 break
 
             if not self.render_thread.is_alive():
-                self.logger.critical("Render Thread Dead Unexpectedly")
+                logger.critical("Render Thread Dead Unexpectedly")
                 break
 
             run_time = self.rife_run_rest(run_time)
@@ -1497,12 +1503,12 @@ class InterpWorkFlow:
         if self.ARGS.is_steam:
             if not self.STEAM.steam_valid:
                 error = str(self.STEAM.steam_error).split('\n')[-1]
-                self.logger.error(f"Steam Validation Failed: {error}")
+                logger.error(f"Steam Validation Failed: {error}")
                 return
             else:
                 valid_response = self.STEAM.CheckSteamAuth()
                 if valid_response != 0:
-                    self.logger.error(f"Steam Validation Failed, code {valid_response}")
+                    logger.error(f"Steam Validation Failed, code {valid_response}")
                     return
             steam_dlc_check = self.STEAM.CheckProDLC(0)
             if not steam_dlc_check:
@@ -1548,11 +1554,11 @@ class InterpWorkFlow:
             """Concat Already / Mission Conflict Check & Dolby Vision Sort"""
             concat_filepath, output_ext = self.get_output_path()
             if os.path.exists(concat_filepath):
-                self.logger.warning("Mission Already Finished, "
-                                    "Jump to Dolby Vision Check")
+                logger.warning("Mission Already Finished, "
+                               "Jump to Dolby Vision Check")
                 if self.hdr_check_status == 3:
                     """Dolby Vision"""
-                    dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS,
+                    dovi_maker = DoviProcesser(concat_filepath, logger, self.project_dir, self.ARGS,
                                                self.interp_exp)
                     dovi_maker.run()
             else:
@@ -1562,11 +1568,13 @@ class InterpWorkFlow:
                     from Utils import inference_rife_ncnn as inference
                 else:
                     try:
+                        # raise Exception("Load Torch Failed Test")
                         from Utils import inference_rife as inference
                     except Exception:
-                        self.logger.warning("Import Torch Failed, use NCNN-RIFE instead")
-                        self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+                        logger.warning("Import Torch Failed, use NCNN-RIFE instead")
+                        logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
                         self.ARGS.use_ncnn = True
+                        self.ARGS.rife_model = "rife-v2"
                         self.ARGS.rife_model_name = "rife-v2"
                         from Utils import inference_rife_ncnn as inference
 
@@ -1596,7 +1604,7 @@ class InterpWorkFlow:
 
                 self.rife_work_event.wait()  # 等待补帧线程启动（等待all frames cnt 更新、验证啥的）
                 if self.main_error:
-                    self.logger.error("Threads outside RUN encounters error,")
+                    logger.error("Threads outside RUN encounters error,")
                     self.feed_to_render([None], is_end=True)
                     raise self.main_error
 
@@ -1639,7 +1647,7 @@ class InterpWorkFlow:
                         mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
                         frames_list.extend(mix_list)
                     else:
-                        reminder_id = self.reminder_bearer.generate_reminder(60, self.logger,
+                        reminder_id = self.reminder_bearer.generate_reminder(60, logger,
                                                                              "Video Frame Interpolation",
                                                                              "Low interpolate speed detected, Please consider lower your output settings to enhance speed")
                         if n > 0:
@@ -1685,7 +1693,7 @@ class InterpWorkFlow:
                 pbar.update(abs(self.all_frames_cnt - now_frame))
                 pbar.close()
 
-                self.logger.info(f"Scedet Status Quo: {self.scene_detection.get_scene_status()}")
+                logger.info(f"Scedet Status Quo: {self.scene_detection.get_scene_status()}")
 
                 """Check Finished Safely"""
                 if self.main_error is not None:
@@ -1698,12 +1706,12 @@ class InterpWorkFlow:
                 self.steam_update_achv()  # TODO Check Steam ACHV available for render only etc.
 
         # if os.path.exists(self.ARGS.config):
-        #     self.logger.info("Successfully Remove Config File")
+        #     logger.info("Successfully Remove Config File")
         #     os.remove(self.ARGS.config)
-        self.logger.info(f"Program finished at {datetime.datetime.now()}: "
-                         f"Duration: {datetime.datetime.now() - run_all_time}")
-        self.logger.info("Please Note That Merchandise Use of SVFI's Output is Strictly PROHIBITED, "
-                         "Check EULA for more details")
+        logger.info(f"Program finished at {datetime.datetime.now()}: "
+                    f"Duration: {datetime.datetime.now() - run_all_time}")
+        logger.info("Please Note That Merchandise Use of SVFI's Output is Strictly PROHIBITED, "
+                    "Check EULA for more details")
         self.reminder_bearer.terminate_all()
         utils_overtime_reminder_bearer.terminate_all()
         pass
@@ -1713,7 +1721,8 @@ class InterpWorkFlow:
         Update Steam Achievement
         :return:
         """
-        if not self.ARGS.is_steam:
+        if not self.ARGS.is_steam or self.main_error is not None:
+            """If encountered serious error in the process, end steam update"""
             return
         """Get Stat"""
         STAT_INT_FINISHED_CNT = self.STEAM.GetStat("STAT_INT_FINISHED_CNT", int)
@@ -1764,7 +1773,7 @@ class InterpWorkFlow:
                           f"(Start Chunk, Start Frame, Start Point, Start Frame)")
 
         renderer = ImgSeqIO(folder=self.output, is_read=False,
-                            start_frame=self.ARGS.interp_start, logger=self.logger,
+                            start_frame=self.ARGS.interp_start, logger=logger,
                             output_ext=self.ARGS.output_ext, )
         pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
         pbar.update(n=start_frame)
@@ -1875,7 +1884,7 @@ class InterpWorkFlow:
         return output_filepath, output_ext
 
     # @profile
-    @overtime_reminder_deco(300, None, "Concat Chunks",
+    @overtime_reminder_deco(300, logger, "Concat Chunks",
                             "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
     def concat_all(self):
         """
@@ -1885,14 +1894,14 @@ class InterpWorkFlow:
 
         os.chdir(self.project_dir)
         concat_path = os.path.join(self.project_dir, "concat.ini")
-        self.logger.info("Final Round Finished, Start Concating")
+        logger.info("Final Round Finished, Start Concating")
         concat_list = list()
 
         for f in os.listdir(self.project_dir):
             if re.match("chunk-\d+-\d+-\d+", f):
                 concat_list.append(os.path.join(self.project_dir, f))
             else:
-                self.logger.debug(f"concat escape {f}")
+                logger.debug(f"concat escape {f}")
 
         concat_list.sort(key=lambda x: int(os.path.basename(x).split('-')[2]))  # sort as start-frame
 
@@ -1932,17 +1941,17 @@ class InterpWorkFlow:
                          f'{color_info_str} ' \
                          f'-y'
 
-        self.logger.debug(f"Concat command: {ffmpeg_command}")
+        logger.debug(f"Concat command: {ffmpeg_command}")
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
-        self.logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
+        logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
         if self.hdr_check_status == 3:
-            self.logger.info("Start DOVI Conversion")
-            dovi_maker = DoviProcesser(concat_filepath, self.logger, self.project_dir, self.ARGS,
+            logger.info("Start DOVI Conversion")
+            dovi_maker = DoviProcesser(concat_filepath, logger, self.project_dir, self.ARGS,
                                        self.interp_exp)
             dovi_maker.run()
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            self.logger.error(f"Concat Error, with output extension {output_ext}")
+            logger.error(f"Concat Error, with output extension {output_ext}")
             raise FileExistsError(
                 f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
                 "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")

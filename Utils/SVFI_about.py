@@ -38,6 +38,7 @@ class Ui_Dialog(object):
         self.label_7.setSizePolicy(sizePolicy)
         self.label_7.setScaledContents(True)
         self.label_7.setWordWrap(True)
+        self.label_7.setOpenExternalLinks(True)
         self.label_7.setObjectName("label_7")
         self.verticalLayout_3.addWidget(self.label_7)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)

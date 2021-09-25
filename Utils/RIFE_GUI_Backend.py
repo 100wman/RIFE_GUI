@@ -1899,15 +1899,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         except Exception:
             height, width = 0, 0
 
-        if "SD" in current_template:
+        if "480p" in current_template:
             width, height = 480, 270
-        if "HD" in current_template:
+        if "720p" in current_template:
             width, height = 1280, 720
-        elif "FHD" in current_template:
+        elif "1080p" in current_template:
             width, height = 1920, 1080
-        elif "UHD" in current_template:
+        elif "2160p" in current_template:
             width, height = 3840, 2160
-        elif "FUHD" in current_template:
+        elif "3840p" in current_template:
             width, height = 7680, 4320
         elif "%" in current_template:
             ratio = int(current_template[:-1]) / 100

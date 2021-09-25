@@ -589,6 +589,9 @@
                   </item>
                   <item row="0" column="0">
                    <widget class="QPushButton" name="homeActionButton">
+                    <property name="toolTip">
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; color:#000000;&quot;&gt;本软件 &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-style:italic; color:#000000;&quot;&gt;Squirrel Video Frame Interpolation&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;是基于&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#000000;&quot;&gt;RIFE: Real-Time Intermediate Flow Estimation for Video Frame Interpolation&lt;/span&gt;&lt;span style=&quot; color:#000000;&quot;&gt; AI补帧算法的可视化图形界面集成.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#000000;&quot;&gt;RIFE算法作者&lt;/span&gt;&lt;span style=&quot; color:#000000;&quot;&gt; Zhewei Huang, Tianyuan Zhang, Wen Heng, Boxin Shi, Shuchang Zhou &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/hzwer/arXiv2020-RIFE&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#000000;&quot;&gt;SVFI作者&lt;/span&gt;&lt;span style=&quot; color:#000000;&quot;&gt; YiWeiHuang-stack, Justin62628, 穆氏, Misaka, NULL204, ABlyh-LEO&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/Justin62628/Squirrel-RIFE&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#000000;&quot;&gt;参考库：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;- NCNN Support: &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/nihui/rife-ncnn-vulkan&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;- SWIG Wraps: &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/orgs/media2x/repositories&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;- UI Design: &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/shuoGG1239/QCandyUi&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;- Steamworks Interface: &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/philippj/SteamworksPy&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;- Encode Supports: &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/FFmpeg/FFmpeg&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/rigaya/QSVEnc&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/rigaya/NVEnc&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/quietvoid/dovi_tool&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/DolbyLaboratories/dlb_mp4base&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/quietvoid/hdr10plus_parser&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;- Super Resolution Algorithm&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/nagadomi/waifu2x&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/jixiaozhong/RealSR&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;https://github.com/xinntao/Real-ESRGAN&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
                     <property name="text">
                      <string>ToHome</string>
                     </property>
@@ -1048,8 +1051,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>432</width>
-                        <height>393</height>
+                        <width>405</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1062,44 +1065,66 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_20">
-                          <item row="1" column="0">
-                           <layout class="QGridLayout" name="gridLayout_3">
-                            <item row="1" column="1">
-                             <widget class="MySpinBox" name="ScdetMaxDiffSelector">
-                              <property name="enabled">
-                               <bool>true</bool>
-                              </property>
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
+                          <item row="0" column="0">
+                           <layout class="QHBoxLayout" name="horizontalLayout_14">
+                            <item>
+                             <widget class="QLabel" name="ScdetModeLabel">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;勾选此项，将使用固定单一画面相似度指标进行转场识别&lt;/p&gt;&lt;p&gt;建议值：&lt;span style=&quot; font-weight:600;&quot;&gt;40~80&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="minimum">
-                               <number>1</number>
-                              </property>
-                              <property name="maximum">
-                               <number>999</number>
-                              </property>
-                              <property name="value">
-                               <number>20</number>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="1" column="0">
-                             <widget class="QCheckBox" name="UseFixedScdet">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;勾选此项，将使用固定单一画面相似度指标进行转场识别&lt;/p&gt;&lt;p&gt;建议值：&lt;span style=&quot; font-weight:600;&quot;&gt;20~40&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;需配合“开启转场识别”使用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;旧：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;旧转场识别模式&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;3D输入&lt;/span&gt;建议值为&lt;span style=&quot; font-weight:600;&quot;&gt;9~15&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;2D输入&lt;/span&gt;建议值为&lt;span style=&quot; font-weight:600;&quot;&gt;20左右&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;新：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;别用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
-                               <string>使用固定转场识别 (?)</string>
+                               <string>选择转场识别模式</string>
                               </property>
                              </widget>
                             </item>
-                            <item row="2" column="1">
+                            <item>
+                             <widget class="QComboBox" name="ScdetMode">
+                              <item>
+                               <property name="text">
+                                <string>旧</string>
+                               </property>
+                              </item>
+                              <item>
+                               <property name="text">
+                                <string>新（待调整）</string>
+                               </property>
+                              </item>
+                             </widget>
+                            </item>
+                           </layout>
+                          </item>
+                          <item row="3" column="0">
+                           <spacer name="verticalSpacer_6">
+                            <property name="orientation">
+                             <enum>Qt::Vertical</enum>
+                            </property>
+                            <property name="sizeType">
+                             <enum>QSizePolicy::Expanding</enum>
+                            </property>
+                            <property name="sizeHint" stdset="0">
+                             <size>
+                              <width>20</width>
+                              <height>40</height>
+                             </size>
+                            </property>
+                           </spacer>
+                          </item>
+                          <item row="1" column="0">
+                           <layout class="QGridLayout" name="gridLayout_3">
+                            <item row="0" column="0">
+                             <widget class="QCheckBox" name="ScedetChecker">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入参考值为9~15&lt;/span&gt;&lt;/p&gt;&lt;p&gt;电影（长时间）实拍（3D）补帧项目：&lt;span style=&quot; font-weight:600;&quot;&gt;建议值10~12&lt;/span&gt;&lt;/p&gt;&lt;p&gt;快速运动画面：&lt;span style=&quot; font-weight:600;&quot;&gt;建议值12~15&lt;/span&gt;&lt;/p&gt;&lt;p&gt;2D（动漫等，不包括3D动画）输入：&lt;span style=&quot; font-weight:600;&quot;&gt;建议值10~15&lt;/span&gt;&lt;/p&gt;&lt;p&gt;画面平均运动速度越大，取值越小&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>开启转场识别 (?)</string>
+                              </property>
+                              <property name="checked">
+                               <bool>true</bool>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="4" column="0" colspan="2">
                              <layout class="QHBoxLayout" name="horizontalLayout_8">
                               <item>
                                <widget class="QComboBox" name="DupRmMode">
@@ -1176,7 +1201,75 @@
                               </item>
                              </layout>
                             </item>
-                            <item row="0" column="1">
+                            <item row="3" column="0">
+                             <widget class="QLabel" name="DupRmLabel">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;N+2种模式，&lt;span style=&quot; font-weight:600;&quot;&gt;建议仅用于2D输入。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;单一识别模式：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;根据帧差判断，可用于解决压制错误等原因造成的视频卡顿等问题&lt;/p&gt;&lt;p&gt;轻度流畅优化：&lt;span style=&quot; font-weight:600;&quot;&gt;0.1~1.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;中度流畅优化：&lt;span style=&quot; font-weight:600;&quot;&gt;1.0~2.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;重度优化（会破坏运动节奏，并导致人物嘴部动画鬼畜，但很流畅）：&lt;span style=&quot; font-weight:600;&quot;&gt;2.0及以上&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;去除一拍N模式：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;自研算法，补动漫追求流畅选这个就完事了&lt;/span&gt;&lt;/p&gt;&lt;p&gt;PS：&lt;span style=&quot; font-weight:600;&quot;&gt;社区版仅有一拍二、一拍三模式，更多模式请升级专业版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>重复帧去除 (?)</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="5" column="0">
+                             <widget class="QCheckBox" name="ScdetUseMix">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;若识别到转场，对转场处的帧序列使用帧混合&lt;/p&gt;&lt;p&gt;勾选此选项可缓解转场识别误判导致的&lt;span style=&quot; font-weight:600;&quot;&gt;卡顿问题，推荐用于混剪作品&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>转场使用帧混合 (?)</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="6" column="0">
+                             <widget class="QCheckBox" name="ScdetOutput">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在项目文件夹下输出识别到的转场帧及其前一帧&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>输出转场帧 (?)</string>
+                              </property>
+                              <property name="checked">
+                               <bool>true</bool>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="2" column="1">
+                             <widget class="MySpinBox" name="ScdetMaxDiffSelector">
+                              <property name="enabled">
+                               <bool>true</bool>
+                              </property>
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;勾选此项，将使用固定单一画面相似度指标进行转场识别&lt;/p&gt;&lt;p&gt;建议值：&lt;span style=&quot; font-weight:600;&quot;&gt;40~80&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="minimum">
+                               <number>1</number>
+                              </property>
+                              <property name="maximum">
+                               <number>999</number>
+                              </property>
+                              <property name="value">
+                               <number>20</number>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="2" column="0">
+                             <widget class="QCheckBox" name="UseFixedScdet">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;勾选此项，将使用固定单一画面相似度指标进行转场识别&lt;/p&gt;&lt;p&gt;建议值：&lt;span style=&quot; font-weight:600;&quot;&gt;20~40&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;需配合“开启转场识别”使用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>使用固定转场识别 (?)</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="1" column="0" colspan="2">
                              <layout class="QHBoxLayout" name="horizontalLayout_16">
                               <item>
                                <widget class="MySpinBox" name="ScdetSelector">
@@ -1219,96 +1312,6 @@
                               </item>
                              </layout>
                             </item>
-                            <item row="0" column="0">
-                             <widget class="QCheckBox" name="ScedetChecker">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入参考值为9~15&lt;/span&gt;&lt;/p&gt;&lt;p&gt;电影（长时间）实拍（3D）补帧项目：&lt;span style=&quot; font-weight:600;&quot;&gt;建议值10~12&lt;/span&gt;&lt;/p&gt;&lt;p&gt;快速运动画面：&lt;span style=&quot; font-weight:600;&quot;&gt;建议值12~15&lt;/span&gt;&lt;/p&gt;&lt;p&gt;2D（动漫等，不包括3D动画）输入：&lt;span style=&quot; font-weight:600;&quot;&gt;建议值10~15&lt;/span&gt;&lt;/p&gt;&lt;p&gt;画面平均运动速度越大，取值越小&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>开启转场识别 (?)</string>
-                              </property>
-                              <property name="checked">
-                               <bool>true</bool>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="2" column="0">
-                             <widget class="QLabel" name="DupRmLabel">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;N+2种模式，&lt;span style=&quot; font-weight:600;&quot;&gt;建议仅用于2D输入。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;单一识别模式：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;根据帧差判断，可用于解决压制错误等原因造成的视频卡顿等问题&lt;/p&gt;&lt;p&gt;轻度流畅优化：&lt;span style=&quot; font-weight:600;&quot;&gt;0.1~1.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;中度流畅优化：&lt;span style=&quot; font-weight:600;&quot;&gt;1.0~2.0&lt;/span&gt;&lt;/p&gt;&lt;p&gt;重度优化（会破坏运动节奏，并导致人物嘴部动画鬼畜，但很流畅）：&lt;span style=&quot; font-weight:600;&quot;&gt;2.0及以上&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;去除一拍N模式：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;自研算法，补动漫追求流畅选这个就完事了&lt;/span&gt;&lt;/p&gt;&lt;p&gt;PS：&lt;span style=&quot; font-weight:600;&quot;&gt;社区版仅有一拍二、一拍三模式，更多模式请升级专业版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>重复帧去除 (?)</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="3" column="0">
-                             <widget class="QCheckBox" name="ScdetUseMix">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;若识别到转场，对转场处的帧序列使用帧混合&lt;/p&gt;&lt;p&gt;勾选此选项可缓解转场识别误判导致的&lt;span style=&quot; font-weight:600;&quot;&gt;卡顿问题，推荐用于混剪作品&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>转场使用帧混合 (?)</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="3" column="1">
-                             <widget class="QCheckBox" name="ScdetOutput">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在项目文件夹下输出识别到的转场帧及其前一帧&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>输出转场帧 (?)</string>
-                              </property>
-                              <property name="checked">
-                               <bool>true</bool>
-                              </property>
-                             </widget>
-                            </item>
-                           </layout>
-                          </item>
-                          <item row="3" column="0">
-                           <spacer name="verticalSpacer_6">
-                            <property name="orientation">
-                             <enum>Qt::Vertical</enum>
-                            </property>
-                            <property name="sizeType">
-                             <enum>QSizePolicy::Expanding</enum>
-                            </property>
-                            <property name="sizeHint" stdset="0">
-                             <size>
-                              <width>20</width>
-                              <height>40</height>
-                             </size>
-                            </property>
-                           </spacer>
-                          </item>
-                          <item row="0" column="0">
-                           <layout class="QHBoxLayout" name="horizontalLayout_14">
-                            <item>
-                             <widget class="QLabel" name="ScdetModeLabel">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;旧：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;旧转场识别模式&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;3D输入&lt;/span&gt;建议值为&lt;span style=&quot; font-weight:600;&quot;&gt;9~15&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;2D输入&lt;/span&gt;建议值为&lt;span style=&quot; font-weight:600;&quot;&gt;20左右&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;新：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;别用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>选择转场识别模式</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item>
-                             <widget class="QComboBox" name="ScdetMode">
-                              <item>
-                               <property name="text">
-                                <string>旧</string>
-                               </property>
-                              </item>
-                              <item>
-                               <property name="text">
-                                <string>新（待调整）</string>
-                               </property>
-                              </item>
-                             </widget>
-                            </item>
                            </layout>
                           </item>
                          </layout>
@@ -1335,23 +1338,31 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_26">
-                          <item row="2" column="1">
-                           <widget class="MyComboBox" name="AiSrSelector">
+                          <item row="8" column="0">
+                           <widget class="MyComboBox" name="AiSrMode">
                             <item>
                              <property name="text">
-                              <string>waifu2x</string>
+                              <string>先超分后补帧</string>
                              </property>
                             </item>
                             <item>
                              <property name="text">
-                              <string>RealSR</string>
+                              <string>先补帧后超分</string>
                              </property>
                             </item>
-                            <item>
-                             <property name="text">
-                              <string>RealESRGAN</string>
-                             </property>
-                            </item>
+                           </widget>
+                          </item>
+                          <item row="9" column="0">
+                           <widget class="QLabel" name="label_10">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;算法时使用，酌情使用。&lt;/p&gt;&lt;p&gt;6G显存设值100~200左右。该数过大会产生显存不足错误。合适的值将提升超分速度。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>TileSize (?)</string>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignCenter</set>
+                            </property>
                            </widget>
                           </item>
                           <item row="2" column="0">
@@ -1370,7 +1381,7 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="5" column="0">
+                          <item row="7" column="0">
                            <widget class="QLabel" name="label_6">
                             <property name="text">
                              <string>超分模式</string>
@@ -1383,7 +1394,7 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="3" column="0">
+                          <item row="5" column="0">
                            <widget class="QLabel" name="label_9">
                             <property name="acceptDrops">
                              <bool>false</bool>
@@ -1402,37 +1413,29 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="5" column="1">
-                           <widget class="MyComboBox" name="AiSrMode">
-                            <item>
-                             <property name="text">
-                              <string>先超分后补帧</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>先补帧后超分</string>
-                             </property>
-                            </item>
-                           </widget>
-                          </item>
-                          <item row="3" column="1">
+                          <item row="6" column="0">
                            <widget class="MyComboBox" name="AiSrModuleSelector"/>
                           </item>
-                          <item row="6" column="0">
-                           <widget class="QLabel" name="label_10">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;算法时使用，酌情使用。&lt;/p&gt;&lt;p&gt;6G显存设值100~200左右。该数过大会产生显存不足错误。合适的值将提升超分速度。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>TileSize (?)</string>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignCenter</set>
-                            </property>
+                          <item row="3" column="0">
+                           <widget class="MyComboBox" name="AiSrSelector">
+                            <item>
+                             <property name="text">
+                              <string>waifu2x</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>RealSR</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>RealESRGAN</string>
+                             </property>
+                            </item>
                            </widget>
                           </item>
-                          <item row="6" column="1">
+                          <item row="10" column="0">
                            <widget class="MySpinBox" name="SrTileSizeSelector">
                             <property name="minimum">
                              <number>20</number>
@@ -1668,12 +1671,12 @@
                             </item>
                             <item>
                              <property name="text">
-                              <string>UHD 2160p</string>
+                              <string>UHD 4K 2160p</string>
                              </property>
                             </item>
                             <item>
                              <property name="text">
-                              <string>FUHD 3840p</string>
+                              <string>FUHD 8K 3840p</string>
                              </property>
                             </item>
                            </widget>
@@ -2292,7 +2295,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>388</width>
-                        <height>470</height>
+                        <height>488</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2479,57 +2482,16 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="9" column="1">
-                           <layout class="QHBoxLayout" name="horizontalLayout_18">
-                            <item>
-                             <widget class="MyComboBox" name="TtaModeSelector">
-                              <property name="currentText">
-                               <string>None</string>
-                              </property>
-                              <item>
-                               <property name="text">
-                                <string>None</string>
-                               </property>
-                              </item>
-                              <item>
-                               <property name="text">
-                                <string>侧向TTA</string>
-                               </property>
-                              </item>
-                              <item>
-                               <property name="text">
-                                <string>中向TTA</string>
-                               </property>
-                              </item>
-                              <item>
-                               <property name="text">
-                                <string>综合TTA</string>
-                               </property>
-                              </item>
-                             </widget>
-                            </item>
-                            <item>
-                             <widget class="MySpinBox" name="TtaIterTimesSelector">
-                              <property name="minimum">
-                               <number>1</number>
-                              </property>
-                              <property name="value">
-                               <number>1</number>
-                              </property>
-                             </widget>
-                            </item>
-                           </layout>
-                          </item>
-                          <item row="10" column="1">
-                           <widget class="MyComboBox" name="ModuleSelector">
+                          <item row="11" column="0">
+                           <widget class="QLabel" name="label_31">
                             <property name="toolTip">
-                             <string/>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;可以在软件根目录的train_log文件夹自行修改模型的名字&lt;/p&gt;&lt;p&gt;一般来说，版本号越高代表模型越新&lt;/p&gt;&lt;p&gt;offical：&lt;span style=&quot; font-weight:600;&quot;&gt;官方&lt;/span&gt;发布模型&lt;/p&gt;&lt;p&gt;anime smooth：&lt;span style=&quot; font-weight:600;&quot;&gt;动漫模型&lt;/span&gt;，模糊但动作连贯&lt;/p&gt;&lt;p&gt;anime sharp：更清晰&lt;/p&gt;&lt;p&gt;anime experiment：速度更快，效果更清晰，较不丝滑，属于&lt;span style=&quot; font-weight:600;&quot;&gt;实验&lt;/span&gt;模型&lt;/p&gt;&lt;p&gt;2.x较慢，3.6较快&lt;/p&gt;&lt;p&gt;所有模型（如anime）的获取需要内测资格或者加入订阅。默认完整包仅包括官方模型，请自行下载前往群文件下载模型包&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
-                            <property name="sizeAdjustPolicy">
-                             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                            <property name="text">
+                             <string>使用的补帧模型 (?)</string>
                             </property>
-                            <property name="minimumContentsLength">
-                             <number>20</number>
+                            <property name="alignment">
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                             </property>
                            </widget>
                           </item>
@@ -2540,6 +2502,19 @@
                             </property>
                             <property name="text">
                              <string>TTA模式 (?)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="11" column="1">
+                           <widget class="MyComboBox" name="ModuleSelector">
+                            <property name="toolTip">
+                             <string/>
+                            </property>
+                            <property name="sizeAdjustPolicy">
+                             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                            </property>
+                            <property name="minimumContentsLength">
+                             <number>20</number>
                             </property>
                            </widget>
                           </item>
@@ -2580,32 +2555,6 @@
                             </item>
                            </widget>
                           </item>
-                          <item row="2" column="0">
-                           <widget class="QCheckBox" name="EvictFlickerChecker">
-                            <property name="acceptDrops">
-                             <bool>true</bool>
-                            </property>
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;由于补帧模型会导致输出帧亮度变化导致画面闪烁，&lt;/p&gt;&lt;p&gt;勾选此项以将输入帧做相同处理，以消除亮度影响&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;会增加计算量与耗时&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>消除闪烁 (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="10" column="0">
-                           <widget class="QLabel" name="label_31">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;可以在软件根目录的train_log文件夹自行修改模型的名字&lt;/p&gt;&lt;p&gt;一般来说，版本号越高代表模型越新&lt;/p&gt;&lt;p&gt;offical：&lt;span style=&quot; font-weight:600;&quot;&gt;官方&lt;/span&gt;发布模型&lt;/p&gt;&lt;p&gt;anime smooth：&lt;span style=&quot; font-weight:600;&quot;&gt;动漫模型&lt;/span&gt;，模糊但动作连贯&lt;/p&gt;&lt;p&gt;anime sharp：更清晰&lt;/p&gt;&lt;p&gt;anime experiment：速度更快，效果更清晰，较不丝滑，属于&lt;span style=&quot; font-weight:600;&quot;&gt;实验&lt;/span&gt;模型&lt;/p&gt;&lt;p&gt;2.x较慢，3.6较快&lt;/p&gt;&lt;p&gt;所有模型（如anime）的获取需要内测资格或者加入订阅。默认完整包仅包括官方模型，请自行下载前往群文件下载模型包&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>使用的补帧模型 (?)</string>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                            </property>
-                           </widget>
-                          </item>
                           <item row="0" column="0">
                            <widget class="QCheckBox" name="FP16Checker">
                             <property name="acceptDrops">
@@ -2628,6 +2577,60 @@
                              <string>反向光流 (?)</string>
                             </property>
                            </widget>
+                          </item>
+                          <item row="2" column="0">
+                           <widget class="QCheckBox" name="EvictFlickerChecker">
+                            <property name="acceptDrops">
+                             <bool>true</bool>
+                            </property>
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;由于补帧模型会导致输出帧亮度变化导致画面闪烁，&lt;/p&gt;&lt;p&gt;勾选此项以将输入帧做相同处理，以消除亮度影响&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;会增加计算量与耗时&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>消除闪烁 (?)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="10" column="0" colspan="2">
+                           <layout class="QHBoxLayout" name="horizontalLayout_18">
+                            <item>
+                             <widget class="MyComboBox" name="TtaModeSelector">
+                              <property name="currentText">
+                               <string>None</string>
+                              </property>
+                              <item>
+                               <property name="text">
+                                <string>None</string>
+                               </property>
+                              </item>
+                              <item>
+                               <property name="text">
+                                <string>侧向TTA</string>
+                               </property>
+                              </item>
+                              <item>
+                               <property name="text">
+                                <string>中向TTA</string>
+                               </property>
+                              </item>
+                              <item>
+                               <property name="text">
+                                <string>综合TTA</string>
+                               </property>
+                              </item>
+                             </widget>
+                            </item>
+                            <item>
+                             <widget class="MySpinBox" name="TtaIterTimesSelector">
+                              <property name="minimum">
+                               <number>1</number>
+                              </property>
+                              <property name="value">
+                               <number>1</number>
+                              </property>
+                             </widget>
+                            </item>
+                           </layout>
                           </item>
                          </layout>
                         </widget>
@@ -3030,7 +3033,36 @@
           <layout class="QGridLayout" name="gridLayout_24">
            <item row="0" column="0">
             <layout class="QGridLayout" name="gridLayout_8">
-             <item row="2" column="0" rowspan="2" colspan="2">
+             <item row="1" column="0">
+              <layout class="QHBoxLayout" name="horizontalLayout_3">
+               <item>
+                <widget class="QLabel" name="OutputGuideLabel">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并向开发人员提交settings和error.log文件，群号264023742&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                 <property name="openExternalLinks">
+                  <bool>true</bool>
+                 </property>
+                 <property name="textInteractionFlags">
+                  <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="3" column="0" rowspan="2" colspan="2">
               <widget class="MyTextWidget" name="OptionCheck">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -3059,7 +3091,62 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="4" column="0">
+             <item row="2" column="0">
+              <layout class="QHBoxLayout" name="horizontalLayout_19">
+               <item>
+                <spacer name="horizontalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QPushButton" name="KillProcButton">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>Abril Fatface</family>
+                   <pointsize>20</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>强制结束补帧进程</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="PauseProcess">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>Abril Fatface</family>
+                   <pointsize>20</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>暂停补帧</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="5" column="0">
               <widget class="QWidget" name="ProgressBarVisibleControl" native="true">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -3099,104 +3186,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                </layout>
               </widget>
-             </item>
-             <item row="1" column="0">
-              <layout class="QGridLayout" name="gridLayout_33">
-               <item row="0" column="0">
-                <widget class="QLabel" name="OutputGuideLabel">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="text">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并向开发人员提交settings和error.log文件，群号264023742&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <layout class="QVBoxLayout" name="verticalLayout_2">
-                 <item>
-                  <spacer name="verticalSpacer_3">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeType">
-                    <enum>QSizePolicy::Fixed</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>120</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item>
-                  <layout class="QHBoxLayout" name="horizontalLayout_3">
-                   <item>
-                    <spacer name="horizontalSpacer">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeType">
-                      <enum>QSizePolicy::Expanding</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>40</width>
-                       <height>20</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                   <item>
-                    <widget class="QPushButton" name="KillProcButton">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="font">
-                      <font>
-                       <family>Abril Fatface</family>
-                       <pointsize>20</pointsize>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>强制结束补帧进程</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QPushButton" name="PauseProcess">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="font">
-                      <font>
-                       <family>Abril Fatface</family>
-                       <pointsize>20</pointsize>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>暂停补帧</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                </layout>
-               </item>
-              </layout>
              </item>
             </layout>
            </item>
@@ -3379,7 +3368,7 @@ p, li { white-space: pre-wrap; }
     <string>回到首页</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Shift+O</string>
+    <string>Ctrl+H</string>
    </property>
   </action>
   <action name="actionBack2Output">
@@ -3387,7 +3376,7 @@ p, li { white-space: pre-wrap; }
     <string>回到输出界面</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+H</string>
+    <string>Ctrl+Shift+O</string>
    </property>
   </action>
  </widget>
@@ -3437,15 +3426,11 @@ p, li { white-space: pre-wrap; }
   <tabstop>ScdetMaxDiffSelector</tabstop>
   <tabstop>DupFramesTSelector</tabstop>
   <tabstop>ScdetUseMix</tabstop>
-  <tabstop>ScdetOutput</tabstop>
   <tabstop>ResizeTemplate</tabstop>
   <tabstop>ResizeWidthSettings</tabstop>
   <tabstop>ResizeHeightSettings</tabstop>
   <tabstop>CropWidthpSettings</tabstop>
   <tabstop>UseAiSR</tabstop>
-  <tabstop>AiSrSelector</tabstop>
-  <tabstop>AiSrModuleSelector</tabstop>
-  <tabstop>AiSrMode</tabstop>
   <tabstop>UseCRF</tabstop>
   <tabstop>CRFSelector</tabstop>
   <tabstop>UseTargetBitrate</tabstop>
@@ -3481,8 +3466,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>OutputFPS</tabstop>
   <tabstop>AllInOne</tabstop>
   <tabstop>OutputSettingsButton</tabstop>
-  <tabstop>KillProcButton</tabstop>
-  <tabstop>PauseProcess</tabstop>
   <tabstop>OptionCheck</tabstop>
   <tabstop>AdvanceSettingsArea</tabstop>
   <tabstop>ClearInputButton</tabstop>

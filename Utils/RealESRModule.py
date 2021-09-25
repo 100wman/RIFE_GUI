@@ -7,10 +7,10 @@ import torch
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from torch.nn import functional as F
 # from line_profiler_pycharm import profile
-from Utils.utils import overtime_reminder_deco
+from Utils.utils import overtime_reminder_deco, Tools
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+logger = Tools.get_logger("RealESR", '')
 
 class RealESRGANer:
     def __init__(self, scale, model_path, tile=0, tile_pad=10, pre_pad=10, half=False):
@@ -261,7 +261,7 @@ class SvfiRealESR:
         return img
 
     # @profile
-    @overtime_reminder_deco(300, None, "RealESR", "Low Super-Resolution speed detected, Please Consider tweak tilesize to enhance speed")
+    @overtime_reminder_deco(300, logger, "RealESR", "Low Super-Resolution speed detected, Please Consider tweak tilesize to enhance speed")
     def svfi_process(self, img):
         if all(self.resize_param):
             img = self.resize_esr_img(img)
