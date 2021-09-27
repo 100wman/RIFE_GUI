@@ -636,7 +636,7 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.5"
+    gui_version = "3.6.6"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
     ols_version = "6.10.5"
@@ -644,14 +644,8 @@ class ArgumentManager:
 
     f"""
     Update Log
-    - Fix Logger Too many files opened IO Error in time reminder module
-    - Fix Torch - NCNN Auto Error Detection / Switch Error at not updating model path
-    - Fix Steam Achievement Obtain Validation Process (1000 minutes get too quick)
-    - Fix Resolution Presets unable to choose error
-    - Fix Super Resolution false logic on checking scale rate
-    - Optimize UI (Add minimum size of window, etc)
-    - Update About and Help Page
-    - Update Internationalization
+    - Minor UI Adjustment: Output Info AlignLeftTop
+    - Fix Template Apply affecting output extension
     """
 
     path_len_limit = 230

@@ -773,8 +773,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>405</width>
-                        <height>410</height>
+                        <width>246</width>
+                        <height>202</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1051,8 +1051,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>405</width>
-                        <height>410</height>
+                        <width>283</width>
+                        <height>234</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1701,7 +1701,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>388</width>
+                        <width>343</width>
                         <height>577</height>
                        </rect>
                       </property>
@@ -2294,7 +2294,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>388</width>
+                        <width>299</width>
                         <height>488</height>
                        </rect>
                       </property>
@@ -2642,8 +2642,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>405</width>
-                        <height>410</height>
+                        <width>256</width>
+                        <height>152</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2731,7 +2731,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>388</width>
+                        <width>351</width>
                         <height>489</height>
                        </rect>
                       </property>
@@ -3047,7 +3047,7 @@
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并向开发人员提交settings和error.log文件，群号264023742&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
                  </property>
                  <property name="wordWrap">
                   <bool>true</bool>
@@ -3073,6 +3073,9 @@
                <property name="autoFormatting">
                 <set>QTextEdit::AutoAll</set>
                </property>
+               <property name="undoRedoEnabled">
+                <bool>false</bool>
+               </property>
                <property name="lineWrapMode">
                 <enum>QTextEdit::NoWrap</enum>
                </property>
@@ -3087,7 +3090,7 @@ p, li { white-space: pre-wrap; }
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="textInteractionFlags">
-                <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+                <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
                </property>
               </widget>
              </item>
