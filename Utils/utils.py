@@ -636,16 +636,18 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.6"
+    gui_version = "3.7.0"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.5"
+    ols_version = "6.11.0"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Minor UI Adjustment: Output Info AlignLeftTop
-    - Fix Template Apply affecting output extension
+    - Optimize Only-Render-Mode progress display (R, Chunk start from 0)
+    - Optimize Multi-Task Queue, fixing failed config dump when rebooting(support configs preservation after reboot)(appData -> appPref)
+    - Optimize Presets for Community Version, add one more option for fluency preset settings blank
+    - Update i18n
     """
 
     path_len_limit = 230
