@@ -6,7 +6,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="319"/>
         <source>补帧已被手动暂停</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">补帧已被手动暂停，请注意长时间暂停补帧有可能导致输出视频（chunk-tmp）损坏</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="327"/>

@@ -266,7 +266,7 @@ class UiRun(QThread):
         try:
             logger.info("SVFI Task Run")
             try:
-                input_list_data = json.loads(appData.value("gui_inputs", "{}"))
+                input_list_data = json.loads(appPref.value("gui_inputs", "{}"))
             except json.decoder.JSONDecodeError:
                 logger.info("Failed to execute RIFE Tasks as there are no valid gui_inputs, check appData")
                 self.update_status(True, returncode=502)
@@ -634,7 +634,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not item_update:
             """New Initiation of GUI"""
             try:
-                input_list_data = json.loads(appData.value("gui_inputs", ""))  # TODO move gui inputs to preference
+                input_list_data = json.loads(appPref.value("gui_inputs", ""))
                 if not self.InputFileName.count():
                     for item_data in input_list_data['inputs']:
                         config_maintainer = SVFI_Config_Manager(item_data, appDir)
@@ -771,9 +771,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             ols_potential = r"D:\60-fps-Project\Projects\RIFE GUI\one_line_shot_args.py"
             logger.info("Change to Debug Path")
 
+        """Load Inputs"""
+        appPref.setValue("gui_inputs", self.InputFileName.saveTasks())
+
         """Input Basic Input Information"""
         appData.setValue("version", self.version)
-        appData.setValue("gui_inputs", self.InputFileName.saveTasks())
         appData.setValue("output_dir", self.OutputFolder.text())
         appData.setValue("input_fps", self.InputFPS.text())
         appData.setValue("target_fps", self.OutputFPS.text())
@@ -1059,10 +1061,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             """First detect using use global settings"""
             self.settings_load_config(appDataPath)  # change to root settings
         self.settings_load_current()  # 保存跳转前设置
+        initiated = True
         if self.last_item is None:
+            initiated = False
             self.last_item = widget_data
         config_maintainer = SVFI_Config_Manager(self.last_item, appDir)
-        config_maintainer.DuplicateConfig()  # 将当前设置保存到上一任务的配置文件，并准备跳转到新任务
+        if initiated:
+            # 仅在初始化的第一个任务时
+            config_maintainer.DuplicateConfig()  # 将当前设置保存到上一任务的配置文件，并准备跳转到新任务
         if not use_global_settings:
             """使用已存在的（上一）任务配置文件载入设置"""
             config_maintainer = SVFI_Config_Manager(widget_data, appDir)
@@ -1072,7 +1078,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 # config_path = config_maintainer.FetchConfig()
             config_maintainer.UpdateRootConfig()
             self.settings_load_config(appDataPath)
-            self.settings_update_pack(item_update=use_global_settings)
+            self.settings_update_pack(item_update=not use_global_settings)
         self.last_item = widget_data
 
     @pyqtSlot(bool)
@@ -1404,6 +1410,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             Activate All Tasks when load_all is assigned or 
             multiple inputs with no check in (reckoned as mis-operation)
             """
+            self.on_InputFileName_currentItemChanged()  # save last modified task
             for it in range(self.InputFileName.count()):
                 self.InputFileName.setCurrentRow(it)
                 self.on_InputFileName_currentItemChanged()
@@ -1441,7 +1448,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.function_disable_inputfilename_connection()
         try:
             self.InputFileName.failSignal.connect(self.on_InputFileName_failImport)
-            self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
+            # self.InputFileName.itemClicked.connect(self.on_InputFileName_currentItemChanged)
             self.InputFileName.currentItemChanged.connect(self.on_InputFileName_currentItemChanged)
             self.InputFileName.addSignal.connect(self.on_InputFileName_currentItemChanged)
         except:
@@ -1615,29 +1622,32 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if current_item is None:
             item_count = len(self.InputFileName.getItems())
             if item_count:
-                current_item = self.InputFileName.currentItem()
+                current_item = self.InputFileName.item(0)
             else:
                 return
-        if current_item is None:
-            return
         if self.InputFileName.itemWidget(current_item) is None:  # check if exists this item in InputFileName
             return
         widget_data = self.InputFileName.getWidgetData(current_item)
         if widget_data is not None:
             self.settings_maintain_item_settings(widget_data)  # 保存当前设置，并准备跳转到新任务的历史设置（可能没有）
+
+        self.settings_maintain_io(widget_data)
+        return
+
+    def settings_maintain_io(self, widget_data: dict):
         input_path = widget_data.get('input_path')
-        if not len(self.InputFPS.text()):
-            self.InputFPS.setText("0")
         if os.path.isfile(input_path):
             input_fps = Tools.get_fps(input_path)
             self.InputFPS.setText(f"{input_fps:.5f}")
-        if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
-            try:
-                exp = int(self.ExpSelecter.currentText()[1:])
-                self.OutputFPS.setText(f"{input_fps * exp:.5f}")
-            except Exception:
-                pass
-        return
+            if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
+                try:
+                    exp = int(self.ExpSelecter.currentText()[1:])
+                    self.OutputFPS.setText(f"{input_fps * exp:.5f}")
+                except Exception:
+                    pass
+        else:
+            if not len(self.InputFPS.text()):
+                self.InputFPS.setText("0")
 
     def on_InputFileName_failImport(self, fail_code: int):
         """
@@ -1829,6 +1839,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.OutputFPS.setEnabled(bool_result)
         if not bool_result:
             self.on_ExpSelecter_currentTextChanged()
+
+    @pyqtSlot(str)
+    def on_SettingsPresetsInputs_currentTextChanged(self):
+        if self.SettingsPresetsInputs.currentIndex() == 1:
+            self.SettingsPresetsFluency.setEnabled(False)
+            self.SettingsPresetsFluency.setCurrentIndex(0)
+        else:
+            self.SettingsPresetsFluency.setEnabled(True)
 
     @pyqtSlot(bool)
     def on_UseNCNNButton_clicked(self, clicked=True, silent=False):

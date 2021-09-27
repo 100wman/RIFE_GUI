@@ -203,7 +203,7 @@ class InterpWorkFlow:
         self.frame_reader = None  # 读帧的迭代器／帧生成器
         self.render_gap = self.ARGS.render_gap  # 每个chunk的帧数
         self.render_thread = None  # 帧渲染器
-        self.task_info = {"chunk_cnt": -1, "render": -1, "now_frame": -1}  # 有关渲染的实时信息
+        self.task_info = {"chunk_cnt": 0, "render": 0, "now_frame": 0}  # 有关渲染的实时信息
 
         """Set Super Resolution"""
         self.sr_module = SuperResolution()  # 超分类

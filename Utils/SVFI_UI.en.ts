@@ -6,7 +6,7 @@
     <message>
         <location filename="RIFE_GUI_Backend.py" line="315"/>
         <source>补帧已被手动暂停</source>
-        <translation>Interpolation has been paused manually</translation>
+        <translation>Interpolation has been paused manually, Please note that pausing the software for too long may result in degradation of output video(chunk-tmp).</translation>
     </message>
     <message>
         <location filename="RIFE_GUI_Backend.py" line="323"/>
