@@ -615,7 +615,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_UseMultiCardsChecker_clicked()
         self.on_InterpExpReminder_toggled()
         self.on_UseAiSR_clicked()
-        self.on_ResizeTemplate_activated()
+        self.on_ResizeTemplate_currentTextChanged()
         self.on_TtaModeSelector_currentTextChanged()
         self.on_ExpertMode_changed()
         self.settings_initiation(item_update=item_update, template_update=False)
@@ -1891,8 +1891,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_AiSrSelector_currentTextChanged(self):
         self.settings_update_sr_model()
 
-    @pyqtSlot(int)
-    def on_ResizeTemplate_activated(self):
+    @pyqtSlot(str)
+    def on_ResizeTemplate_currentTextChanged(self):
         """
         自定义输出分辨率
         :return:
@@ -1901,23 +1901,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if not len(self.InputFileName.getItems()):
             return
-        current_item = self.InputFileName.currentItem()
-        if current_item is None:
-            return
-        row = self.InputFileName.getWidgetData(current_item)['row']
-        input_files = self.function_get_input_paths()
-        sample_file = input_files[row]
-
-        try:
-            if not os.path.isfile(sample_file):
-                height, width = 0, 0
-            else:
-                input_stream = cv2.VideoCapture(sample_file)
-                width = input_stream.get(cv2.CAP_PROP_FRAME_WIDTH)
-                height = input_stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        except Exception:
-            height, width = 0, 0
-
+        width, height = 0, 0
         if "480p" in current_template:
             width, height = 480, 270
         if "720p" in current_template:
@@ -1929,6 +1913,22 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         elif "3840p" in current_template:
             width, height = 7680, 4320
         elif "%" in current_template:
+            current_item = self.InputFileName.currentItem()
+            if current_item is None:
+                self.function_send_msg('Select a item first!', _translate('', '未选中输入项'))
+                return
+            row = self.InputFileName.getWidgetData(current_item)['row']
+            input_files = self.function_get_input_paths()
+            sample_file = input_files[row]
+            try:
+                if not os.path.isfile(sample_file):
+                    height, width = 0, 0
+                else:
+                    input_stream = cv2.VideoCapture(sample_file)
+                    width = input_stream.get(cv2.CAP_PROP_FRAME_WIDTH)
+                    height = input_stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            except Exception:
+                height, width = 0, 0
             ratio = int(current_template[:-1]) / 100
             width, height = width * ratio, height * ratio
             self.resize_exp = ratio

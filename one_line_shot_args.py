@@ -71,12 +71,14 @@ class InterpWorkFlow:
         self.eula.boom()
 
         """获得补帧输出路径"""
+        if not len(self.ARGS.output_dir):
+            """未填写输出文件夹"""
+            self.ARGS.output_dir = os.path.dirname(self.ARGS.input)
         if os.path.isfile(self.ARGS.output_dir):
             self.ARGS.output_dir = os.path.dirname(self.ARGS.output_dir)
         self.project_name = f"{Tools.get_filename(self.ARGS.input)}_{self.ARGS.task_id}"
         self.project_dir = os.path.join(self.ARGS.output_dir, self.project_name)
-        if not os.path.exists(self.project_dir):
-            os.makedirs(self.project_dir, exist_ok=True)
+        os.makedirs(self.project_dir, exist_ok=True)
         sys.path.append(self.project_dir)
 
         """Set Logger"""
@@ -97,7 +99,6 @@ class InterpWorkFlow:
         """Set input output and initiate environment"""
         self.input = self.ARGS.input
         self.output = self.ARGS.output_dir
-        self.ARGS.is_img_input = not os.path.isfile(self.input)
         if self.ARGS.is_img_output:
             self.output = os.path.join(self.output, self.project_name)
             os.makedirs(self.output, exist_ok=True)
@@ -1526,6 +1527,8 @@ class InterpWorkFlow:
 
         """Go through the process"""
         if self.ARGS.concat_only:
+            # self.project_dir = self.input
+            # self.ARGS.is_img_input = False
             self.concat_all()
         elif self.ARGS.extract_only:
             self.extract_only()

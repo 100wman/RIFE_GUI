@@ -636,17 +636,17 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.0"
+    gui_version = "3.6.8"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.11.0"
+    ols_version = "6.10.7"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Optimize Only-Render-Mode progress display (R, Chunk start from 0)
-    - Optimize Multi-Task Queue, fixing failed config dump when rebooting(support configs preservation after reboot)(appData -> appPref)
-    - Optimize Presets for Community Version, add one more option for fluency preset settings blank
+    - Improve UI Issues
+    - Fix Rife Model without updating rife model combo box
+    - Optimize Output Resolution Selection
     - Update i18n
     """
 

@@ -778,8 +778,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>246</width>
-                        <height>202</height>
+                        <width>405</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1056,8 +1056,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>283</width>
-                        <height>234</height>
+                        <width>405</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1706,7 +1706,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>343</width>
+                        <width>388</width>
                         <height>577</height>
                        </rect>
                       </property>
@@ -2299,7 +2299,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>299</width>
+                        <width>388</width>
                         <height>488</height>
                        </rect>
                       </property>
@@ -2647,8 +2647,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>256</width>
-                        <height>152</height>
+                        <width>405</width>
+                        <height>410</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2736,7 +2736,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>351</width>
+                        <width>388</width>
                         <height>489</height>
                        </rect>
                       </property>

@@ -7,7 +7,7 @@ import torch
 from torch.nn import functional as F
 
 from Utils.inference_template import VideoFrameInterpolation
-from Utils.utils import ArgumentManager
+from Utils.utils import ArgumentManager, appDir
 
 warnings.filterwarnings("ignore")
 
@@ -50,8 +50,8 @@ class RifeInterpolation(VideoFrameInterpolation):
                     traceback.print_exc()
                     self.ARGS.use_rife_fp16 = False
 
-        if self.ARGS.rife_model == "":
-            self.model_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'train_log')
+        if self.ARGS.rife_model == "" or not os.path.exists(self.ARGS.rife_model):
+            self.model_path = os.path.join(appDir, 'train_log', 'official_2.3')
         else:
             self.model_path = self.ARGS.rife_model
 
