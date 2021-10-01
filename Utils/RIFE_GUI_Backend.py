@@ -297,6 +297,9 @@ class UiRun(QThread):
                     if not len(command):
                         logger.warning(f"At task {i}, Invalid Input Path: {command}")
                         continue
+                    if self.kill:
+                        logger.warning(f"Mission Queue Killed, Breaking")
+                        break
                     logger.info(f"Designed Command:\n{command}")
                     proc_args = shlex.split(command)
 
@@ -385,6 +388,7 @@ class UiRun(QThread):
 
     def kill_proc_exec(self):
         self.kill = True
+        self.current_step = len(self.task_list) if self.task_list is not None else 0
         if self.current_proc is not None:
             self.current_proc.terminate()
             _msg = _translate('', '补帧已被强制结束')
