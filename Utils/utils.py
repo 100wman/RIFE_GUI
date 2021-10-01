@@ -636,18 +636,16 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.8"
+    gui_version = "3.6.9"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.7"
+    ols_version = "6.10.8"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Improve UI Issues
-    - Fix Rife Model without updating rife model combo box
-    - Optimize Output Resolution Selection
-    - Update i18n
+    - Optimize encoding deblock params
+    - Optimize Multi-mission queue for instant termination (instead of starting other missions)
     """
 
     path_len_limit = 230
