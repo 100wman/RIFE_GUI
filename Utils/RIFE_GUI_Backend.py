@@ -740,6 +740,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ReverseChecker.setChecked(appData.value("is_rife_reverse", False, type=bool))
         self.ForwardEnsembleChecker.setChecked(appData.value("use_rife_forward_ensemble", False, type=bool))
         self.AutoInterpScaleChecker.setChecked(appData.value("use_rife_auto_scale", False, type=bool))
+        self.AutoInterpScalePredictSizeSelector.setValue(appData.value("rife_auto_scale_predict_size", 64, type=int))
         self.on_AutoInterpScaleChecker_clicked()
         self.UseNCNNButton.setChecked(appData.value("use_ncnn", False, type=bool))
         self.EvictFlickerChecker.setChecked(appData.value("use_evict_flicker", False, type=bool))
@@ -885,6 +886,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_rife_multi_cards", self.UseMultiCardsChecker.isChecked())
         appData.setValue("use_specific_gpu", self.DiscreteCardSelector.currentIndex())
         appData.setValue("use_rife_auto_scale", self.AutoInterpScaleChecker.isChecked())
+        appData.setValue("rife_auto_scale_predict_size", self.AutoInterpScalePredictSizeSelector.value())
         appData.setValue("use_rife_forward_ensemble", self.ForwardEnsembleChecker.isChecked())
 
         """Debug Mode"""
@@ -1943,6 +1945,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         logger.debug("Switch To Auto Scale Mode: %s" % self.AutoInterpScaleChecker.isChecked())
         bool_result = not self.AutoInterpScaleChecker.isChecked()
         self.InterpScaleSelector.setEnabled(bool_result)
+        self.AutoInterpScaleReminder.setVisible(not bool_result)
+        self.AutoInterpScalePredictSizeSelector.setVisible(not bool_result)
 
     @pyqtSlot(bool)
     def on_slowmotion_clicked(self):

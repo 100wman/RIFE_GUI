@@ -1,10 +1,9 @@
 import os
-import warnings
 import random
+import warnings
 
-from Utils.utils import ArgumentManager
+from Utils.utils import ArgumentManager, VideoFrameInterpolation
 from ncnn.rife import rife_ncnn_vulkan
-from Utils.inference_template import VideoFrameInterpolation
 
 warnings.filterwarnings("ignore")
 raw = rife_ncnn_vulkan.raw
@@ -12,7 +11,7 @@ raw = rife_ncnn_vulkan.raw
 
 class RifeInterpolation(VideoFrameInterpolation):
     def __init__(self, __args: ArgumentManager):
-        super().__init__()
+        super().__init__(__args)
         self.ARGS = __args
         uhd_mode = True if self.ARGS.rife_exp < 1 else False
         self.initiated = False
@@ -28,7 +27,7 @@ class RifeInterpolation(VideoFrameInterpolation):
                 self.ARGS.ncnn_gpu, os.path.basename(self.ARGS.rife_model),
                 uhd_mode=uhd_mode, num_threads=self.ARGS.ncnn_thread))
         self.model = None
-        self.tta_mode = self.ARGS.use_rife_tta_mode
+        self.tta = self.ARGS.rife_tta_mode
         self.model_path = ""
 
     def initiate_algorithm(self, __args=None):
@@ -43,7 +42,7 @@ class RifeInterpolation(VideoFrameInterpolation):
         """
         return img
 
-    def __inference(self, i1, i2):
+    def calculate_prediction(self, i1, i2, scale=1.0):
         rife_instance = self.device[random.randrange(0, len(self.device))]
         if self.ARGS.is_rife_reverse:
             mid = rife_instance.process(i1, i2)[0]
@@ -51,12 +50,37 @@ class RifeInterpolation(VideoFrameInterpolation):
             mid = rife_instance.process(i2, i1)[0]
         return mid
 
+    def TTA_FRAME(self, img0, img1, iter_time=2, scale=1.0):
+        if iter_time != 0:
+            img0 = self.calculate_prediction(img0, img1, scale)
+            return self.TTA_FRAME(img0, img1, iter_time=iter_time - 1, scale=scale)
+        else:
+            return img0
+
+    def inference(self, img0, img1, scale=1.0, iter_time=2):
+        if self.tta == 0:
+            return self.TTA_FRAME(img0, img1, 1, scale)
+        elif self.tta == 1:  # side_vector
+            LX = self.TTA_FRAME(img0, img1, iter_time, scale)
+            RX = self.TTA_FRAME(img1, img0, iter_time, scale)
+            return self.TTA_FRAME(LX, RX, 1, scale)
+        elif self.tta == 2:  # mid_vector
+            mid = self.TTA_FRAME(img0, img1, 1, scale)
+            LX = self.TTA_FRAME(img0, mid, iter_time, scale)
+            RX = self.TTA_FRAME(img1, mid, iter_time, scale)
+            return self.TTA_FRAME(LX, RX, 1, scale)
+        else:  # mix_vector
+            mid = self.TTA_FRAME(img0, img1, 1, scale)
+            LX = self.TTA_FRAME(img0, mid, iter_time, scale)
+            RX = self.TTA_FRAME(img1, mid, iter_time, scale)
+            m1 = self.TTA_FRAME(LX, RX, 1, scale)
+            LX = self.TTA_FRAME(img0, img1, iter_time, scale)
+            RX = self.TTA_FRAME(img1, img0, iter_time, scale)
+            m2 = self.TTA_FRAME(LX, RX, 1, scale)
+            return self.TTA_FRAME(m1, m2, 1, scale)
+
     def __make_n_inference(self, i1, i2, scale, n):
-        mid = self.__inference(i1, i2)
-        if self.tta_mode:
-            mid1 = self.__inference(i1, mid)
-            mid2 = self.__inference(mid, i2)
-            mid = self.__inference(mid1, mid2)
+        mid = self.inference(i1, i2, iter_time=self.ARGS.rife_tta_iter)
         if n == 1:
             return [mid]
         first_half = self.__make_n_inference(i1, mid, scale, n=n // 2)
@@ -65,6 +89,9 @@ class RifeInterpolation(VideoFrameInterpolation):
             return [*first_half, mid, *second_half]
         else:
             return [*first_half, *second_half]
+
+    def get_auto_scale(self, img0, img1):
+        return self.ARGS.rife_exp
 
     def generate_n_interp(self, img1, img2, n, scale, debug=False):
         if debug:

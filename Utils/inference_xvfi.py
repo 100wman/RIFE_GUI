@@ -1,14 +1,12 @@
 import warnings
 
-from Utils.inference_template import VideoFrameInterpolation
-
 warnings.filterwarnings("ignore")
 import torch.utils.data
 import torch.backends.cudnn as cudnn
 
 from utils_xvfi import *
 from XVFInet import *
-from Utils.utils import ArgumentManager
+from Utils.utils import ArgumentManager, VideoFrameInterpolation
 
 
 # Utils = Utils()
@@ -28,7 +26,7 @@ class XVFIArgument(ArgumentManager):
 
 class XVFInterpolation(VideoFrameInterpolation):
     def __init__(self, __args: XVFIArgument):
-        super().__init__()
+        super().__init__(__args)
 
         self.initiated = False
         self.ARGS = __args

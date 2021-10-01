@@ -514,69 +514,6 @@ class ImgSeqIO:
         return
 
 
-class RifeInterpolation:
-    """Rife 补帧 抽象类"""
-
-    def __init__(self, __args):
-        self.initiated = False
-        self.args = {}
-        if __args is not None:
-            """Update Args"""
-            self.args = __args
-        else:
-            raise NotImplementedError("Args not sent in")
-
-        self.device = None
-        self.model = None
-        self.model_path = ""
-        pass
-
-    def initiate_rife(self, __args=None):
-        raise NotImplementedError("Abstract")
-
-    def __make_inference(self, img1, img2, scale, exp):
-        raise NotImplementedError("Abstract")
-
-    def __make_n_inference(self, img1, img2, scale, n):
-        raise NotImplementedError("Abstract")
-
-    def generate_padding(self, img, scale):
-        raise NotImplementedError("Abstract")
-
-    def generate_torch_img(self, img, padding):
-        """
-        :param img: cv2.imread [:, :, ::-1]
-        :param padding:
-        :return:
-        """
-        raise NotImplementedError("Abstract")
-
-    def pad_image(self, img, padding):
-        raise NotImplementedError("Abstract")
-
-    def generate_interp(self, img1, img2, exp, scale, n=None, debug=False, test=False):
-        """
-
-        :param img1: cv2.imread
-        :param img2:
-        :param exp:
-        :param scale:
-        :param n:
-        :param debug:
-        :return: list of interp cv2 image
-        """
-        raise NotImplementedError("Abstract")
-
-    def generate_n_interp(self, img1, img2, n, scale, debug=False):
-        raise NotImplementedError("Abstract")
-
-    def get_auto_scale(self, img1, img2, scale):
-        raise NotImplementedError("Abstract")
-
-    def run(self):
-        raise NotImplementedError("Abstract")
-
-
 class SuperResolution:
     """
     超分抽象类
@@ -636,16 +573,16 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.9"
+    gui_version = "3.6.10"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.8"
+    ols_version = "6.10.9"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Optimize encoding deblock params
-    - Optimize Multi-mission queue for instant termination (instead of starting other missions)
+    - Add New Auto Scale (v2) structure
+    - Optimize Abstract class for rife vfi
     """
 
     path_len_limit = 230
@@ -742,6 +679,7 @@ class ArgumentManager:
         self.is_rife_reverse = args.get("is_rife_reverse", False)
         self.use_specific_gpu = args.get("use_specific_gpu", 0)  # !
         self.use_rife_auto_scale = args.get("use_rife_auto_scale", False)
+        self.rife_auto_scale_predict_size = args.get("rife_auto_scale_predict_size", 64)
         self.use_rife_forward_ensemble = args.get("use_rife_forward_ensemble", False)
         self.use_rife_multi_cards = args.get("use_rife_multi_cards", False)
 
@@ -761,6 +699,35 @@ class ArgumentManager:
         self.extract_only = args.get("extract_only", False)
         self.render_only = args.get("render_only", False)
         self.version = args.get("version", "0.0.0 beta")
+
+class VideoFrameInterpolation:
+    def __init__(self, __args):
+        self.initiated = False
+        self.args = {}
+        if __args is not None:
+            """Update Args"""
+            self.args = __args
+        else:
+            raise NotImplementedError("Args not sent in")
+
+        self.device = None
+        self.model = None
+        self.model_path = ""
+
+    def initiate_algorithm(self):
+        raise NotImplementedError()
+
+    def generate_n_interp(self, img0, img1, n, scale, debug=False):
+        raise NotImplementedError()
+
+    def get_auto_scale(self, img1, img2):
+        raise NotImplementedError()
+
+    def __make_n_inference(self, img1, img2, scale, n):
+        raise NotImplementedError("Abstract")
+
+    def run(self):
+        raise NotImplementedError("Abstract")
 
 
 class Hdr10PlusProcesser:
@@ -1775,3 +1742,5 @@ if __name__ == "__main__":
     # dm.run()
     print(Tools.check_non_ascii(".fdassda f。"))
     pass
+
+
