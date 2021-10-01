@@ -2,29 +2,31 @@ import os
 import traceback
 import warnings
 
+import cv2
 import numpy as np
 import torch
 from torch.nn import functional as F
 
-from Utils.inference_template import VideoFrameInterpolation
-from Utils.utils import ArgumentManager, appDir
+from Utils.utils import ArgumentManager, appDir, VideoFrameInterpolation
 
 warnings.filterwarnings("ignore")
 
 
 class RifeInterpolation(VideoFrameInterpolation):
     def __init__(self, __args: ArgumentManager):
-        super().__init__()
+        super().__init__(__args)
         self.initiated = False
         self.ARGS = __args
 
-        self.auto_scale = self.ARGS.use_rife_auto_scale
+        self.use_auto_scale = self.ARGS.use_rife_auto_scale
+        self.auto_scale_predict_size = self.ARGS.rife_auto_scale_predict_size
         self.device = None
         self.device_count = torch.cuda.device_count()
         self.model = None
         self.model_path = ""
         self.model_version = 0
-        self.tta_mode = self.ARGS.use_rife_tta_mode
+        self.tta_mode = self.ARGS.rife_tta_mode
+        self.tta_iter = self.ARGS.rife_tta_iter
 
     def initiate_algorithm(self, __args=None):
         if self.initiated:
@@ -77,9 +79,9 @@ class RifeInterpolation(VideoFrameInterpolation):
 
     def __inference(self, i1, i2, scale):
         if self.ARGS.is_rife_reverse:
-            mid = self.model.inference(i1, i2, scale)
+            mid = self.model.inference(i1, i2, scale, iter_time=self.tta_iter)
         else:
-            mid = self.model.inference(i2, i1, scale)
+            mid = self.model.inference(i2, i1, scale, iter_time=self.tta_iter)
         return mid
 
     def __make_n_inference(self, img1, img2, scale, n):
@@ -126,8 +128,11 @@ class RifeInterpolation(VideoFrameInterpolation):
         """
 
         try:
-            img_torch = torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(
-                0).float() / 255.
+            img_torch = torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(0)
+            if self.ARGS.use_rife_fp16:
+                img_torch = img_torch.half() / 255.
+            else:
+                img_torch = img_torch.float() / 255.
             if self.ARGS.use_rife_multi_cards and self.device_count > 1:
                 if self.device_count % 2 == 0:
                     batch = 2
@@ -141,10 +146,10 @@ class RifeInterpolation(VideoFrameInterpolation):
             raise e
 
     def pad_image(self, img, padding):
-        if self.ARGS.use_rife_fp16:
-            return F.pad(img, padding).half()
-        else:
-            return F.pad(img, padding)
+        # if self.ARGS.use_rife_fp16:
+        #     return F.pad(img, padding).half()
+        # else:
+        return F.pad(img, padding)
 
     def generate_n_interp(self, img1, img2, n, scale, debug=False):
         if debug:
@@ -152,8 +157,25 @@ class RifeInterpolation(VideoFrameInterpolation):
             for i in range(n):
                 output_gen.append(img1)
             return output_gen
+
         interp_gen = self.__make_n_inference(img1, img2, scale, n=n)
         return interp_gen
+
+    def get_auto_scale(self, i0, i1):
+        # TODO suck auto scale
+        scale_range = [0.25, 0.5, 1.0]
+        min_loss = 1000
+        select_scale = 0.5
+        pw, ph = self.auto_scale_predict_size, self.auto_scale_predict_size
+        t0 = cv2.resize(i0, (pw, ph))
+        t1 = cv2.resize(i1, (pw, ph))
+        for scale in scale_range:
+            interp = self.__make_n_inference(t0, t1, scale, 1)[0].copy()
+            loss = abs(abs(interp - t0) - abs(interp - t1)).mean()
+            if loss < min_loss:
+                select_scale = scale
+                min_loss = loss
+        return select_scale
 
     def run(self):
         pass

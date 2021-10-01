@@ -1,6 +1,5 @@
 # coding: utf-8
 import argparse
-import math
 import os.path
 import sys
 
@@ -167,7 +166,7 @@ class InterpWorkFlow:
             f"FRAMES_CNT: {self.all_frames_cnt}, EXP: {self.ARGS.rife_exp}")
 
         """Set RIFE Core"""
-        self.vfi_core = RifeInterpolation(self.ARGS)  # 用于补帧的模块
+        self.vfi_core = VideoFrameInterpolation(self.ARGS)  # 用于补帧的模块
 
         """Guess Memory and Fix Resolution"""
         if self.ARGS.use_manual_buffer:
@@ -993,12 +992,13 @@ class InterpWorkFlow:
             if img0 is None or img1 is None:
                 scale = 1.0
             else:
-                x = psnr(cv2.resize(img0, (256, 256)), cv2.resize(img1, (256, 256)))
-                y25 = 0.0000136703 * (x ** 3) - 0.000407396 * (x ** 2) - 0.0129 * x + 0.62621
-                y50 = 0.00000970763 * (x ** 3) - 0.0000908092 * (x ** 2) - 0.02095 * x - 0.69068
-                y100 = 0.0000134965 * (x ** 3) - 0.000246688 * (x ** 2) - 0.01987 * x - 0.70953
-                m = min(y25, y50, y100)
-                scale = {y25: 0.25, y50: 0.5, y100: 1.0}[m]
+                # x = psnr(cv2.resize(img0, (256, 256)), cv2.resize(img1, (256, 256)))
+                # y25 = 0.0000136703 * (x ** 3) - 0.000407396 * (x ** 2) - 0.0129 * x + 0.62621
+                # y50 = 0.00000970763 * (x ** 3) - 0.0000908092 * (x ** 2) - 0.02095 * x - 0.69068
+                # y100 = 0.0000134965 * (x ** 3) - 0.000246688 * (x ** 2) - 0.01987 * x - 0.70953
+                # m = min(y25, y50, y100)
+                # scale = {y25: 0.25, y50: 0.5, y100: 1.0}[m]
+                scale = self.vfi_core.get_auto_scale(img0, img1)
 
         if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0 and img0 is not None and img1 is not None:
             """先超后补"""
