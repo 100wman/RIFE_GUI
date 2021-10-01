@@ -1899,8 +1899,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         current_template = self.ResizeTemplate.currentText()
 
-        if not len(self.InputFileName.getItems()):
-            return
         width, height = 0, 0
         if "480p" in current_template:
             width, height = 480, 270
@@ -1915,7 +1913,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         elif "%" in current_template:
             current_item = self.InputFileName.currentItem()
             if current_item is None:
-                self.function_send_msg('Select a item first!', _translate('', '未选中输入项'))
+                # self.function_send_msg('Select a item first!', _translate('', '未选中输入项'))
                 return
             row = self.InputFileName.getWidgetData(current_item)['row']
             input_files = self.function_get_input_paths()
