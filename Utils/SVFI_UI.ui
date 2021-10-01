@@ -771,7 +771,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>2</number>
+                      <number>6</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -2298,7 +2298,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-78</y>
                         <width>388</width>
                         <height>488</height>
                        </rect>
@@ -2320,26 +2320,10 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_5">
-                          <item row="4" column="0">
-                           <widget class="QCheckBox" name="UseMultiCardsChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用所有能检测到的显卡进行补帧&lt;/p&gt;&lt;p&gt;使用A卡模式（左侧“使用A卡或核显”）将同时调用能识别到的A卡和N卡&lt;/p&gt;&lt;p&gt;不适用A卡模式则只能使用检测到的N卡&lt;/p&gt;&lt;p&gt;速度较单卡慢&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
+                          <item row="2" column="0">
+                           <widget class="QLabel" name="label_32">
                             <property name="text">
-                             <string>使用多卡 (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="0" column="0">
-                           <widget class="QCheckBox" name="ForwardEnsembleChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;提高光流预测准确性&lt;/p&gt;&lt;p&gt;开启后可有效减轻虚影&lt;/p&gt;&lt;p&gt;速度减慢25%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用，2.x模型不推荐开启&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>双向光流 (?)</string>
-                            </property>
-                            <property name="checked">
-                             <bool>true</bool>
+                             <string>用于补帧的N卡：</string>
                             </property>
                            </widget>
                           </item>
@@ -2353,14 +2337,30 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="2" column="0">
-                           <widget class="QLabel" name="label_32">
+                          <item row="4" column="0">
+                           <widget class="QCheckBox" name="UseMultiCardsChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用所有能检测到的显卡进行补帧&lt;/p&gt;&lt;p&gt;使用A卡模式（左侧“使用A卡或核显”）将同时调用能识别到的A卡和N卡&lt;/p&gt;&lt;p&gt;不适用A卡模式则只能使用检测到的N卡&lt;/p&gt;&lt;p&gt;速度较单卡慢&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
                             <property name="text">
-                             <string>用于补帧的N卡：</string>
+                             <string>使用多卡 (?)</string>
                             </property>
                            </widget>
                           </item>
-                          <item row="1" column="0">
+                          <item row="5" column="0">
+                           <widget class="QCheckBox" name="ForwardEnsembleChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;提高光流预测准确性&lt;/p&gt;&lt;p&gt;开启后可有效减轻虚影&lt;/p&gt;&lt;p&gt;速度减慢25%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用，2.x模型不推荐开启&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>双向光流 (?)</string>
+                            </property>
+                            <property name="checked">
+                             <bool>true</bool>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="6" column="0">
                            <widget class="QCheckBox" name="AutoInterpScaleChecker">
                             <property name="toolTip">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;动态选择光流尺度，用于N卡将有效缓解物体消失问题&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -2735,7 +2735,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-79</y>
                         <width>388</width>
                         <height>489</height>
                        </rect>

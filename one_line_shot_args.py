@@ -394,42 +394,42 @@ class InterpWorkFlow:
             "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
                     "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
                     "min-keyint=1:rc-lookahead=25:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
-                    "crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1",
+                    "crqpoffs=-2:qcomp=0.65:sao=0:repeat-headers=1",
             "8bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
                     "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
                     "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
-                    "qcomp=0.65:deblock=-1:sao=0",
+                    "qcomp=0.65:sao=0",
             "10bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
                      "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
                      "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
-                     "deblock=-1:sao=0",
+                     "sao=0",
             "hdr10": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
                      'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
                      'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                     'deblock=-1:sao=0:'
+                     'sao=0:'
                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                      'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
                      'max-cll="1000,100":hdr10-opt=1:repeat-headers=1',
             "hdr10+": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
                       'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
                       'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                      'deblock=-1:sao=0:'
+                      'sao=0:'
                       'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                       'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
                       f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata}"'
         }
 
         params_libx264s = {
-            "fast": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=4:deblock='-1:-1':"
+            "fast": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=4:"
                     "rc-lookahead=30:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:me=hex:merange=16:"
                     "subme=7:psy-rd='1:0.1':mixed-refs=1:trellis=1",
-            "8bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+            "8bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:"
                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "10bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+            "10bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:"
                      "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
                      "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "hdr10": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+            "hdr10": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:"
                      "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
                      "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
                      "range=tv:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:"
