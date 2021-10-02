@@ -1,3 +1,5 @@
+import time
+
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from model.IFNet_HDv3 import *
@@ -7,7 +9,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Model:
-    def __init__(self, use_multi_cards=False, forward_ensemble=False, tta=False, local_rank=-1):
+    def __init__(self, use_multi_cards=False, forward_ensemble=False, tta=0, local_rank=-1):
         self.tta = tta
         self.forward_ensemble = forward_ensemble
         self.use_multi_cards = use_multi_cards
@@ -51,19 +53,53 @@ class Model:
         if rank == 0:
             torch.save(self.flownet.state_dict(), '{}/flownet.pkl'.format(path))
 
-    def inference(self, img0, img1, scale=1.0):
+    def calculate_flow(self, i0, i1, scale):
+        """
+
+        :param i0: tensor
+        :param i1: tensor
+        :param scale: float
+        :return:
+        """
+        imgs = torch.cat((i0, i1), 1)
+        scale_list = [4 / scale, 2 / scale, 1 / scale]
+        flow = self.flownet(imgs, scale_list, ensemble=self.forward_ensemble)[1]
+        return flow, imgs
+
+    def calculate_prediction(self, img0, img1, scale):
         imgs = torch.cat((img0, img1), 1)
         scale_list = [4 / scale, 2 / scale, 1 / scale]
-        merged = self.flownet(imgs, scale_list, ensemble=self.forward_ensemble)[2]
-        if not self.tta:
-            return merged
+        merged = self.flownet(imgs, scale_list, ensemble=self.forward_ensemble)[0][2]
+        return merged
+
+    def TTA_FRAME(self, img0, img1, iter_time=2, scale=1.0):
+        if iter_time != 0:
+            img0 = self.calculate_prediction(img0, img1, scale)
+            return self.TTA_FRAME(img0, img1, iter_time=iter_time - 1, scale=scale)
         else:
-            imgs_l1 = torch.cat((img0, merged), 1)
-            imgs_r1 = torch.cat((merged, img1), 1)
-            img_025 = self.flownet(imgs_l1, scale_list, ensemble=self.forward_ensemble)[2]
-            img_075 = self.flownet(imgs_r1, scale_list, ensemble=self.forward_ensemble)[2]
-            imgs_con = torch.cat((img_025, img_075), 1)
-            return self.flownet(imgs_con, scale_list, ensemble=self.forward_ensemble)[2]
+            return img0
+
+    def inference(self, img0, img1, scale=1.0, iter_time=2):
+        if self.tta == 0:
+            return self.TTA_FRAME(img0, img1, 1, scale)
+        elif self.tta == 1:  # side_vector
+            LX = self.TTA_FRAME(img0, img1, iter_time, scale)
+            RX = self.TTA_FRAME(img1, img0, iter_time, scale)
+            return self.TTA_FRAME(LX, RX, 1, scale)
+        elif self.tta == 2:  # mid_vector
+            mid = self.TTA_FRAME(img0, img1, 1, scale)
+            LX = self.TTA_FRAME(img0, mid, iter_time, scale)
+            RX = self.TTA_FRAME(img1, mid, iter_time, scale)
+            return self.TTA_FRAME(LX, RX, 1, scale)
+        elif self.tta == 3:  # mix_vector
+            mid = self.TTA_FRAME(img0, img1, 1, scale)
+            LX = self.TTA_FRAME(img0, mid, iter_time, scale)
+            RX = self.TTA_FRAME(img1, mid, iter_time, scale)
+            m1 = self.TTA_FRAME(LX, RX, 1, scale)
+            LX = self.TTA_FRAME(img0, img1, iter_time, scale)
+            RX = self.TTA_FRAME(img1, img0, iter_time, scale)
+            m2 = self.TTA_FRAME(LX, RX, 1, scale)
+            return self.TTA_FRAME(m1, m2, 1, scale)
 
 
 if __name__ == '__main__':
@@ -71,6 +107,8 @@ if __name__ == '__main__':
     _img1 = torch.tensor(np.random.normal(
         0, 1, (1, 3, 256, 256))).float().to(device)
     _imgs = torch.cat((_img0, _img1), 1)
-    model = Model(True, True, True)
+    model = Model(True, True, 3)
     model.eval()
+    _t = time.time()
     print(model.inference(_img0, _img1).shape)
+    print(round(time.time() - _t, 2))

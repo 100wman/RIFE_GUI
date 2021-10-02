@@ -771,7 +771,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>4</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -1132,7 +1132,7 @@
                             <item row="4" column="0" colspan="2">
                              <layout class="QHBoxLayout" name="horizontalLayout_8">
                               <item>
-                               <widget class="QComboBox" name="DupRmMode">
+                               <widget class="MyComboBox" name="DupRmMode">
                                 <property name="toolTip">
                                  <string/>
                                 </property>

@@ -161,20 +161,29 @@ class RifeInterpolation(VideoFrameInterpolation):
         interp_gen = self.__make_n_inference(img1, img2, scale, n=n)
         return interp_gen
 
+    def _get_auto_scale_to_tensor(self, *imgs):
+        if self.ARGS.use_rife_fp16:  # 是否为半精度
+            return [
+                torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(0).half() / 255.
+                for img in imgs]
+        return [torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(0).float() / 255.
+                for img in imgs]
+
     def get_auto_scale(self, i0, i1):
-        # TODO suck auto scale
         scale_range = [0.25, 0.5, 1.0]
-        min_loss = 1000
+        max_distance = 0
         select_scale = 0.5
-        pw, ph = self.auto_scale_predict_size, self.auto_scale_predict_size
-        t0 = cv2.resize(i0, (pw, ph))
-        t1 = cv2.resize(i1, (pw, ph))
         for scale in scale_range:
-            interp = self.__make_n_inference(t0, t1, scale, 1)[0].copy()
-            loss = abs(abs(interp - t0) - abs(interp - t1)).mean()
-            if loss < min_loss:
+            pwh = int(32/scale)
+            t0 = cv2.resize(i0, (pwh, pwh))
+            t1 = cv2.resize(i1, (pwh, pwh))
+            I0, I1 = self._get_auto_scale_to_tensor(t0, t1)
+            lf, _ = self.model.calculate_flow(I0, I1, scale)
+            rf, _ = self.model.calculate_flow(I1, I0, scale)
+            distance = abs(((lf - rf) / 2).mean())
+            if distance > max_distance:
                 select_scale = scale
-                min_loss = loss
+                max_distance = distance
         return select_scale
 
     def run(self):

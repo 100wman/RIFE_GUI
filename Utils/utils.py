@@ -576,13 +576,12 @@ class ArgumentManager:
     gui_version = "3.6.10"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.9"
+    ols_version = "6.10.10"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add New Auto Scale (v2) structure
-    - Optimize Abstract class for rife vfi
+    - Add New Auto Scale (v2)
     """
 
     path_len_limit = 230
