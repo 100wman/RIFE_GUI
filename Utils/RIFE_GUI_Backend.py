@@ -533,6 +533,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.LoadCurrentSettings.setVisible(False)
         self.ShortCutGroup.setVisible(False)
         self.LockWHChecker.setVisible(False)
+        self.AutoInterpScaleReminder.setVisible(False)
+        self.AutoInterpScalePredictSizeSelector.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -1945,8 +1947,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         logger.debug("Switch To Auto Scale Mode: %s" % self.AutoInterpScaleChecker.isChecked())
         bool_result = not self.AutoInterpScaleChecker.isChecked()
         self.InterpScaleSelector.setEnabled(bool_result)
-        self.AutoInterpScaleReminder.setVisible(not bool_result)
-        self.AutoInterpScalePredictSizeSelector.setVisible(not bool_result)
+        # self.AutoInterpScaleReminder.setVisible(not bool_result)
+        # self.AutoInterpScalePredictSizeSelector.setVisible(not bool_result)
 
     @pyqtSlot(bool)
     def on_slowmotion_clicked(self):

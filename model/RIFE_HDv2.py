@@ -108,7 +108,7 @@ class FusionNet(nn.Module):
 
 
 class Model:
-    def __init__(self, use_multi_cards=False, forward_ensemble=False, tta=False, local_rank=-1):
+    def __init__(self, use_multi_cards=False, forward_ensemble=False, tta=0, local_rank=-1):
         self.forward_ensemble = forward_ensemble
         self.tta = tta
         self.use_multi_cards = use_multi_cards
@@ -188,27 +188,41 @@ class Model:
         flow, _ = self.flownet(imgs, scale)
         if self.forward_ensemble:
             pass
-            # TODO Fix Forward Ensemble for RIFE 2.x
-            # reimgs = torch.cat((img1, img0), 1)
-            # reflow, _ = self.flownet(reimgs,scale)
-            # flow = (flow + reflow) / 2
-        return flow
+        return flow, imgs
 
     def calculate_prediction(self, img0, img1, scale):
-        flow = self.calculate_flow(img0, img1, scale)
-        imgs = torch.cat((img0, img1), 1)
+        flow, imgs = self.calculate_flow(img0, img1, scale)
         prediction = self.predict(imgs, flow, training=False)
         return prediction
 
-    def inference(self, img0, img1, scale=1.0):
-        predicted = self.calculate_prediction(img0, img1, scale)
-        if not self.tta:
-            return predicted
+    def TTA_FRAME(self, img0, img1, iter_time=2, scale=1.0):
+        if iter_time != 0:
+            img0 = self.calculate_prediction(img0, img1, scale)
+            return self.TTA_FRAME(img0, img1, iter_time=iter_time - 1, scale=scale)
         else:
-            img_025 = self.calculate_prediction(img0, predicted, scale)
-            img_075 = self.calculate_prediction(predicted, img1, scale)
-            img_050 = self.calculate_prediction(img_025, img_075, scale)
-            return img_050
+            return img0
+
+    def inference(self, img0, img1, scale=1.0, iter_time=2):
+        if self.tta == 0:
+            return self.TTA_FRAME(img0, img1, 1, scale)
+        elif self.tta == 1:  # side_vector
+            LX = self.TTA_FRAME(img0, img1, iter_time, scale)
+            RX = self.TTA_FRAME(img1, img0, iter_time, scale)
+            return self.TTA_FRAME(LX, RX, 1, scale)
+        elif self.tta == 2:  # mid_vector
+            mid = self.TTA_FRAME(img0, img1, 1, scale)
+            LX = self.TTA_FRAME(img0, mid, iter_time, scale)
+            RX = self.TTA_FRAME(img1, mid, iter_time, scale)
+            return self.TTA_FRAME(LX, RX, 1, scale)
+        else:  # mix_vector
+            mid = self.TTA_FRAME(img0, img1, 1, scale)
+            LX = self.TTA_FRAME(img0, mid, iter_time, scale)
+            RX = self.TTA_FRAME(img1, mid, iter_time, scale)
+            m1 = self.TTA_FRAME(LX, RX, 1, scale)
+            LX = self.TTA_FRAME(img0, img1, iter_time, scale)
+            RX = self.TTA_FRAME(img1, img0, iter_time, scale)
+            m2 = self.TTA_FRAME(LX, RX, 1, scale)
+            return self.TTA_FRAME(m1, m2, 1, scale)
 
 
 if __name__ == '__main__':
@@ -216,6 +230,6 @@ if __name__ == '__main__':
     _img1 = torch.tensor(np.random.normal(
         0, 1, (1, 3, 256, 256))).float().to(device)
     _imgs = torch.cat((_img0, _img1), 1)
-    model = Model(True, True, True)
+    model = Model(True, True, 3)
     model.eval()
     print(model.inference(_img0, _img1).shape)
