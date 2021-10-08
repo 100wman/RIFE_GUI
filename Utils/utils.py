@@ -385,6 +385,7 @@ class Tools:
 class ImgSeqIO:
     def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
                  output_ext=".png", exp=2, resize=(0, 0), is_esr=False, **kwargs):
+        # TODO 解耦成Input，Output，Tool三个类
         if logger is None:
             self.logger = Tools.get_logger(name="ImgIO", log_path=folder)
         else:
@@ -402,8 +403,10 @@ class ImgSeqIO:
             os.makedirs(self.seq_folder, exist_ok=True)
             start_frame = 0
         elif start_frame == -1 and not is_read:
-            start_frame = self.get_start_frame()
             # write: start writing at the end of sequence
+            start_frame = self.get_write_start_frame()
+        elif start_frame != -1 and is_read:
+            start_frame = int(start_frame / (2 ** exp))
 
         self.start_frame = start_frame
         self.frame_cnt = 0
@@ -443,7 +446,7 @@ class ImgSeqIO:
             for _t in self.thread_pool:
                 _t.start()
 
-    def get_start_frame(self):
+    def get_write_start_frame(self):
         """
         Get Start Frame when start_frame is at its default value
         :return:
@@ -452,12 +455,12 @@ class ImgSeqIO:
         for f in os.listdir(self.seq_folder):
             fn, ext = os.path.splitext(f)
             if ext in SupportFormat.img_inputs:
-                img_list.append(int(fn))
+                img_list.append(fn)
         if not len(img_list):
             return 0
-        img_list.sort()
-        last_img = img_list[-1]  # biggest
-        return last_img
+        # img_list.sort()
+        # last_img = img_list[-1]  # biggest
+        return len(img_list)
 
     def get_frames_cnt(self):
         """
@@ -573,15 +576,21 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.10"
+    gui_version = "3.6.11"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.10"
+    ols_version = "6.10.11"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add New Auto Scale (v2)
+    - Fix some false warnings: #225, #226
+    - Fix unable to process img sequence: #222
+    - Fix ffmpeg custom command only allowing single inputs(enable plural inputs)
+    - Fix Main Error Clogging the queue
+    - Fix Error msg from ols got stuck when ols encounters fatal error
+    - Fix image sequence unable to resume Workflow
+    - Add ugly strip color bar at selected task item
     """
 
     path_len_limit = 230

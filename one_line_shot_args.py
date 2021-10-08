@@ -91,7 +91,7 @@ class InterpWorkFlow:
         """Set FFmpeg"""
         self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffmpeg.exe"))
         self.ffplay = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffplay.exe"))
-        if not os.path.exists(self.ffmpeg):
+        if not os.path.exists(os.path.join(self.ARGS.app_dir, "ffmpeg.exe")):
             self.ffmpeg = "ffmpeg"
             logger.warning("Not find selected ffmpeg, use default")
 
@@ -101,6 +101,8 @@ class InterpWorkFlow:
         if self.ARGS.is_img_output:
             self.output = os.path.join(self.output, self.project_name)
             os.makedirs(self.output, exist_ok=True)
+        if not os.path.isfile(self.input):
+            self.ARGS.is_img_input = True
 
         """Get input's info"""
         self.video_info_instance = VideoInfo(file_input=self.input, logger=logger, project_dir=self.project_dir,
@@ -456,8 +458,8 @@ class InterpWorkFlow:
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
-            img_io = ImgSeqIO(folder=self.output, is_read=False,
-                              start_frame=start_frame, logger=logger,
+            img_io = ImgSeqIO(folder=self.project_dir, is_read=False,
+                              start_frame=-1, logger=logger,
                               output_ext=self.ARGS.output_ext, )
             return img_io
 
@@ -767,11 +769,19 @@ class InterpWorkFlow:
         ffmpeg_customized_command = {}
         if len(self.ARGS.render_ffmpeg_customized):
             shlex_out = shlex.split(self.ARGS.render_ffmpeg_customized)
-            if len(shlex_out) % 2 != 0:
-                logger.warning(f"Customized FFmpeg is invalid: {self.ARGS.render_ffmpeg_customized}")
+            if len(shlex_out) == 1:
+                ffmpeg_customized_command.update({shlex_out[0]: ""})
             else:
-                for i in range(int(len(shlex_out) / 2)):
-                    ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
+                for i in range(len(shlex_out) - 1):
+                    command = shlex_out[i]
+                    next_command = shlex_out[i+1]
+                    if command.startswith("-") and next_command.startswith('-'):
+                        ffmpeg_customized_command.update({command: ""})
+                    elif command.startswith("-"):
+                        ffmpeg_customized_command.update({command: next_command})
+                last_command = shlex_out[-1]
+                if last_command.startswith("-"):
+                    ffmpeg_customized_command.update({last_command: ""})
         logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
         # output_path = Tools.fillQuotation(output_path)
@@ -790,14 +800,17 @@ class InterpWorkFlow:
         """
         if self.ARGS.is_img_output:
             """IMG OUTPUT"""
-            img_io = ImgSeqIO(folder=self.output, is_tool=True,
-                              start_frame=self.ARGS.interp_start, logger=logger,
+            img_io = ImgSeqIO(folder=self.project_dir, is_tool=True,
+                              start_frame=-1, logger=logger,
                               output_ext=self.ARGS.output_ext, )
-            last_img = img_io.get_start_frame()
+            last_img = img_io.get_write_start_frame()
             if self.ARGS.interp_start not in [-1, ]:
                 return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)  # Manually Prioritized
             if last_img == 0:
                 return 1, 0
+            else:
+                """last_img > 0"""
+                return 1, int(last_img)
 
         if self.ARGS.interp_start != -1 or self.ARGS.output_chunk_cnt != -1:
             return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
@@ -895,8 +908,8 @@ class InterpWorkFlow:
         is_end = False
         frame_written = False
         while True:
-            if not self.main_event.is_set():
-                logger.warning("Main interpolation thread Dead, break")  # 主线程已结束，这里的锁其实没用，调试用的
+            if self.main_error is not None:
+                logger.warning("Other Thread encounters Error, break")
                 frame_writer.close()
                 is_end = True
                 rename_chunk()
@@ -1766,17 +1779,21 @@ class InterpWorkFlow:
         pass
 
     def extract_only(self):
+        if self.output_ext not in SupportFormat.img_outputs:
+            self.output_ext = ".png"
+            logger.warning("Auto change output extension to png")
         chunk_cnt, start_frame = self.check_chunk()
         videogen = self.generate_frame_reader(start_frame).nextFrame()
 
         img1 = self.crop_read_img(Tools.gen_next(videogen))
         if img1 is None:
+            self.reminder_bearer.terminate_all()
             raise OSError(f"Input file is not available: {self.input}, is img input: {self.ARGS.is_img_input},"
                           f"Please Check Your Input Settings"
                           f"(Start Chunk, Start Frame, Start Point, Start Frame)")
 
-        renderer = ImgSeqIO(folder=self.output, is_read=False,
-                            start_frame=self.ARGS.interp_start, logger=logger,
+        renderer = ImgSeqIO(folder=self.project_dir, is_read=False,
+                            start_frame=-1, logger=logger,  # auto write to destination
                             output_ext=self.ARGS.output_ext, )
         pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
         pbar.update(n=start_frame)
@@ -1830,7 +1847,7 @@ class InterpWorkFlow:
             time.sleep(0.1)
 
         if self.main_error is not None:
-            raise self.main_error
+            return
 
         """Concat the chunks"""
         if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:

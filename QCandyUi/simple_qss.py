@@ -291,6 +291,11 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
         selection-background-color: {light};
         background: transparent
     }}
+    
+    QListWidget::item:selected {{
+        border-left: 3px solid {light};
+    }}
+    
     """
 
     """QLineEdit"""
