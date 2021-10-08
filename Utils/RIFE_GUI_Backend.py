@@ -212,6 +212,7 @@ class UiRun(QThread):
         self.silent = False
         self.current_filename = ""
         self.current_step = 0
+        self.main_error = ""
 
     def build_command(self, item_data: dict) -> (str, str):
         global appData
@@ -343,6 +344,7 @@ class UiRun(QThread):
                                 """Imediately Upload"""
                                 logger.error(f"[In ONE LINE SHOT]: f{flush_lines}")
                                 self.update_status(False, sp_status=f"{flush_lines}")
+                                self.main_error = flush_lines
                                 flush_lines = ""
                             elif len(flush_lines) and time.time() - interval_time > 0.1:
                                 interval_time = time.time()
@@ -403,6 +405,9 @@ class UiRun(QThread):
             logger.info("Pause Process Command Fired")
         else:
             logger.info("Resume Process Command Fired")
+
+    def get_main_error(self):
+        return self.main_error
 
     pass
 
@@ -1017,28 +1022,33 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             os.mkdir(project_dir)
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
-            self.function_send_msg(f"Resume Workflow?", f"{_msg1}{widget_data['row'] + 1}{_msg2}", 3)
+            self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{widget_data['row'] + 1}{_msg2}", 3)
             self.settings_set_start_info(0, 1, False)  # start from zero
             return
 
         if self.ImgOutputChecker.isChecked():
             """Img Output"""
-            img_io = ImgSeqIO(logger=logger, folder=output_dir, is_tool=True, output_ext=self.ExtSelector.currentText())
-            last_img = img_io.get_start_frame()  # output_dir
+            img_io = ImgSeqIO(logger=logger, folder=project_dir, is_tool=True, output_ext=self.ExtSelector.currentText())
+            last_img = img_io.get_write_start_frame()  # output_dir
             if last_img:
                 reply = self.function_send_msg(f"Resume Workflow?", _translate('', "检测到未完成的图片序列补帧任务，载入进度？"), 3)
                 if reply == QMessageBox.No:
                     self.settings_set_start_info(0, 1, False)  # start from zero
                     logger.info("User Abort Auto Set")
                     return
-            self.settings_set_start_info(last_img + 1, 1, False)
+                self.settings_set_start_info(int(last_img), 1, False)
+            else:
+                _msg1 = _translate('', '未找到与第')
+                _msg2 = _translate('', '个任务相关的进度信息')
+                self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{widget_data['row'] + 1}{_msg2}", 3)
+                self.settings_set_start_info(-1, -1, False)
             return
 
         chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(project_dir)
         if not len(chunk_paths):
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
-            self.function_send_msg(f"Resume Workflow?", f"{_msg1}{widget_data['row']}{_msg2}", 3)
+            self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{widget_data['row'] + 1}{_msg2}", 3)
             logger.info("AutoSet find None to resume interpolation")
             self.settings_set_start_info(0, 1, False)
             return
@@ -1554,7 +1564,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if len(data.get("subprocess", "")):
             dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
                              "AppID", "SteamInternal"]
-            if any([i in data["subprocess"] for i in dup_keys_list]):
+            if 'error' not in data['subprocess'] and any([i in data["subprocess"] for i in dup_keys_list]):
                 tmp = ""
                 lines = data["subprocess"].splitlines()
                 for line in lines:
@@ -2205,14 +2215,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         expert_mode = appPref.value("expert", False, type=bool)
         self.UseFixedScdet.setVisible(expert_mode)
         self.ScdetMaxDiffSelector.setVisible(expert_mode)
-        self.QuickExtractChecker.setVisible(expert_mode)
+        # self.QuickExtractChecker.setVisible(expert_mode)
         self.HDRModeField.setVisible(expert_mode)
         self.RenderSettingsLabel.setVisible(expert_mode)
         self.RenderSettingsGroup.setVisible(expert_mode)
         self.FP16Checker.setVisible(expert_mode)
         self.ReverseChecker.setVisible(expert_mode)
         self.KeepChunksChecker.setVisible(expert_mode)
-        self.AutoInterpScaleChecker.setVisible(expert_mode)
+        # self.AutoInterpScaleChecker.setVisible(expert_mode)
         self.ScdetOutput.setVisible(expert_mode)
         self.ScdetUseMix.setVisible(expert_mode)
         self.DeinterlaceChecker.setVisible(expert_mode)
