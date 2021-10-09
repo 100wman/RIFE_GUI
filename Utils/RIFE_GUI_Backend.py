@@ -626,6 +626,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_UseMultiCardsChecker_clicked()
         self.on_InterpExpReminder_toggled()
         self.on_UseAiSR_clicked()
+        self.on_AiSrSelector_currentTextChanged()
         self.on_ResizeTemplate_currentTextChanged()
         self.on_TtaModeSelector_currentTextChanged()
         self.on_ExpertMode_changed()
@@ -1190,7 +1191,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         current_sr_algo = self.AiSrSelector.currentText()
-        if not len(current_sr_algo):
+        if not len(current_sr_algo) or self.is_free or not self.UseAiSR.isChecked():
             return
         sr_algo_ncnn_dir = self.function_get_SuperResolution_paths(path_type=1,
                                                                    key_word=current_sr_algo)
@@ -1908,6 +1909,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(str)
     def on_AiSrSelector_currentTextChanged(self):
         self.settings_update_sr_model()
+        bool_result = 'realESR' in self.AiSrSelector.currentText()
+        self.TileSizeLabel.setVisible(bool_result)
+        self.SrTileSizeSelector.setVisible(bool_result)
 
     @pyqtSlot(str)
     def on_ResizeTemplate_currentTextChanged(self):

@@ -1,13 +1,10 @@
 # coding: utf-8
 import argparse
-import os.path
 import sys
 
 import tqdm
 
 from Utils.utils import *
-# profile line
-# from line_profiler_pycharm import profile
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
 from steamworks.exceptions import *
 

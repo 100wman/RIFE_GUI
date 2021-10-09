@@ -576,21 +576,17 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.11"
+    gui_version = "3.6.12"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.11"
+    ols_version = "6.10.12"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix some false warnings: #225, #226
-    - Fix unable to process img sequence: #222
-    - Fix ffmpeg custom command only allowing single inputs(enable plural inputs)
-    - Fix Main Error Clogging the queue
-    - Fix Error msg from ols got stuck when ols encounters fatal error
-    - Fix image sequence unable to resume Workflow
-    - Add ugly strip color bar at selected task item
+    - Optimize RealESR Half-Precision mode, increase speed and lower VRAM usage #227
+    - Optimize Settings related to RealESR
+    - Add RealESR Anime 6B new model #223
     """
 
     path_len_limit = 230

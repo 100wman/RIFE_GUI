@@ -771,7 +771,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>1</number>
+                      <number>2</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -1358,7 +1358,7 @@
                            </widget>
                           </item>
                           <item row="9" column="0">
-                           <widget class="QLabel" name="label_10">
+                           <widget class="QLabel" name="TileSizeLabel">
                             <property name="toolTip">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;算法时使用，酌情使用。&lt;/p&gt;&lt;p&gt;6G显存设值100~200左右。该数过大会产生显存不足错误。合适的值将提升超分速度。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
