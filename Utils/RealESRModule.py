@@ -4,7 +4,6 @@ import os
 import cv2
 import numpy as np
 import torch
-from basicsr.archs.rrdbnet_arch import RRDBNet
 from torch.nn import functional as F
 # from line_profiler_pycharm import profile
 from Utils.utils import overtime_reminder_deco, Tools
@@ -26,31 +25,38 @@ class RealESRGANer:
 
         num_block = 23
         net_scale = scale
+        is_change_RRDB = False
         if 'RealESRGAN_x4plus_anime_6B.pth' in model_path:
             num_block = 6
         elif 'RealESRGAN_x2plus.pth' in model_path:
             """Double Check"""
             net_scale = 2
+        elif 'RealESRGAN_x2plus_anime110k_6B.pth' in model_path:
+            is_change_RRDB = True
+            num_block = 6
+            net_scale = 2
         # debug
         # num_block = 23
+        if is_change_RRDB:
+            from basicsr.archs.svfi_rrdbnet_arch import MyRRDBNet as RRDBNet
+        else:
+            from basicsr.archs.rrdbnet_arch import RRDBNet as RRDBNet
 
         model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=num_block, num_grow_ch=32, scale=net_scale)
-        loadnet = torch.load(model_path)
+        loadnet = torch.load(model_path, map_location='cpu')
         if 'params_ema' in loadnet:
             keyname = 'params_ema'
         else:
             keyname = 'params'
         model.load_state_dict(loadnet[keyname], strict=True)
         model.eval()
-        self.model = model.to(self.device)
-        if self.half:
-            self.model = self.model.half()
+        self.model = model.half().to(self.device)  # compulsory switch to half mode
 
     def pre_process(self, img):
         img = torch.from_numpy(np.transpose(img, (2, 0, 1))).float()
         self.img = img.unsqueeze(0).to(self.device)
-        if self.half:
-            self.img = self.img.half()
+        # if self.half:
+        self.img = self.img.half()
 
         # pre_pad
         if self.pre_pad != 0:
