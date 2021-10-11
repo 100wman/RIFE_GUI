@@ -881,9 +881,9 @@ class InterpWorkFlow:
             sp.wait()
             if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
                 if self.input_ext in SupportFormat.vid_outputs:
-                    self.output_ext = self.input_ext
                     logger.warning(f"Concat Test found unavailable output extension {self.output_ext}, "
                                    f"changed to {self.input_ext}")
+                    self.output_ext = self.input_ext
                 else:
                     logger.error(f"Concat Test Error, {output_ext}, empty output")
                     self.main_error = FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
