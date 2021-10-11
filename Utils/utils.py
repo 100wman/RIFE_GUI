@@ -576,17 +576,15 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.12"
+    gui_version = "3.6.12.beta.1"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.12"
+    ols_version = "6.10.13"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Optimize RealESR Half-Precision mode, increase speed and lower VRAM usage #227
-    - Optimize Settings related to RealESR
-    - Add RealESR Anime 6B new model #223
+    - Fallback from 3.6.13 to 3.6.12 to remove SR Pipe
     """
 
     path_len_limit = 230

@@ -133,7 +133,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         self.ForceCpuChecker.setChecked(appPref.value("rife_use_cpu", False, type=bool))
         self.ExpertModeChecker.setChecked(appPref.value("expert", False, type=bool))
         self.PreviewArgsModeChecker.setChecked(appPref.value("is_preview_args", False, type=bool))
-        self.RudeExitModeChecker.setChecked(appPref.value("is_rude_exit", False, type=bool))
+        self.RudeExitModeChecker.setChecked(appPref.value("is_rude_exit", True, type=bool))
         self.QuietModeChecker.setChecked(appPref.value("is_gui_quiet", False, type=bool))
         self.WinOnTopChecker.setChecked(appPref.value("is_windows_ontop", False, type=bool))
         self.OneWayModeChecker.setChecked(appPref.value("use_clear_inputs", False, type=bool))
@@ -540,6 +540,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.LockWHChecker.setVisible(False)
         self.AutoInterpScaleReminder.setVisible(False)
         self.AutoInterpScalePredictSizeSelector.setVisible(False)
+        self.AiSrMode.setVisible(False)
+        self.SrModeLabel.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -1604,6 +1606,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if data["finished"]:
             """Error Handle"""
+
+            if self.chores_thread is not None and len(self.chores_thread.get_main_error()):
+                main_error = self.chores_thread.get_main_error()
+                self.OptionCheck.append(f"LAST ERROR MSG in OLS:\n{main_error}")
+
             returncode = data["returncode"]
             complete_msg = f"For {data['cnt']} Tasks:\n"
             if returncode == 0 or "Program Finished" in self.OptionCheck.toPlainText() or (
@@ -1627,7 +1634,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.AllInOne.setEnabled(True)
             self.InputFileName.setEnabled(True)
             self.current_failed = False
-            # self.on_InputFileName_currentItemChanged()
 
             if appPref.value("use_clear_inputs", False, type=bool):
                 self.InputFileName.clear()
@@ -2095,7 +2101,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
         _msg1 = _translate('', '仅合并操作启动')
-        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]\n\n\n")
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
 
     @pyqtSlot(bool)
     def on_StartExtractButton_clicked(self):
@@ -2113,7 +2119,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
         _msg1 = _translate('', '仅拆帧操作启动')
-        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]\n\n\n")
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
 
     @pyqtSlot(bool)
     def on_StartRenderButton_clicked(self):
@@ -2131,7 +2137,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         RIFE_thread.start()
         self.rife_thread = RIFE_thread
         _msg1 = _translate('', '仅渲染操作启动')
-        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]\n\n\n")
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
 
     @pyqtSlot(bool)
     def on_KillProcButton_clicked(self):

@@ -5,11 +5,13 @@ import cv2
 import numpy as np
 import torch
 from torch.nn import functional as F
+
 # from line_profiler_pycharm import profile
 from Utils.utils import overtime_reminder_deco, Tools
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 logger = Tools.get_logger("RealESR", '')
+
 
 class RealESRGANer:
     def __init__(self, scale, model_path, tile=0, tile_pad=10, pre_pad=10, half=False):
@@ -26,6 +28,7 @@ class RealESRGANer:
         num_block = 23
         net_scale = scale
         is_change_RRDB = False
+        is_RFDN = False
         if 'RealESRGAN_x4plus_anime_6B.pth' in model_path:
             num_block = 6
         elif 'RealESRGAN_x2plus.pth' in model_path:
@@ -35,14 +38,21 @@ class RealESRGANer:
             is_change_RRDB = True
             num_block = 6
             net_scale = 2
+        elif 'RFDN' in model_path:
+            is_RFDN = True
         # debug
         # num_block = 23
-        if is_change_RRDB:
-            from basicsr.archs.svfi_rrdbnet_arch import MyRRDBNet as RRDBNet
+        if is_RFDN:
+            from basicsr.archs.rfdn_arch import RFDN
+            model = RFDN()
         else:
-            from basicsr.archs.rrdbnet_arch import RRDBNet as RRDBNet
+            if is_change_RRDB:
+                from basicsr.archs.svfi_rrdbnet_arch import MyRRDBNet as RRDBNet
+            else:
+                from basicsr.archs.rrdbnet_arch import RRDBNet as RRDBNet
+            model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_grow_ch=32,
+                            num_block=num_block, scale=net_scale)
 
-        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=num_block, num_grow_ch=32, scale=net_scale)
         loadnet = torch.load(model_path, map_location='cpu')
         if 'params_ema' in loadnet:
             keyname = 'params_ema'
@@ -267,7 +277,8 @@ class SvfiRealESR:
         return img
 
     # @profile
-    @overtime_reminder_deco(300, logger, "RealESR", "Low Super-Resolution speed detected, Please Consider tweak tilesize to enhance speed")
+    @overtime_reminder_deco(300, logger, "RealESR",
+                            "Low Super-Resolution speed detected, Please Consider tweak tilesize to enhance speed")
     def svfi_process(self, img):
         if all(self.resize_param):
             img = self.resize_esr_img(img)
