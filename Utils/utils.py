@@ -576,8 +576,8 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.12.beta.1"
-    version_tag = f"{gui_version} " \
+    gui_version = "3.6.12"
+    version_tag = f"{gui_version}.beta.1 " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
     ols_version = "6.10.13"
     """ 发布前改动以上参数即可 """
