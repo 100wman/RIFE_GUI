@@ -33,273 +33,190 @@ basic_parser.add_argument('--extract-only', dest='extract_only', action='store_t
 basic_parser.add_argument('--render-only', dest='render_only', action='store_true', help='只执行渲染操作')
 
 args_read = parser.parse_args()
-cp = DefaultConfigParser(allow_no_value=True)  # 把SVFI GUI传来的参数格式化
-cp.read(args_read.config, encoding='utf-8')
-cp_items = dict(cp.items("General"))
-args = Tools.clean_parsed_config(cp_items)
-args.update(vars(args_read))  # update -i -o -c，将命令行参数更新到config生成的字典
-ARGS = ArgumentManager(args)
-
-"""设置可见的gpu"""
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-if int(ARGS.rife_cuda_cnt) != 0 and ARGS.use_rife_multi_cards:
-    cuda_devices = [str(i) for i in range(ARGS.rife_cuda_cnt)]
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(cuda_devices)}"
-else:
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{ARGS.use_specific_gpu}"
-
-"""强制使用CPU"""
-if ARGS.force_cpu:
-    os.environ["CUDA_VISIBLE_DEVICES"] = f""
+global_config_parser = DefaultConfigParser(allow_no_value=True)  # 把SVFI GUI传来的参数格式化
+global_config_parser.read(args_read.config, encoding='utf-8')
+global_config_parser_items = dict(global_config_parser.items("General"))
+global_args = Tools.clean_parsed_config(global_config_parser_items)
+global_args.update(vars(args_read))  # update -i -o -c，将命令行参数更新到config生成的字典
 
 """Set Global Logger"""
 logger = Tools.get_logger('TMP', '')
 
 
-class InterpWorkFlow:
-    # @profile
-    def __init__(self, __args: ArgumentManager, **kwargs):
-        global logger
-        self.ARGS = __args
-
-        """EULA"""
-        self.eula = EULAWriter()
-        self.eula.boom()
-
+class TaskArgumentManager(ArgumentManager):
+    """
+        For OLS's current input's arguments validation
+    """
+    def __init__(self, _args: dict):
+        super().__init__(_args)
         """获得补帧输出路径"""
-        if not len(self.ARGS.output_dir):
-            """未填写输出文件夹"""
-            self.ARGS.output_dir = os.path.dirname(self.ARGS.input)
-        if os.path.isfile(self.ARGS.output_dir):
-            self.ARGS.output_dir = os.path.dirname(self.ARGS.output_dir)
-        self.project_name = f"{Tools.get_filename(self.ARGS.input)}_{self.ARGS.task_id}"
-        self.project_dir = os.path.join(self.ARGS.output_dir, self.project_name)
-        os.makedirs(self.project_dir, exist_ok=True)
-        sys.path.append(self.project_dir)
-
-        """Set Logger"""
-        logger = Tools.get_logger("CLI", self.project_dir, debug=self.ARGS.debug)
-        logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
-                    self.ARGS.input)
-
-        """Steam Validation"""
-        self.STEAM = SteamUtils(self.ARGS.is_steam, logger=logger)
-
-        """Set FFmpeg"""
-        self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffmpeg.exe"))
-        self.ffplay = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffplay.exe"))
-        if not os.path.exists(os.path.join(self.ARGS.app_dir, "ffmpeg.exe")):
-            self.ffmpeg = "ffmpeg"
-            logger.warning("Not find selected ffmpeg, use default")
-
-        """Set input output and initiate environment"""
-        self.input = self.ARGS.input
-        self.output = self.ARGS.output_dir
-        if self.ARGS.is_img_output:
-            self.output = os.path.join(self.output, self.project_name)
-            os.makedirs(self.output, exist_ok=True)
-        if not os.path.isfile(self.input):
-            self.ARGS.is_img_input = True
-
-        """Get input's info"""
-        self.video_info_instance = VideoInfo(file_input=self.input, logger=logger, project_dir=self.project_dir,
-                                             app_dir=self.ARGS.app_dir, img_input=self.ARGS.is_img_input,
-                                             hdr_mode=self.ARGS.hdr_mode, exp=self.ARGS.rife_exp)
-        self.video_info = self.video_info_instance.get_info()
-        if self.ARGS.hdr_mode == 0:  # Auto
-            logger.info(f"Auto HDR Mode, Set HDR mode to {self.video_info['hdr_mode']}")
-            self.hdr_check_status = self.video_info['hdr_mode']
-            # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
-            # hdr_check_status indicates the final process mode for (hdr) input
-        else:
-            self.hdr_check_status = self.ARGS.hdr_mode
-
-        """Set input and target(output) fps"""
-        if not self.ARGS.is_img_input:  # 输入不是文件夹，使用检测到的帧率
-            self.input_fps = self.video_info["fps"]
-        elif self.ARGS.input_fps:
-            self.input_fps = self.ARGS.input_fps
-        else:  # 用户有毒，未发现有效的输入帧率，用检测到的帧率
-            if self.video_info["fps"] is None or not self.video_info["fps"]:
-                raise OSError("Not Find FPS, Input File is not valid")
-            self.input_fps = self.video_info["fps"]
-
-        if self.ARGS.is_img_input:
-            self.target_fps = self.ARGS.target_fps
-            self.ARGS.is_save_audio = False
-            # but assigned output fps will be not altered
-        else:
-            if self.ARGS.target_fps:
-                self.target_fps = self.ARGS.target_fps
-            else:
-                self.target_fps = (2 ** self.ARGS.rife_exp) * self.input_fps  # default
-
-        """Set interpolation exp related to hdr mode"""
-        self.interp_exp = self.target_fps / self.input_fps
-        if self.hdr_check_status == 3 or (self.hdr_check_status == 2 and len(self.video_info['hdr10plus_metadata'])):
-            """DoVi or Valid HDR10 Metadata Dected"""
-            self.interp_exp = int(math.ceil(self.target_fps / self.input_fps))
-            self.target_fps = self.interp_exp * self.input_fps
-        self.hdr10_metadata_processer = Hdr10PlusProcesser(logger, self.project_dir, self.ARGS,
-                                                           self.interp_exp, self.video_info)
-
-        """Update All Frames Count"""
+        global logger
+        self.hdr_mode = 0
+        self.interp_times = 0
         self.max_frame_cnt = 10 ** 10
-        self.all_frames_cnt = abs(int(self.video_info["duration"] * self.target_fps))
-        if self.all_frames_cnt > self.max_frame_cnt:
-            raise OSError(f"SVFI can't afford input exceeding {self.max_frame_cnt} frames")
+        self.all_frames_cnt = 0
+        self.frames_queue_len = 0
+        self.dup_skip_limit = 0
+        self.input_ext = ".mp4"
+        self.output_ext = ".mp4"
+        self.task_info = {"chunk_cnt": 0, "render": 0, "now_frame": 0}  # 有关任务的实时信息
 
-        """Set Cropping Parameters"""
-        self.crop_param = [0, 0]  # crop parameter, 裁切参数
-        crop_param = self.ARGS.crop.replace("：", ":")
-        if crop_param not in ["", "0", None]:
-            width_black, height_black = crop_param.split(":")
-            width_black = int(width_black)
-            height_black = int(height_black)
-            self.crop_param = [width_black, height_black]
-            logger.info(f"Update Crop Parameters to {self.crop_param}")
+        self._io_path_validation()
+        self._initiate_logger()
+        self._set_ffmpeg_path()
+        self.video_info_instance = VideoInfo(input_file=self.input, logger=logger, project_dir=self.project_dir,
+                                             interp_exp=self.rife_exp)
+        self._update_hdr_mode()
+        self._update_io_fps()
+        self._update_frames_cnt()
+        self._update_frame_size()
+        self._update_task_queue_size_by_memory()
+        self._update_io_ext()
 
         """Check Initiation Info"""
         logger.info(
-            f"Check Interpolation Source, FPS: {self.input_fps}, TARGET FPS: {self.target_fps}, "
-            f"FRAMES_CNT: {self.all_frames_cnt}, EXP: {self.ARGS.rife_exp}")
+            f"Check Interpolation Source: "
+            f"FPS: {self.input_fps} -> {self.target_fps}, FRAMES_CNT: {self.all_frames_cnt}, EXP: {self.rife_exp}, "
+            f"HDR: {self.hdr_mode}, FRAME_SIZE: {self.frame_size}, QUEUE_LEN: {self.frames_queue_len}, "
+            f"INPUT_EXT: {self.input_ext}, OUTPUT_EXT: {self.output_ext}")
 
-        """Set RIFE Core"""
-        self.vfi_core = VideoFrameInterpolation(self.ARGS)  # 用于补帧的模块
+    def _update_io_ext(self):
+        """update extension"""
+        self.input_ext = os.path.splitext(self.input)[1] if os.path.isfile(self.input) else ""
+        self.input_ext = self.input_ext.lower()
+        self.output_ext = "." + self.output_ext
+        if "ProRes" in self.render_encoder and not self.is_img_output:
+            self.output_ext = ".mov"
 
+    def _update_task_queue_size_by_memory(self):
         """Guess Memory and Fix Resolution"""
-        if self.ARGS.use_manual_buffer:
+        if self.use_manual_buffer:
             # 手动指定内存占用量
-            free_mem = self.ARGS.manual_buffer_size * 1024
+            free_mem = self.manual_buffer_size * 1024
         else:
             mem = psutil.virtual_memory()
             free_mem = round(mem.free / 1024 / 1024)
-        if self.ARGS.resize_width != 0 and self.ARGS.resize_height != 0:
-            """规整化输出输入分辨率"""
-            if self.ARGS.resize_width % 2 != 0:
-                self.ARGS.resize_width += 1
-            if self.ARGS.resize_height % 2 != 0:
-                self.ARGS.resize_height += 1
-            self.frames_queue_len = round(free_mem / (sys.getsizeof(
-                np.random.rand(3, round(self.ARGS.resize_width),
-                               round(self.ARGS.resize_height))) / 1024 / 1024))
-        else:
-            self.frames_queue_len = round(free_mem / (sys.getsizeof(
-                np.random.rand(3, round(self.video_info["size"][0]),
-                               round(self.video_info["size"][1]))) / 1024 / 1024))
-        if not self.ARGS.use_manual_buffer:
+        self.frames_queue_len = round(free_mem / (sys.getsizeof(
+            np.random.rand(3, self.frame_size[0], self.frame_size[1])) / 1024 / 1024))
+        if not self.use_manual_buffer:
             self.frames_queue_len = int(max(10.0, self.frames_queue_len))
-        logger.info(f"Buffer Size to {self.frames_queue_len}")
+        self.dup_skip_limit = int(0.5 * self.input_fps) + 1  # 当前跳过的帧计数超过这个值，将结束当前判断循环
 
-        """Set Queues"""
-        self.frames_output = Queue(maxsize=self.frames_queue_len)  # 补出来的帧序列队列（消费者）
-        self.rife_task_queue = Queue(maxsize=self.frames_queue_len)  # 补帧任务队列（生产者）
-        self.rife_thread = None  # 帧插值预处理线程（生产者）
-        self.rife_work_event = threading.Event()
-        self.rife_work_event.clear()
+    def _update_frame_size(self):
+        """规整化输出输入分辨率"""
+        if self.resize_width != 0 and self.resize_height != 0:
+            self.frame_size = (round(self.resize_width),
+                               round(self.resize_height))
+        else:
+            self.frame_size = (round(self.video_info_instance.frames_size[0]),
+                               round(self.video_info_instance.frames_size[1]))
+        if not all(self.resize_param):
+            self.resize_param = self.resize_exp * self.resize_param
+        elif all(self.frame_size):
+            self.resize_exp = int(math.ceil(self.resize_param[0] * self.resize_param[1] /
+                                            self.frame_size[0] * self.frame_size[1]))
+            # TODO check logic here
+            pass
 
-        """Set Render Parameters"""
-        self.frame_reader = None  # 读帧的迭代器／帧生成器
-        self.render_gap = self.ARGS.render_gap  # 每个chunk的帧数
-        self.render_thread = None  # 帧渲染器
-        self.task_info = {"chunk_cnt": 0, "render": 0, "now_frame": 0}  # 有关渲染的实时信息
+    def _update_frames_cnt(self):
+        """Update All Frames Count"""
+        self.all_frames_cnt = abs(int(self.video_info_instance.duration * self.target_fps))
+        if self.all_frames_cnt > self.max_frame_cnt:
+            raise OSError(f"SVFI can't afford input exceeding {self.max_frame_cnt} frames")
 
-        """Set Super Resolution"""
-        self.sr_module = SuperResolution()  # 超分类
-        if self.ARGS.use_sr:
-            try:
-                input_resolution = self.video_info["size"][0] * self.video_info["size"][1]
-                # for img input, video info is updated to first img input
-                output_resolution = self.ARGS.resize_width * self.ARGS.resize_height
-                # for img output, if output_resolution not assigned(0,0), resolution_rate should be 0
-                resolution_rate = output_resolution / input_resolution
-                sr_scale = 0
-                if input_resolution and resolution_rate > 1:
-                    sr_scale = int(math.ceil(resolution_rate))
-                if self.ARGS.resize_exp > 1:
-                    """Compulsorily assign scale = resize_exp, could be img input"""
-                    sr_scale = self.ARGS.resize_exp
-                    # eventual output resolution will still be affected by assigned output resolution (if not 0,0)
-                if sr_scale > 1:
-                    resize_param = (self.ARGS.resize_width, self.ARGS.resize_height)
-                    if self.ARGS.use_sr_algo == "waifu2x":
-                        import Utils.SuperResolutionModule
-                        self.sr_module = Utils.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
-                                                                               scale=sr_scale,
-                                                                               num_threads=self.ARGS.ncnn_thread,
-                                                                               resize=resize_param)
-                    elif self.ARGS.use_sr_algo == "realSR":
-                        import Utils.SuperResolutionModule
-                        self.sr_module = Utils.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
-                                                                                scale=sr_scale,
-                                                                                resize=resize_param)
-                    elif self.ARGS.use_sr_algo == "realESR":
-                        import Utils.RealESRModule
-                        self.sr_module = Utils.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
-                                                                         gpu_id=self.ARGS.use_specific_gpu,
-                                                                         scale=sr_scale, tile=self.ARGS.sr_tilesize,
-                                                                         half=self.ARGS.use_rife_fp16,
-                                                                         resize=resize_param)
-                    logger.info(
-                        f"Load AI SR at {self.ARGS.use_sr_algo}, {self.ARGS.use_sr_model}, "
-                        f"scale = {sr_scale}, resize = {resize_param}")
-                else:
-                    self.ARGS.use_sr = False
-                    logger.warning("Abort to load AI SR since Resolution Rate <= 1")
-            except ImportError:
-                logger.error(
-                    f"Import SR Module failed\n{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
+    def _update_io_fps(self):
+        """Set input and target(output) fps"""
+        if not self.is_img_input:  # 输入不是文件夹，使用检测到的帧率
+            self.input_fps = self.video_info_instance.fps
+        elif not self.input_fps:  # 输入是文件夹，使用用户的输入帧率; 用户有毒，未发现有效的输入帧率
+            raise OSError("Not Find FPS, Input File is not valid")
+        if not self.target_fps:  # 未找到用户的输出帧率
+            self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
+        if self.is_img_input:  # 图片序列输入，不保留音频（也无音频可保留
+            self.is_save_audio = False
+        """Set interpolation exp related to hdr mode"""
+        self.interp_times = int(math.ceil(self.target_fps / self.input_fps))
+        if self.hdr_mode == 3 or (
+                self.hdr_mode == 2 and self.video_info_instance.getInputHdr10PlusMetadata() is not None):
+            """DoVi or Valid HDR10 Metadata Detected, change target fps"""
+            self.target_fps = self.interp_times * self.input_fps
 
-        """Scene Detection"""
-        if self.ARGS.scdet_mode == 0:
-            """Old Mode"""
-        self.scene_detection = TransitionDetection_ST(self.project_dir, int(0.5 * self.input_fps),
+    def _update_hdr_mode(self):
+        if self.hdr_mode == 0:  # Auto
+            logger.info(f"Auto HDR Mode, Set HDR mode to {self.video_info_instance.hdr_mode}")
+            self.hdr_mode = self.video_info_instance.hdr_mode
+            # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
+            # hdr_check_status indicates the final process mode for (hdr) input
+
+    def _set_ffmpeg_path(self):
+        """Set FFmpeg"""
+        self.ffmpeg = "ffmpeg"
+
+    def _io_path_validation(self):
+        if not len(self.input):
+            raise OSError("Input Path is empty")
+        if not len(self.output_dir):
+            """未填写输出文件夹"""
+            self.output_dir = os.path.dirname(self.input)
+        if os.path.isfile(self.output_dir):
+            self.output_dir = os.path.dirname(self.output_dir)
+
+        self.project_name = f"{Tools.get_filename(self.input)}_{self.task_id}"
+        self.project_dir = os.path.join(self.output_dir, self.project_name)
+        os.makedirs(self.project_dir, exist_ok=True)
+        sys.path.append(self.project_dir)
+
+        """Check Img IO status"""
+        if self.is_img_output:
+            self.output = os.path.join(self.output, self.project_name)
+            os.makedirs(self.output, exist_ok=True)
+        if not os.path.isfile(self.input):
+            self.is_img_input = True
+
+    def _initiate_logger(self):
+        """Set Global Logger"""
+        global logger
+        logger = Tools.get_logger("CLI", self.project_dir, debug=self.debug)
+        logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
+                    self.input)
+
+
+class ReadFlow(threading.Thread):
+
+    def __init__(self, _args: TaskArgumentManager, _output_queue: Queue):
+        super().__init__()
+        # TODO OLS generate_frame_reader
+        # TODO OLS Check Chunk
+        # TODO reader lock
+        # TODO Queue Status Broker
+        # TODO Crop
+        self.ARGS = _args
+        self._output_queue = _output_queue
+
+        self.scene_detection = TransitionDetection_ST(self.ARGS.project_dir, int(0.5 * self.ARGS.input_fps),
                                                       scdet_threshold=self.ARGS.scdet_threshold,
                                                       no_scdet=self.ARGS.is_no_scdet,
                                                       use_fixed_scdet=self.ARGS.use_scdet_fixed,
                                                       fixed_max_scdet=self.ARGS.scdet_fixed_max,
                                                       scdet_output=self.ARGS.is_scdet_output)
-        """Duplicate Frames Removal"""
-        self.dup_skip_limit = int(0.5 * self.input_fps) + 1  # 当前跳过的帧计数超过这个值，将结束当前判断循环
-
-        """Main Thread Lock"""
-        self.main_event = threading.Event()
-        self.render_lock = threading.Event()  # 渲染锁，没有用
-        self.main_event.set()
-
-        """Set output's color info"""
-        self.color_info = {}
-        for k in self.video_info:
-            if k.startswith("-"):
-                self.color_info[k] = self.video_info[k]
-
-        """fix extension"""
-        self.input_ext = os.path.splitext(self.input)[1] if os.path.isfile(self.input) else ""
-        self.input_ext = self.input_ext.lower()
-        self.output_ext = "." + self.ARGS.output_ext
-        if "ProRes" in self.ARGS.render_encoder and not self.ARGS.is_img_output:
-            self.output_ext = ".mov"
-
         self.reminder_bearer = OverTimeReminderBearer()
-        self.main_error = None
+        self.kill = False
+        self.initiation_lock = threading.Lock()
+        self.initiation_lock.locked()
+        pass
 
-    def generate_frame_reader(self, start_frame=-1, frame_check=False):
+    def _generate_frame_reader(self, start_frame=0, frame_check=False):
         """
         输入帧迭代器
-        :param frame_check:
-        :param start_frame:
         :return:
         """
         """If input is sequence of frames"""
         if self.ARGS.is_img_input:
-            img_io = ImgSeqIO(folder=self.input, is_read=True,
-                              start_frame=self.ARGS.interp_start, logger=logger,
-                              output_ext=self.ARGS.output_ext, exp=self.ARGS.rife_exp,
-                              resize=(self.ARGS.resize_width, self.ARGS.resize_height),
-                              is_esr=self.ARGS.use_sr_algo == "realESR")
-            self.all_frames_cnt = img_io.get_frames_cnt()
-            logger.info(f"Img Input, update frames count to {self.all_frames_cnt}")
-            return img_io
+            img_reader = ImageRead(logger, folder=self.ARGS.input, start_frame=self.ARGS.interp_start,
+                               exp=self.ARGS.rife_exp, resize=self.ARGS.resize_param,)
+            self.ARGS.all_frames_cnt = img_reader.get_frames_cnt()
+            logger.info(f"Img Input, update frames count to {self.ARGS.all_frames_cnt}")
+            return img_reader
 
         """If input is a video"""
         input_dict = {"-vsync": "0", }
@@ -319,20 +236,21 @@ class InterpWorkFlow:
             if self.ARGS.input_end_point is not None:
                 end_point = datetime.datetime.strptime(self.ARGS.input_end_point, time_fmt) - end_point
                 input_dict.update({"-to": self.ARGS.input_end_point})
-            elif self.video_info['duration']:
+            elif self.ARGS.video_info_instance.duration:
                 # no need to care about img input
                 end_point = datetime.datetime.fromtimestamp(
-                    self.video_info['duration']) - datetime.datetime.fromtimestamp(0.0)
+                    self.ARGS.video_info_instance.duration) - datetime.datetime.fromtimestamp(0.0)
             else:
                 end_point = end_point - end_point
 
             if end_point > start_point:
                 start_frame = -1
                 clip_duration = end_point - start_point
-                clip_fps = self.target_fps
-                self.all_frames_cnt = round(clip_duration.total_seconds() * clip_fps)
+                clip_fps = self.ARGS.target_fps
+                self.ARGS.all_frames_cnt = round(clip_duration.total_seconds() * clip_fps)
                 logger.info(
-                    f"Update Input Range: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, all_frames_cnt -> {self.all_frames_cnt}")
+                    f"Update Input Range: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, "
+                    f"all_frames_cnt -> {self.ARGS.all_frames_cnt}")
             else:
                 if '-ss' in input_dict:
                     input_dict.pop('-ss')
@@ -345,16 +263,23 @@ class InterpWorkFlow:
 
         output_dict = {
             "-vframes": str(10 ** 10), }  # use read frames cnt to avoid ffprobe, fuck
-        # debug
-        # output_dict = {}
-        output_dict.update(self.color_info)
+
+        self.color_data_tag = [('color_range', 'tv'),
+                               ('color_space', 'bt709'),
+                               ('color_transfer', 'bt709'),
+                               ('color_primaries', 'bt709')]
+        color_tag_map = {'-color_range':'color_range',
+                         '-color_primaries': 'color_primaries',
+                         '-colorspace':'color_space', '-color_trc': 'color_transfer'}
+        for ct in color_tag_map:
+            output_dict.update({ct: self.ARGS.video_info_instance.video_info[color_tag_map[ct]]})
 
         if frame_check:
             """用以一拍二一拍N除重模式的预处理"""
             output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
                                 "-s": "300x300"})
         elif self.ARGS.resize_height and self.ARGS.resize_width and not self.ARGS.use_sr:
-            h, w = self.video_info["size"][1], self.video_info["size"][0]
+            w,h = self.ARGS.frame_size
             if h != self.ARGS.resize_height or w != self.ARGS.resize_width:
                 output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
                                     "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
@@ -365,700 +290,109 @@ class InterpWorkFlow:
             # not start from the beginning
             if self.ARGS.risk_resume_mode:
                 """Quick Locate"""
-                input_dict.update({"-ss": f"{start_frame / self.target_fps:.3f}"})
+                input_dict.update({"-ss": f"{start_frame / self.ARGS.target_fps:.3f}"})
             else:
-                output_dict.update({"-ss": f"{start_frame / self.target_fps:.3f}"})
+                output_dict.update({"-ss": f"{start_frame / self.ARGS.target_fps:.3f}"})
 
         """Quick Extraction"""
         if not self.ARGS.is_quick_extract:
             vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
 
-        vf_args += f",minterpolate=fps={self.target_fps}:mi_mode=dup"
+        vf_args += f",minterpolate=fps={self.ARGS.target_fps}:mi_mode=dup"
 
         """Update video filters"""
         output_dict["-vf"] = vf_args
         logger.debug(f"reader: {input_dict} {output_dict}")
-        return FFmpegReader(filename=self.input, inputdict=input_dict, outputdict=output_dict)
+        return FFmpegReader(filename=self.ARGS.input, inputdict=input_dict, outputdict=output_dict)
 
-    def generate_frame_renderer(self, output_path, start_frame=0):
+    def _crop(self, img):
         """
-        渲染帧
-        :param start_frame: for IMG IO, select start_frame to generate IO instance
-        :param output_path:
-        :return:
+                Crop using self.crop parameters
+                :param img:
+                :return:
+                """
+        if img is None or not all(self.ARGS.crop_param):
+            return img
+
+        h, w, _ = img.shape
+        cw, ch = self.ARGS.crop_param
+        if cw > w or ch > h:
+            """奇怪的黑边参数，不予以处理"""
+            return img
+        return img[ch:h - ch, cw:w - cw]
+
+    def delExistedChunks(self):
+        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(self.ARGS.project_dir)
+        for f in chunk_paths:
+            os.remove(os.path.join(self.ARGS.project_dir, f))
+
+    def check_chunk(self):
         """
-        hdr10plus_metadata = self.hdr10_metadata_processer.get_hdr10plus_metadata_at_point(start_frame)
-        params_libx265s = {
-            "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
-                    "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
-                    "min-keyint=1:rc-lookahead=25:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
-                    "crqpoffs=-2:qcomp=0.65:sao=0:repeat-headers=1",
-            "8bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
-                    "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
-                    "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
-                    "qcomp=0.65:sao=0",
-            "10bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
-                     "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
-                     "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
-                     "sao=0",
-            "hdr10": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
-                     'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
-                     'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                     'sao=0:'
-                     'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                     'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                     'max-cll="1000,100":hdr10-opt=1:repeat-headers=1',
-            "hdr10+": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
-                      'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
-                      'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                      'sao=0:'
-                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                      'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                      f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata}"'
-        }
-
-        params_libx264s = {
-            "fast": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=4:"
-                    "rc-lookahead=30:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:me=hex:merange=16:"
-                    "subme=7:psy-rd='1:0.1':mixed-refs=1:trellis=1",
-            "8bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:"
-                    "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                    "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "10bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:"
-                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "hdr10": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:"
-                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
-                     "range=tv:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:"
-                     "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
-                     "cll='1000,100'"
-        }
-
-        def HDR_auto_modify_params():
-            if self.ARGS.is_img_input or self.hdr_check_status == 1:  # img input or ordinary hdr
-                return
-
-            if self.hdr_check_status == 2:
-                """HDR10"""
-                self.ARGS.render_hwaccel_mode = "CPU"
-                if "H265" in self.ARGS.render_encoder:
-                    self.ARGS.render_encoder = "H265, 10bit"
-                elif "H264" in self.ARGS.render_encoder:
-                    self.ARGS.render_encoder = "H264, 10bit"
-                self.ARGS.render_encoder_preset = "medium"
-            elif self.hdr_check_status == 4:
-                """HLG"""
-                self.ARGS.render_encoder = "H265, 10bit"
-                self.ARGS.render_hwaccel_mode = "CPU"
-                self.ARGS.render_encoder_preset = "medium"
-
-        """If output is sequence of frames"""
-        if self.ARGS.is_img_output:
-            img_io = ImgSeqIO(folder=self.project_dir, is_read=False,
-                              start_frame=-1, logger=logger,
-                              output_ext=self.ARGS.output_ext, )
-            return img_io
-
-        """HDR Check"""
-        if self.ARGS.hdr_mode == 0:  # Auto
-            HDR_auto_modify_params()
-
-        """Output Video"""
-        input_dict = {"-vsync": "cfr"}
-
-        output_dict = {"-r": f"{self.target_fps}", "-preset": self.ARGS.render_encoder_preset,
-                       "-metadata": f'title="Powered By SVFI {self.ARGS.version}"'}
-
-        output_dict.update(self.color_info)
-
-        if not self.ARGS.is_img_input:
-            input_dict.update({"-r": f"{self.target_fps}"})
-        else:
-            """Img Input"""
-            input_dict.update({"-r": f"{self.input_fps * 2 ** self.ARGS.rife_exp}"})
-
-        """Slow motion design"""
-        if self.ARGS.is_render_slow_motion:
-            if self.ARGS.render_slow_motion_fps:
-                input_dict.update({"-r": f"{self.ARGS.render_slow_motion_fps}"})
-            else:
-                input_dict.update({"-r": f"{self.target_fps}"})
-            output_dict.pop("-r")
-
-        vf_args = "copy"  # debug
-        output_dict.update({"-vf": vf_args})
-
-        if self.ARGS.use_sr and self.ARGS.resize_height and self.ARGS.resize_width:
-            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
-
-        """Assign Render Codec"""
-        """CRF / Bitrate Control"""
-        if self.ARGS.render_hwaccel_mode == "CPU":
-            if "H264" in self.ARGS.render_encoder:
-                output_dict.update({"-c:v": "libx264", "-preset:v": self.ARGS.render_encoder_preset})
-                if "8bit" in self.ARGS.render_encoder:
-                    output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "high",
-                                        "-x264-params": params_libx264s["8bit"]})
-                else:
-                    """10bit"""
-                    output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "high10",
-                                        "-x264-params": params_libx264s["10bit"]})
-                if 'fast' in self.ARGS.render_encoder_preset:
-                    output_dict.update({"-x264-params": params_libx264s["fast"]})
-                if self.hdr_check_status == 2:
-                    """HDR10"""
-                    output_dict.update({"-x264-params": params_libx264s["hdr10"]})
-            elif "H265" in self.ARGS.render_encoder:
-                output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
-                if "8bit" in self.ARGS.render_encoder:
-                    output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main",
-                                        "-x265-params": params_libx265s["8bit"]})
-                else:
-                    """10bit"""
-                    output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "main10",
-                                        "-x265-params": params_libx265s["10bit"]})
-                if 'fast' in self.ARGS.render_encoder_preset:
-                    output_dict.update({"-x265-params": params_libx265s["fast"]})
-                if self.hdr_check_status == 2:
-                    """HDR10"""
-                    output_dict.update({"-x265-params": params_libx265s["hdr10"]})
-                    if os.path.exists(hdr10plus_metadata):
-                        output_dict.update({"-x265-params": params_libx265s["hdr10+"]})
-            else:
-                """ProRes"""
-                if "-preset" in output_dict:
-                    output_dict.pop("-preset")
-                output_dict.update({"-c:v": "prores_ks", "-profile:v": self.ARGS.render_encoder_preset, })
-                if "422" in self.ARGS.render_encoder:
-                    output_dict.update({"-pix_fmt": "yuv422p10le"})
-                else:
-                    output_dict.update({"-pix_fmt": "yuv444p10le"})
-
-        elif self.ARGS.render_hwaccel_mode == "NVENC":
-            output_dict.update({"-pix_fmt": "yuv420p"})
-            if "10bit" in self.ARGS.render_encoder:
-                output_dict.update({"-pix_fmt": "yuv420p10le"})
-                pass
-            if "H264" in self.ARGS.render_encoder:
-                output_dict.update({f"-g": f"{int(self.target_fps * 3)}", "-c:v": "h264_nvenc", "-rc:v": "vbr_hq", })
-            elif "H265" in self.ARGS.render_encoder:
-                output_dict.update({"-c:v": "hevc_nvenc", "-rc:v": "vbr_hq",
-                                    f"-g": f"{int(self.target_fps * 3)}", })
-
-            if self.ARGS.render_encoder_preset != "loseless":
-                hwacccel_preset = self.ARGS.render_hwaccel_preset
-                if hwacccel_preset != "None":
-                    output_dict.update({"-i_qfactor": "0.71", "-b_qfactor": "1.3", "-keyint_min": "1",
-                                        f"-rc-lookahead": "120", "-forced-idr": "1", "-nonref_p": "1",
-                                        "-strict_gop": "1", })
-                    if hwacccel_preset == "5th":
-                        output_dict.update({"-bf": "0"})
-                    elif hwacccel_preset == "6th":
-                        output_dict.update({"-bf": "0", "-weighted_pred": "1"})
-                    elif hwacccel_preset == "7th+":
-                        output_dict.update({"-bf": "4", "-temporal-aq": "1", "-b_ref_mode": "2"})
-            else:
-                output_dict.update({"-preset": "10", })
-
-        elif self.ARGS.render_hwaccel_mode == "NVENCC":
-            _input_dict = {  # '--avsw': '',
-                'encc': "NVENCC",
-                '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
-                "-pix_fmt": "rgb24",
-            }
-            _output_dict = {
-                # "--chroma-qp-offset": "-2",
-                "--lookahead": "16",
-                "--gop-len": "250",
-                "-b": "4",
-                "--ref": "8",
-                "--aq": "",
-                "--aq-temporal": "",
-                "--bref-mode": "middle"}
-            if '-color_range' in output_dict:
-                _output_dict.update({"--colorrange": output_dict["-color_range"]})
-            if '-colorspace' in output_dict:
-                _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
-            if '-color_trc' in output_dict:
-                _output_dict.update({"--transfer": output_dict["-color_trc"]})
-            if '-color_primaries' in output_dict:
-                _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
-
-            if '-s' in output_dict:
-                _output_dict.update({'--output-res': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
-                _output_dict.update({"--output-depth": "10"})
-            if "H264" in self.ARGS.render_encoder:
-                _output_dict.update({f"-c": f"h264",
-                                     "--profile": "high10" if "10bit" in self.ARGS.render_encoder else "high", })
-            elif "H265" in self.ARGS.render_encoder:
-                _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
-                                     "--tier": "main", "-b": "5"})
-
-            if self.hdr_check_status == 2:
-                """HDR10"""
-                _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10",
-                                     "--tier": "main", "-b": "5",
-                                     "--max-cll": "1000,100",
-                                     "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"})
-                if os.path.exists(hdr10plus_metadata):
-                    _output_dict.update({"--dhdr10-info": hdr10plus_metadata})
-            else:
-                if self.ARGS.render_encoder_preset != "loseless":
-                    _output_dict.update({"--preset": self.ARGS.render_encoder_preset})
-                else:
-                    _output_dict.update({"--lossless": "", "--preset": self.ARGS.render_encoder_preset})
-
-            input_dict = _input_dict
-            output_dict = _output_dict
-            pass
-        elif self.ARGS.render_hwaccel_mode == "QSVENCC":
-            _input_dict = {  # '--avsw': '',
-                'encc': "QSVENCC",
-                '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
-                "-pix_fmt": "rgb24",
-            }
-            _output_dict = {
-                "--fallback-rc": "", "--la-depth": "50", "--la-quality": "slow", "--extbrc": "", "--mbbrc": "",
-                "--i-adapt": "",
-                "--b-adapt": "", "--gop-len": "250", "-b": "6", "--ref": "8", "--b-pyramid": "", "--weightb": "",
-                "--weightp": "", "--adapt-ltr": "",
-            }
-            if '-color_range' in output_dict:
-                _output_dict.update({"--colorrange": output_dict["-color_range"]})
-            if '-colorspace' in output_dict:
-                _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
-            if '-color_trc' in output_dict:
-                _output_dict.update({"--transfer": output_dict["-color_trc"]})
-            if '-color_primaries' in output_dict:
-                _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
-
-            if '-s' in output_dict:
-                _output_dict.update({'--output-res': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
-                _output_dict.update({"--output-depth": "10"})
-            if "H264" in self.ARGS.render_encoder:
-                _output_dict.update({f"-c": f"h264",
-                                     "--profile": "high", "--repartition-check": "", "--trellis": "all"})
-            elif "H265" in self.ARGS.render_encoder:
-                _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
-                                     "--tier": "main", "--sao": "luma", "--ctu": "64", })
-            if self.hdr_check_status == 2:
-                _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
-                                     "--tier": "main", "--sao": "luma", "--ctu": "64",
-                                     "--max-cll": "1000,100",
-                                     "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
-                                     })
-            _output_dict.update({"--quality": self.ARGS.render_encoder_preset})
-
-            input_dict = _input_dict
-            output_dict = _output_dict
-            pass
-        elif self.ARGS.render_hwaccel_mode == "SVT":
-            _input_dict = {  # '--avsw': '',
-                '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
-                "-pix_fmt": "rgb24",
-                '-n': f"{self.ARGS.render_gap}"
-            }
-            _output_dict = {
-                "encc": "hevc", "-brr": "1", "-sharp": "1", "-b": ""
-            }
-            if "VP9" in self.ARGS.render_encoder:
-                _output_dict = {
-                    "encc": "vp9", "-tune": "0", "-b": ""
-                }
-            # TODO Color Info
-            # if '-color_range' in output_dict:
-            #     _output_dict.update({"--colorrange": output_dict["-color_range"]})
-            # if '-colorspace' in output_dict:
-            #     _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
-            # if '-color_trc' in output_dict:
-            #     _output_dict.update({"--transfer": output_dict["-color_trc"]})
-            # if '-color_primaries' in output_dict:
-            #     _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
-
-            if '-s' in output_dict:
-                _output_dict.update({'-s': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
-                _output_dict.update({"-bit-depth": "10"})
-            else:
-                _output_dict.update({"-bit-depth": "8"})
-
-            preset_mapper = {"slowest": "4", "slow": "5", "fast": "7", "faster": "9"}
-
-            if "H265" in self.ARGS.render_encoder_preset:
-                _output_dict.update({"-encMode": preset_mapper[self.ARGS.render_encoder_preset]})
-            elif "VP9" in self.ARGS.render_encoder_preset:
-                _output_dict.update({"-enc-mode": preset_mapper[self.ARGS.render_encoder_preset]})
-
-            # TODO max cll, master display
-            # if self.hdr_check_status == 2:
-            #     _output_dict.update({"-c": "hevc",
-            #                          "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
-            #                          "--tier": "main", "--sao": "luma", "--ctu": "64",
-            #                          "--max-cll": "1000,100",
-            #                          "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
-            #                          })
-
-            input_dict = _input_dict
-            output_dict = _output_dict
-            pass
-
-        else:
-            """QSV"""
-            output_dict.update({"-pix_fmt": "yuv420p"})
-            if "10bit" in self.ARGS.render_encoder:
-                output_dict.update({"-pix_fmt": "yuv420p10le"})
-                pass
-            if "H264" in self.ARGS.render_encoder:
-                output_dict.update({"-c:v": "h264_qsv",
-                                    "-i_qfactor": "0.75", "-b_qfactor": "1.1",
-                                    f"-rc-lookahead": "120", })
-            elif "H265" in self.ARGS.render_encoder:
-                output_dict.update({"-c:v": "hevc_qsv",
-                                    f"-g": f"{int(self.target_fps * 3)}", "-i_qfactor": "0.75", "-b_qfactor": "1.1",
-                                    f"-look_ahead": "120", })
-
-        if "ProRes" not in self.ARGS.render_encoder and self.ARGS.render_encoder_preset != "loseless":
-
-            if self.ARGS.render_crf and self.ARGS.use_crf:
-                if self.ARGS.render_hwaccel_mode != "CPU":
-                    hwaccel_mode = self.ARGS.render_hwaccel_mode
-                    if hwaccel_mode == "NVENC":
-                        output_dict.update({"-cq:v": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "QSV":
-                        output_dict.update({"-q": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "NVENCC":
-                        output_dict.update({"--vbr": "0", "--vbr-quality": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "QSVENCC":
-                        output_dict.update({"--la-icq": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "SVT":
-                        output_dict.update({"-q": str(self.ARGS.render_crf)})
-
-                else:  # CPU
-                    output_dict.update({"-crf": str(self.ARGS.render_crf)})
-
-            if self.ARGS.render_bitrate and self.ARGS.use_bitrate:
-                if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
-                    output_dict.update({"--vbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
-                elif self.ARGS.render_hwaccel_mode == "SVT":
-                    output_dict.update({"-tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
-                else:
-                    output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
-                if self.ARGS.render_hwaccel_mode == "QSV":
-                    output_dict.update({"-maxrate": "200M"})
-
-        if self.ARGS.use_manual_encode_thread:
-            if self.ARGS.render_hwaccel_mode == "NVENCC":
-                output_dict.update({"--output-thread": f"{self.ARGS.render_encode_thread}"})
-            else:
-                output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
-
-        logger.debug(f"writer: {output_dict}, {input_dict}")
-
-        """Customize FFmpeg Render Command"""
-        ffmpeg_customized_command = {}
-        if len(self.ARGS.render_ffmpeg_customized):
-            shlex_out = shlex.split(self.ARGS.render_ffmpeg_customized)
-            if len(shlex_out) == 1:
-                ffmpeg_customized_command.update({shlex_out[0]: ""})
-            else:
-                for i in range(len(shlex_out) - 1):
-                    command = shlex_out[i]
-                    next_command = shlex_out[i+1]
-                    if command.startswith("-") and next_command.startswith('-'):
-                        ffmpeg_customized_command.update({command: ""})
-                    elif command.startswith("-"):
-                        ffmpeg_customized_command.update({command: next_command})
-                last_command = shlex_out[-1]
-                if last_command.startswith("-"):
-                    ffmpeg_customized_command.update({last_command: ""})
-        logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
-        output_dict.update(ffmpeg_customized_command)
-        # output_path = Tools.fillQuotation(output_path)
-        if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
-            return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
-        elif self.ARGS.render_hwaccel_mode in ["SVT"]:
-            return SVTWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
-        return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
-
-    # @profile
-    def check_chunk(self, del_chunk=False):
-        """
-        Get Chunk Start
-        :param: del_chunk: delete all chunks existed
-        :return: chunk, start_frame
-        """
+                Get Chunk Start
+                :param: del_chunk: delete all chunks existed
+                :return: chunk, start_frame
+                """
         if self.ARGS.is_img_output:
             """IMG OUTPUT"""
-            img_io = ImgSeqIO(folder=self.project_dir, is_tool=True,
-                              start_frame=-1, logger=logger,
-                              output_ext=self.ARGS.output_ext, )
-            last_img = img_io.get_write_start_frame()
+            img_writer = ImageWrite(logger, folder=self.ARGS.output, start_frame=self.ARGS.interp_start,
+                                output_ext=self.ARGS.output_ext, is_tool=True)
+            last_img = img_writer.get_write_start_frame()
             if self.ARGS.interp_start not in [-1, ]:
                 return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)  # Manually Prioritized
             if last_img == 0:
                 return 1, 0
-            else:
-                """last_img > 0"""
-                return 1, int(last_img)
 
         if self.ARGS.interp_start != -1 or self.ARGS.output_chunk_cnt != -1:
             return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
 
-        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(self.project_dir)
-        if del_chunk:
-            for f in chunk_paths:
-                os.remove(os.path.join(self.project_dir, f))
-            return 1, 0
+        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(self.ARGS.project_dir)
         if not len(chunk_paths):
             return 1, 0
         return chunk_cnt + 1, last_frame + 1
-
-    # @profile
-    def render(self, chunk_cnt, start_frame):
-        """
-        Render thread
-        :param chunk_cnt:
-        :param start_frame: render start
-        :return:
-        """
-
-        def rename_chunk():
-            """Maintain Chunk json"""
-            if self.ARGS.is_img_output or self.main_error is not None:
-                return
-            chunk_desc_path = "chunk-{:0>3d}-{:0>8d}-{:0>8d}{}".format(chunk_cnt, start_frame, now_frame,
-                                                                       self.output_ext)
-            chunk_desc_path = os.path.join(self.project_dir, chunk_desc_path)
-            if os.path.exists(chunk_desc_path):
-                os.remove(chunk_desc_path)
-            os.rename(chunk_tmp_path, chunk_desc_path)
-            chunk_path_list.append(chunk_desc_path)
-            chunk_info_path = os.path.join(self.project_dir, "chunk.json")
-
-            with open(chunk_info_path, "w", encoding="utf-8") as w:
-                chunk_info = {
-                    "project_dir": self.project_dir,
-                    "input": self.input,
-                    "chunk_cnt": chunk_cnt,
-                    "chunk_list": chunk_path_list,
-                    "last_frame": now_frame,
-                    "target_fps": self.target_fps,
-                }
-                json.dump(chunk_info, w)
-            """
-            key: project_dir, input filename, chunk cnt, chunk list, last frame
-            """
-            if is_end:
-                if os.path.exists(chunk_info_path):
-                    os.remove(chunk_info_path)
-
-        # @profile
-        def check_audio_concat():
-            """Check Input file ext"""
-            if not self.ARGS.is_save_audio or self.main_error is not None:
-                return
-            if self.ARGS.is_img_output:
-                return
-            output_ext = self.output_ext
-            if "ProRes" in self.ARGS.render_encoder:
-                output_ext = ".mov"
-
-            concat_filepath = f"{os.path.join(self.output, 'concat_test')}" + output_ext
-            map_audio = f'-i "{self.input}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy -shortest '
-            ffmpeg_command = f'{self.ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
-                             f'{Tools.fillQuotation(concat_filepath)} -y'
-
-            logger.info("Start Audio Concat Test")
-            sp = Tools.popen(ffmpeg_command)
-            sp.wait()
-            if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-                if self.input_ext in SupportFormat.vid_outputs:
-                    logger.warning(f"Concat Test found unavailable output extension {self.output_ext}, "
-                                   f"changed to {self.input_ext}")
-                    self.output_ext = self.input_ext
-                else:
-                    logger.error(f"Concat Test Error, {output_ext}, empty output")
-                    self.main_error = FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
-                    raise FileExistsError(
-                        "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
-                        "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
-            else:
-                logger.info("Audio Concat Test Success")
-                os.remove(concat_filepath)
-
-        concat_test_flag = True
-
-        chunk_frame_cnt = 1  # number of frames of current output chunk
-        chunk_path_list = list()
-        chunk_tmp_path = os.path.join(self.project_dir, f"chunk-tmp{self.output_ext}")
-        frame_writer = self.generate_frame_renderer(chunk_tmp_path, start_frame)  # get frame renderer
-
-        now_frame = start_frame
-        is_end = False
-        frame_written = False
-        while True:
-            if self.main_error is not None:
-                logger.warning("Other Thread encounters Error, break")
-                frame_writer.close()
-                is_end = True
-                rename_chunk()
-                break
-
-            frame_data = self.frames_output.get()
-            if frame_data is None:
-                if frame_written:
-                    frame_writer.close()
-                is_end = True
-                rename_chunk()
-                break
-
-            now_frame = frame_data[0]
-            frame = frame_data[1]
-
-            if self.ARGS.use_fast_denoise:
-                frame = cv2.fastNlMeansDenoising(frame)
-            if self.ARGS.use_sr and (self.ARGS.use_sr_mode == 1 or self.ARGS.render_only):
-                """先补后超"""
-                frame = self.sr_module.svfi_process(frame)
-
-            reminder_id = self.reminder_bearer.generate_reminder(30, logger, "Encoder",
-                                                                 "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
-            if frame is not None:
-                frame_written = True
-                frame_writer.writeFrame(frame)
-            self.reminder_bearer.terminate_reminder(reminder_id)
-
-            chunk_frame_cnt += 1
-            self.task_info.update({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
-
-            if not chunk_frame_cnt % self.render_gap:
-                frame_writer.close()
-                if concat_test_flag:
-                    check_audio_concat()
-                    concat_test_flag = False
-                rename_chunk()
-                chunk_cnt += 1
-                start_frame = now_frame + 1
-                frame_writer = self.generate_frame_renderer(chunk_tmp_path, start_frame)
-        return
-
-    # @profile
-    def feed_to_render(self, frames_list: list, is_end=False):
-        """
-        维护输出帧数组的输入（往输出渲染线程喂帧
-        :param frames_list:
-        :param is_end: 是否是视频结尾
-        :return:
-        """
-        frames_list_len = len(frames_list)
-
-        for frame_i in range(frames_list_len):
-            if frames_list[frame_i] is None:
-                self.frames_output.put(None)
-                logger.info("Put None to write_buffer in advance")
-                return
-            self.frames_output.put(frames_list[frame_i])  # 往输出队列（消费者）喂正常的帧
-            if frame_i == frames_list_len - 1:
-                if is_end:
-                    self.frames_output.put(None)
-                    logger.info("Put None to write_buffer")
-                    return
         pass
 
-    # @profile
-    def feed_to_rife(self, now_frame: int, img0, img1, n=0, exp=0, is_end=False, add_scene=False, ):
+    def getInitiatedLock(self):
+        return self.initiation_lock
+
+    def rife_run_input_check(self, dedup=False):
         """
-        创建任务，输出到补帧任务队列消费者
-        :param now_frame:当前帧数
-        :param add_scene:加入转场的前一帧（避免音画不同步和转场鬼畜）
-        :param img0:
-        :param img1:
-        :param n:要补的帧数
-        :param exp:使用指定的补帧倍率（2**exp）
-        :param is_end:是否是任务结束
-        :return:
+        perform input availability check and return generator of frames
+        :return: chunk_cnt, start_frame, videogen, videogen_check
         """
+        _debug = False
+        chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
+        logger.info("Resuming Video Frames...")
 
-        def psnr(i1, i2):
-            i1 = np.float64(i1)
-            i2 = np.float64(i2)
-            mse = np.mean((i1 - i2) ** 2)
-            if mse == 0:
-                return 100
-            pixel_max = 255.0
-            return 20 * math.log10(pixel_max / math.sqrt(mse))
+        """Get Frames to interpolate"""
+        reminder_id = self.reminder_bearer.generate_reminder(300, logger, "Decode Input",
+                                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
+        videogen = self._generate_frame_reader(start_frame).nextFrame()
+        videogen_check = None
+        if dedup:
+            videogen_check = self._generate_frame_reader(start_frame, frame_check=True).nextFrame()
+        videogen_available_check = self._generate_frame_reader(start_frame, frame_check=True).nextFrame()
 
-        scale = self.ARGS.rife_scale
-        if self.ARGS.use_rife_auto_scale:
-            """使用动态光流"""
-            if img0 is None or img1 is None:
-                scale = 1.0
-            else:
-                # x = psnr(cv2.resize(img0, (256, 256)), cv2.resize(img1, (256, 256)))
-                # y25 = 0.0000136703 * (x ** 3) - 0.000407396 * (x ** 2) - 0.0129 * x + 0.62621
-                # y50 = 0.00000970763 * (x ** 3) - 0.0000908092 * (x ** 2) - 0.02095 * x - 0.69068
-                # y100 = 0.0000134965 * (x ** 3) - 0.000246688 * (x ** 2) - 0.01987 * x - 0.70953
-                # m = min(y25, y50, y100)
-                # scale = {y25: 0.25, y50: 0.5, y100: 1.0}[m]
-                scale = self.vfi_core.get_auto_scale(img0, img1)
+        check_img1 = self._crop(Tools.gen_next(videogen_available_check))
+        self.reminder_bearer.terminate_reminder(reminder_id)
+        videogen_available_check.close()
+        if check_img1 is None:
+            self.main_error = OSError(
+                f"Input file is not available: {self.ARGS.input}, is img input: {self.ARGS.is_img_input},"
+                f"Please Check Your Input Settings"
+                f"(Start Chunk, Start Frame, Start Point, Start Frame)")
+            raise self.main_error
+        return chunk_cnt, start_frame, videogen, videogen_check
 
-        if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0 and img0 is not None and img1 is not None:
-            """先超后补"""
-            img0, img1 = self.sr_module.svfi_process(img0), self.sr_module.svfi_process(img1)
+    def rife_run_rest(self, run_time: float):
+        rest_exp = 3600
+        if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
+                time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
+            logger.info(
+                f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
+            time.sleep(600)
+            return time.time()
+        return run_time
 
-        self.rife_task_queue.put(
-            {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "exp": exp, "scale": scale,
-             "is_end": is_end, "add_scene": add_scene})
-
-    # @profile
-    def crop_read_img(self, img):
-        """
-        Crop using self.crop parameters
-        :param img:
-        :return:
-        """
-        if img is None:
-            return img
-
-        h, w, _ = img.shape
-        if self.crop_param[0] > w or self.crop_param[1] > h:
-            """奇怪的黑边参数，不予以处理"""
-            return img
-        return img[self.crop_param[1]:h - self.crop_param[1], self.crop_param[0]:w - self.crop_param[0]]
-
-    # @profile
-    def nvidia_vram_test(self):
-        """
-        显存测试
-        :return:
-        """
-        try:
-            if self.ARGS.resize_width and self.ARGS.resize_height:
-                w, h = self.ARGS.resize_width, self.ARGS.resize_height
-            else:
-                w, h = list(map(lambda x: round(x), self.video_info["size"]))
-
-            logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
-
-            test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
-                                   np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
-            self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
-            logger.info(f"VRAM Test Success, Resume of workflow ahead")
-            del test_img0, test_img1
-        except Exception as e:
-            logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
-                limit=ArgumentManager.traceback_limit))
-            raise e
-
-    # @profile
     def remove_duplicate_frames(self, videogen_check: FFmpegReader.nextFrame, init=False) -> (list, list, dict):
         """
         获得新除重预处理帧数序列
@@ -1260,46 +594,6 @@ class InterpWorkFlow:
         check_frame_list = [i for i in check_frame_list if i > -1]
         return check_frame_list, scene_frame_list, check_frame_data
 
-    def rife_run_rest(self, run_time: float):
-        rest_exp = 3600
-        if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
-                time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
-            logger.info(
-                f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
-            time.sleep(600)
-            return time.time()
-        return run_time
-
-    def rife_run_input_check(self, dedup=False):
-        """
-        perform input availability check and return generator of frames
-        :return: chunk_cnt, start_frame, videogen, videogen_check
-        """
-        _debug = False
-        chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-        logger.info("Resuming Video Frames...")
-
-        """Get Frames to interpolate"""
-        reminder_id = self.reminder_bearer.generate_reminder(300, logger, "Decode Input",
-                                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
-        videogen = self.generate_frame_reader(start_frame).nextFrame()
-        videogen_check = None
-        if dedup:
-            videogen_check = self.generate_frame_reader(start_frame, frame_check=True).nextFrame()
-        videogen_available_check = self.generate_frame_reader(start_frame, frame_check=True).nextFrame()
-
-        check_img1 = self.crop_read_img(Tools.gen_next(videogen_available_check))
-        self.reminder_bearer.terminate_reminder(reminder_id)
-        videogen_available_check.close()
-        if check_img1 is None:
-            self.main_error = OSError(
-                f"Input file is not available: {self.input}, is img input: {self.ARGS.is_img_input},"
-                f"Please Check Your Input Settings"
-                f"(Start Chunk, Start Frame, Start Point, Start Frame)")
-            self.rife_work_event.set()
-            raise self.main_error
-        return chunk_cnt, start_frame, videogen, videogen_check
-
     # @profile
     def rife_run(self):
         """
@@ -1312,7 +606,7 @@ class InterpWorkFlow:
         logger.info("Loaded Input Frames")
         is_end = False
 
-        self.rife_work_event.set()
+        self.initiation_lock.release()
         """Start Process"""
         run_time = time.time()
         first_run = True
@@ -1320,8 +614,8 @@ class InterpWorkFlow:
             if is_end or self.main_error:
                 break
 
-            if not self.render_thread.is_alive():
-                logger.critical("Render Thread Dead Unexpectedly")
+            if self.kill:
+                logger.critical("Reader Thread Killed")
                 break
 
             run_time = self.rife_run_rest(run_time)
@@ -1332,7 +626,7 @@ class InterpWorkFlow:
             first_run = False
             if not len(check_frame_list):
                 while True:
-                    img1 = self.crop_read_img(Tools.gen_next(videogen))
+                    img1 = self._crop(Tools.gen_next(videogen))
                     if img1 is None:
                         is_end = True
                         self.feed_to_rife(now_frame_key, img1, img1, n=0,
@@ -1342,7 +636,7 @@ class InterpWorkFlow:
                 break
 
             else:
-                img0 = self.crop_read_img(Tools.gen_next(videogen))
+                img0 = self._crop(Tools.gen_next(videogen))
                 img1 = img0.copy()
                 last_frame_key = check_frame_list[0]
                 now_a_key = last_frame_key
@@ -1353,12 +647,12 @@ class InterpWorkFlow:
                     while True:
                         last_possible_scene = img1
                         if now_a_key != now_b_key:
-                            img1 = self.crop_read_img(Tools.gen_next(videogen))
+                            img1 = self._crop(Tools.gen_next(videogen))
                             now_a_key += 1
                         else:
                             break
                     now_frame_key = now_b_key
-                    self.task_info.update({"now_frame": now_frame_key})
+                    self.ARGS.task_info.update({"now_frame": now_frame_key})
                     if now_frame_key in scene_frame_list:
                         self.scene_detection.update_scene_status(now_frame_key, "scene")
                         potential_key = now_frame_key - 1
@@ -1395,10 +689,10 @@ class InterpWorkFlow:
                     last_frame_key = now_frame_key
                     img0 = img1
                 self.feed_to_rife(now_frame_key, img1, img1, n=0, is_end=is_end)
-                self.task_info.update({"now_frame": check_frame_list[-1]})
+                self.ARGS.task_info.update({"now_frame": check_frame_list[-1]})
 
         pass
-        self.rife_task_queue.put(None)
+        self._output_queue.put(None)
         videogen.close()
         videogen_check.close()
         """Wait for Rife and Render Thread to finish"""
@@ -1412,7 +706,7 @@ class InterpWorkFlow:
 
         logger.info("Activate Any FPS Mode")
         chunk_cnt, now_frame, videogen, videogen_check = self.rife_run_input_check(dedup=True)
-        img1 = self.crop_read_img(Tools.gen_next(videogen))
+        img1 = self._crop(Tools.gen_next(videogen))
         logger.info("Loaded Input Frames")
         is_end = False
 
@@ -1421,22 +715,21 @@ class InterpWorkFlow:
             self.ARGS.remove_dup_threshold = self.ARGS.remove_dup_threshold if self.ARGS.remove_dup_threshold > 0.01 else 0.01
         else:  # 0， 不去除重复帧
             self.ARGS.remove_dup_threshold = 0.001
-
-        self.rife_work_event.set()
+        self.initiation_lock.release()
         """Start Process"""
         run_time = time.time()
         while True:
             if is_end or self.main_error:
                 break
 
-            if not self.render_thread.is_alive():
-                logger.critical("Render Thread Dead Unexpectedly")
+            if self.kill:
+                logger.critical("Reader Thread Killed")
                 break
 
             run_time = self.rife_run_rest(run_time)
 
             img0 = img1
-            img1 = self.crop_read_img(Tools.gen_next(videogen))
+            img1 = self._crop(Tools.gen_next(videogen))
 
             now_frame += 1
 
@@ -1462,7 +755,7 @@ class InterpWorkFlow:
                         skip += 1
                         self.scene_detection.update_scene_status(now_frame, "dup")
                         last_frame = img1.copy()
-                        img1 = self.crop_read_img(Tools.gen_next(videogen))
+                        img1 = self._crop(Tools.gen_next(videogen))
 
                         if img1 is None:
                             img1 = last_frame
@@ -1474,7 +767,7 @@ class InterpWorkFlow:
                         is_scene = self.scene_detection.check_scene(img0, img1)  # update scene stack
                         if is_scene:
                             break
-                        if skip == self.dup_skip_limit * self.target_fps // self.input_fps:
+                        if skip == self.ARGS.dup_skip_limit * self.ARGS.target_fps // self.ARGS.input_fps:
                             """超过重复帧计数限额，直接跳出"""
                             break
 
@@ -1501,10 +794,973 @@ class InterpWorkFlow:
                     """normal frames"""
                     self.feed_to_rife(now_frame, img0, img1, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
                     self.scene_detection.update_scene_status(now_frame, "normal")
-                self.task_info.update({"now_frame": now_frame})
+                self.ARGS.task_info.update({"now_frame": now_frame})
             pass
 
-        self.rife_task_queue.put(None)  # bad way to end
+        self._output_queue.put(None)  # bad way to end
+
+    def feed_to_rife(self, now_frame: int, img0, img1, n=0, exp=0, is_end=False, add_scene=False, ):
+        """
+        创建任务，输出到补帧任务队列消费者
+        :param now_frame:当前帧数
+        :param add_scene:加入转场的前一帧（避免音画不同步和转场鬼畜）
+        :param img0:
+        :param img1:
+        :param n:要补的帧数
+        :param exp:使用指定的补帧倍率（2**exp）
+        :param is_end:是否是任务结束
+        :return:
+        """
+
+        def psnr(i1, i2):
+            i1 = np.float64(i1)
+            i2 = np.float64(i2)
+            mse = np.mean((i1 - i2) ** 2)
+            if mse == 0:
+                return 100
+            pixel_max = 255.0
+            return 20 * math.log10(pixel_max / math.sqrt(mse))
+
+        scale = self.ARGS.rife_scale
+        if self.ARGS.use_rife_auto_scale:
+            """使用动态光流"""
+            if img0 is None or img1 is None:
+                scale = 1.0
+            else:
+                # x = psnr(cv2.resize(img0, (256, 256)), cv2.resize(img1, (256, 256)))
+                # y25 = 0.0000136703 * (x ** 3) - 0.000407396 * (x ** 2) - 0.0129 * x + 0.62621
+                # y50 = 0.00000970763 * (x ** 3) - 0.0000908092 * (x ** 2) - 0.02095 * x - 0.69068
+                # y100 = 0.0000134965 * (x ** 3) - 0.000246688 * (x ** 2) - 0.01987 * x - 0.70953
+                # m = min(y25, y50, y100)
+                # scale = {y25: 0.25, y50: 0.5, y100: 1.0}[m]
+                # TODO transfer vfi core and sr_module here
+                scale = self.vfi_core.get_auto_scale(img0, img1)
+
+        if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0 and img0 is not None and img1 is not None:
+            """先超后补"""
+            img0, img1 = self.sr_module.svfi_process(img0), self.sr_module.svfi_process(img1)
+
+        self._output_queue.put(
+            {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "exp": exp, "scale": scale,
+             "is_end": is_end, "add_scene": add_scene})
+
+
+class RenderFlow(threading.Thread):
+    def __init__(self, _args: TaskArgumentManager, _reader_queue: Queue):
+        super().__init__()
+        # TODO OLS generate_frame_renderer
+        # TODO OLS Check Chunk
+        # TODO render lock
+        # TODO Queue Status Broker
+        # TODO Concat(All)
+        # TODO Get output path
+        self.ffmpeg = "ffmpeg"
+        self.kill = False
+        self.hdr10_metadata_processer = Hdr10PlusProcesser(logger, self.ARGS.project_dir, self.ARGS.render_gap,
+                                                           self.ARGS.interp_times,
+                                                           self.ARGS.video_info_instance.getInputHdr10PlusMetadata())
+        self.ARGS = _args
+        self.initiation_lock = threading.Lock()
+        self.initiation_lock.locked()
+        self.reminder_bearer = OverTimeReminderBearer()
+
+        self._input_queue=_reader_queue
+
+    def _generate_frame_writer(self, start_frame, output_path):
+        """
+                渲染帧
+                :param start_frame: for IMG IO, select start_frame to generate IO instance
+                :param output_path:
+                :return:
+                """
+        hdr10plus_metadata = self.hdr10_metadata_processer.get_hdr10plus_metadata_at_point(start_frame)
+        params_libx265s = {
+            "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
+                    "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
+                    "min-keyint=1:rc-lookahead=25:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
+                    "crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1",
+            "8bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
+                    "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
+                    "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
+                    "qcomp=0.65:deblock=-1:sao=0",
+            "10bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
+                     "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
+                     "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
+                     "deblock=-1:sao=0",
+            "hdr10": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
+                     'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
+                     'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
+                     'deblock=-1:sao=0:'
+                     'range=limited:colorprim=9:transfer=16:colormatrix=9:'
+                     'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
+                     'max-cll="1000,100":hdr10-opt=1:repeat-headers=1',
+            "hdr10+": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
+                      'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
+                      'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
+                      'deblock=-1:sao=0:'
+                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
+                      'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
+                      f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata}"'
+        }
+
+        params_libx264s = {
+            "fast": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=4:deblock='-1:-1':"
+                    "rc-lookahead=30:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:me=hex:merange=16:"
+                    "subme=7:psy-rd='1:0.1':mixed-refs=1:trellis=1",
+            "8bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+                    "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
+                    "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
+            "10bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
+                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
+            "hdr10": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
+                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
+                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
+                     "range=tv:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:"
+                     "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
+                     "cll='1000,100'"
+        }
+
+        def HDR_auto_modify_params():
+            if self.ARGS.is_img_input or self.ARGS.hdr_mode == 1:  # img input or ordinary hdr
+                return
+
+            if self.ARGS.hdr_mode == 2:
+                """HDR10"""
+                self.ARGS.render_hwaccel_mode = "CPU"
+                if "H265" in self.ARGS.render_encoder:
+                    self.ARGS.render_encoder = "H265, 10bit"
+                elif "H264" in self.ARGS.render_encoder:
+                    self.ARGS.render_encoder = "H264, 10bit"
+                self.ARGS.render_encoder_preset = "medium"
+            elif self.ARGS.hdr_mode == 4:
+                """HLG"""
+                self.ARGS.render_encoder = "H265, 10bit"
+                self.ARGS.render_hwaccel_mode = "CPU"
+                self.ARGS.render_encoder_preset = "medium"
+
+        """If output is sequence of frames"""
+        if self.ARGS.is_img_output:
+            img_io = ImageWrite(logger, folder=self.ARGS.output, start_frame=start_frame, exp=self.ARGS.rife_exp,
+                                resize=self.ARGS.resize_param, output_ext=self.ARGS.output_ext, )
+            return img_io
+
+        """HDR Check"""
+        if self.ARGS.hdr_mode == 0:  # Auto
+            HDR_auto_modify_params()
+
+        """Output Video"""
+        input_dict = {"-vsync": "cfr"}
+
+        output_dict = {"-r": f"{self.ARGS.target_fps}", "-preset": self.ARGS.render_encoder_preset,
+                       "-metadata": f'title="Powered By SVFI {self.ARGS.version}"'}
+
+        self.color_data_tag = [('color_range', 'tv'),
+                               ('color_space', 'bt709'),
+                               ('color_transfer', 'bt709'),
+                               ('color_primaries', 'bt709')]
+        color_tag_map = {'-color_range': 'color_range',
+                         '-color_primaries': 'color_primaries',
+                         '-colorspace': 'color_space', '-color_trc': 'color_transfer'}
+        for ct in color_tag_map:
+            output_dict.update({ct: self.ARGS.video_info_instance.video_info[color_tag_map[ct]]})
+
+        if not self.ARGS.is_img_input:
+            input_dict.update({"-r": f"{self.ARGS.target_fps}"})
+        else:
+            """Img Input"""
+            input_dict.update({"-r": f"{self.ARGS.input_fps * 2 ** self.ARGS.rife_exp}"})
+
+        """Slow motion design"""
+        if self.ARGS.is_render_slow_motion:
+            if self.ARGS.render_slow_motion_fps:
+                input_dict.update({"-r": f"{self.ARGS.render_slow_motion_fps}"})
+            else:
+                input_dict.update({"-r": f"{self.ARGS.target_fps}"})
+            output_dict.pop("-r")
+
+        vf_args = "copy"  # debug
+        output_dict.update({"-vf": vf_args})
+
+        if self.ARGS.use_sr and self.ARGS.resize_height and self.ARGS.resize_width:
+            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
+                                "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
+
+        """Assign Render Codec"""
+        """CRF / Bitrate Control"""
+        if self.ARGS.render_hwaccel_mode == "CPU":
+            if "H264" in self.ARGS.render_encoder:
+                output_dict.update({"-c:v": "libx264", "-preset:v": self.ARGS.render_encoder_preset})
+                if "8bit" in self.ARGS.render_encoder:
+                    output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "high",
+                                        "-x264-params": params_libx264s["8bit"]})
+                else:
+                    """10bit"""
+                    output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "high10",
+                                        "-x264-params": params_libx264s["10bit"]})
+                if 'fast' in self.ARGS.render_encoder_preset:
+                    output_dict.update({"-x264-params": params_libx264s["fast"]})
+                if self.ARGS.hdr_mode == 2:
+                    """HDR10"""
+                    output_dict.update({"-x264-params": params_libx264s["hdr10"]})
+            elif "H265" in self.ARGS.render_encoder:
+                output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
+                if "8bit" in self.ARGS.render_encoder:
+                    output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main",
+                                        "-x265-params": params_libx265s["8bit"]})
+                else:
+                    """10bit"""
+                    output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "main10",
+                                        "-x265-params": params_libx265s["10bit"]})
+                if 'fast' in self.ARGS.render_encoder_preset:
+                    output_dict.update({"-x265-params": params_libx265s["fast"]})
+                if self.ARGS.hdr_mode == 2:
+                    """HDR10"""
+                    output_dict.update({"-x265-params": params_libx265s["hdr10"]})
+                    if os.path.exists(hdr10plus_metadata):
+                        output_dict.update({"-x265-params": params_libx265s["hdr10+"]})
+            else:
+                """ProRes"""
+                if "-preset" in output_dict:
+                    output_dict.pop("-preset")
+                output_dict.update({"-c:v": "prores_ks", "-profile:v": self.ARGS.render_encoder_preset, })
+                if "422" in self.ARGS.render_encoder:
+                    output_dict.update({"-pix_fmt": "yuv422p10le"})
+                else:
+                    output_dict.update({"-pix_fmt": "yuv444p10le"})
+
+        elif self.ARGS.render_hwaccel_mode == "NVENC":
+            output_dict.update({"-pix_fmt": "yuv420p"})
+            if "10bit" in self.ARGS.render_encoder:
+                output_dict.update({"-pix_fmt": "yuv420p10le"})
+                pass
+            if "H264" in self.ARGS.render_encoder:
+                output_dict.update({f"-g": f"{int(self.ARGS.target_fps * 3)}", "-c:v": "h264_nvenc", "-rc:v": "vbr_hq", })
+            elif "H265" in self.ARGS.render_encoder:
+                output_dict.update({"-c:v": "hevc_nvenc", "-rc:v": "vbr_hq",
+                                    f"-g": f"{int(self.ARGS.target_fps * 3)}", })
+
+            if self.ARGS.render_encoder_preset != "loseless":
+                hwacccel_preset = self.ARGS.render_hwaccel_preset
+                if hwacccel_preset != "None":
+                    output_dict.update({"-i_qfactor": "0.71", "-b_qfactor": "1.3", "-keyint_min": "1",
+                                        f"-rc-lookahead": "120", "-forced-idr": "1", "-nonref_p": "1",
+                                        "-strict_gop": "1", })
+                    if hwacccel_preset == "5th":
+                        output_dict.update({"-bf": "0"})
+                    elif hwacccel_preset == "6th":
+                        output_dict.update({"-bf": "0", "-weighted_pred": "1"})
+                    elif hwacccel_preset == "7th+":
+                        output_dict.update({"-bf": "4", "-temporal-aq": "1", "-b_ref_mode": "2"})
+            else:
+                output_dict.update({"-preset": "10", })
+
+        elif self.ARGS.render_hwaccel_mode == "NVENCC":
+            _input_dict = {  # '--avsw': '',
+                'encc': "NVENCC",
+                '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                "-pix_fmt": "rgb24",
+            }
+            _output_dict = {
+                # "--chroma-qp-offset": "-2",
+                "--lookahead": "16",
+                "--gop-len": "250",
+                "-b": "4",
+                "--ref": "8",
+                "--aq": "",
+                "--aq-temporal": "",
+                "--bref-mode": "middle"}
+            if '-color_range' in output_dict:
+                _output_dict.update({"--colorrange": output_dict["-color_range"]})
+            if '-colorspace' in output_dict:
+                _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
+            if '-color_trc' in output_dict:
+                _output_dict.update({"--transfer": output_dict["-color_trc"]})
+            if '-color_primaries' in output_dict:
+                _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+
+            if '-s' in output_dict:
+                _output_dict.update({'--output-res': output_dict['-s']})
+            if "10bit" in self.ARGS.render_encoder:
+                _output_dict.update({"--output-depth": "10"})
+            if "H264" in self.ARGS.render_encoder:
+                _output_dict.update({f"-c": f"h264",
+                                     "--profile": "high10" if "10bit" in self.ARGS.render_encoder else "high", })
+            elif "H265" in self.ARGS.render_encoder:
+                _output_dict.update({"-c": "hevc",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--tier": "main", "-b": "5"})
+
+            if self.ARGS.hdr_mode == 2:
+                """HDR10"""
+                _output_dict.update({"-c": "hevc",
+                                     "--profile": "main10",
+                                     "--tier": "main", "-b": "5",
+                                     "--max-cll": "1000,100",
+                                     "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"})
+                if os.path.exists(hdr10plus_metadata):
+                    _output_dict.update({"--dhdr10-info": hdr10plus_metadata})
+            else:
+                if self.ARGS.render_encoder_preset != "loseless":
+                    _output_dict.update({"--preset": self.ARGS.render_encoder_preset})
+                else:
+                    _output_dict.update({"--lossless": "", "--preset": self.ARGS.render_encoder_preset})
+
+            input_dict = _input_dict
+            output_dict = _output_dict
+            pass
+        elif self.ARGS.render_hwaccel_mode == "QSVENCC":
+            _input_dict = {  # '--avsw': '',
+                'encc': "QSVENCC",
+                '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                "-pix_fmt": "rgb24",
+            }
+            _output_dict = {
+                "--fallback-rc": "", "--la-depth": "50", "--la-quality": "slow", "--extbrc": "", "--mbbrc": "",
+                "--i-adapt": "",
+                "--b-adapt": "", "--gop-len": "250", "-b": "6", "--ref": "8", "--b-pyramid": "", "--weightb": "",
+                "--weightp": "", "--adapt-ltr": "",
+            }
+            if '-color_range' in output_dict:
+                _output_dict.update({"--colorrange": output_dict["-color_range"]})
+            if '-colorspace' in output_dict:
+                _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
+            if '-color_trc' in output_dict:
+                _output_dict.update({"--transfer": output_dict["-color_trc"]})
+            if '-color_primaries' in output_dict:
+                _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+
+            if '-s' in output_dict:
+                _output_dict.update({'--output-res': output_dict['-s']})
+            if "10bit" in self.ARGS.render_encoder:
+                _output_dict.update({"--output-depth": "10"})
+            if "H264" in self.ARGS.render_encoder:
+                _output_dict.update({f"-c": f"h264",
+                                     "--profile": "high", "--repartition-check": "", "--trellis": "all"})
+            elif "H265" in self.ARGS.render_encoder:
+                _output_dict.update({"-c": "hevc",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--tier": "main", "--sao": "luma", "--ctu": "64", })
+            if self.ARGS.hdr_mode == 2:
+                _output_dict.update({"-c": "hevc",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--tier": "main", "--sao": "luma", "--ctu": "64",
+                                     "--max-cll": "1000,100",
+                                     "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
+                                     })
+            _output_dict.update({"--quality": self.ARGS.render_encoder_preset})
+
+            input_dict = _input_dict
+            output_dict = _output_dict
+            pass
+        elif self.ARGS.render_hwaccel_mode == "SVT":
+            _input_dict = {  # '--avsw': '',
+                '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                "-pix_fmt": "rgb24",
+                '-n': f"{self.ARGS.render_gap}"
+            }
+            _output_dict = {
+                "encc": "hevc", "-brr": "1", "-sharp": "1", "-b": ""
+            }
+            if "VP9" in self.ARGS.render_encoder:
+                _output_dict = {
+                    "encc": "vp9", "-tune": "0", "-b": ""
+                }
+            # TODO Color Info
+            # if '-color_range' in output_dict:
+            #     _output_dict.update({"--colorrange": output_dict["-color_range"]})
+            # if '-colorspace' in output_dict:
+            #     _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
+            # if '-color_trc' in output_dict:
+            #     _output_dict.update({"--transfer": output_dict["-color_trc"]})
+            # if '-color_primaries' in output_dict:
+            #     _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+
+            if '-s' in output_dict:
+                _output_dict.update({'-s': output_dict['-s']})
+            if "10bit" in self.ARGS.render_encoder:
+                _output_dict.update({"-bit-depth": "10"})
+            else:
+                _output_dict.update({"-bit-depth": "8"})
+
+            preset_mapper = {"slowest": "4", "slow": "5", "fast": "7", "faster": "9"}
+
+            if "H265" in self.ARGS.render_encoder_preset:
+                _output_dict.update({"-encMode": preset_mapper[self.ARGS.render_encoder_preset]})
+            elif "VP9" in self.ARGS.render_encoder_preset:
+                _output_dict.update({"-enc-mode": preset_mapper[self.ARGS.render_encoder_preset]})
+
+            # TODO max cll, master display
+            # if self.ARGS.hdr_mode == 2:
+            #     _output_dict.update({"-c": "hevc",
+            #                          "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+            #                          "--tier": "main", "--sao": "luma", "--ctu": "64",
+            #                          "--max-cll": "1000,100",
+            #                          "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
+            #                          })
+
+            input_dict = _input_dict
+            output_dict = _output_dict
+            pass
+
+        else:
+            """QSV"""
+            output_dict.update({"-pix_fmt": "yuv420p"})
+            if "10bit" in self.ARGS.render_encoder:
+                output_dict.update({"-pix_fmt": "yuv420p10le"})
+                pass
+            if "H264" in self.ARGS.render_encoder:
+                output_dict.update({"-c:v": "h264_qsv",
+                                    "-i_qfactor": "0.75", "-b_qfactor": "1.1",
+                                    f"-rc-lookahead": "120", })
+            elif "H265" in self.ARGS.render_encoder:
+                output_dict.update({"-c:v": "hevc_qsv",
+                                    f"-g": f"{int(self.ARGS.target_fps * 3)}", "-i_qfactor": "0.75", "-b_qfactor": "1.1",
+                                    f"-look_ahead": "120", })
+
+        if "ProRes" not in self.ARGS.render_encoder and self.ARGS.render_encoder_preset != "loseless":
+
+            if self.ARGS.render_crf and self.ARGS.use_crf:
+                if self.ARGS.render_hwaccel_mode != "CPU":
+                    hwaccel_mode = self.ARGS.render_hwaccel_mode
+                    if hwaccel_mode == "NVENC":
+                        output_dict.update({"-cq:v": str(self.ARGS.render_crf)})
+                    elif hwaccel_mode == "QSV":
+                        output_dict.update({"-q": str(self.ARGS.render_crf)})
+                    elif hwaccel_mode == "NVENCC":
+                        output_dict.update({"--vbr": "0", "--vbr-quality": str(self.ARGS.render_crf)})
+                    elif hwaccel_mode == "QSVENCC":
+                        output_dict.update({"--la-icq": str(self.ARGS.render_crf)})
+                    elif hwaccel_mode == "SVT":
+                        output_dict.update({"-q": str(self.ARGS.render_crf)})
+
+                else:  # CPU
+                    output_dict.update({"-crf": str(self.ARGS.render_crf)})
+
+            if self.ARGS.render_bitrate and self.ARGS.use_bitrate:
+                if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
+                    output_dict.update({"--vbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
+                elif self.ARGS.render_hwaccel_mode == "SVT":
+                    output_dict.update({"-tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
+                else:
+                    output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
+                if self.ARGS.render_hwaccel_mode == "QSV":
+                    output_dict.update({"-maxrate": "200M"})
+
+        if self.ARGS.use_manual_encode_thread:
+            if self.ARGS.render_hwaccel_mode == "NVENCC":
+                output_dict.update({"--output-thread": f"{self.ARGS.use_manual_encode_thread}"})
+            else:
+                output_dict.update({"-threads": f"{self.ARGS.use_manual_encode_thread}"})
+
+        logger.debug(f"writer: {output_dict}, {input_dict}")
+
+        """Customize FFmpeg Render Command"""
+        ffmpeg_customized_command = {}
+        if len(self.ARGS.render_ffmpeg_customized):
+            shlex_out = shlex.split(self.ARGS.render_ffmpeg_customized)
+            if len(shlex_out) % 2 != 0:
+                logger.warning(f"Customized FFmpeg is invalid: {self.ARGS.render_ffmpeg_customized}")
+            else:
+                for i in range(int(len(shlex_out) / 2)):
+                    ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
+        logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
+        output_dict.update(ffmpeg_customized_command)
+        # output_path = Tools.fillQuotation(output_path)
+        if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
+            return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
+        elif self.ARGS.render_hwaccel_mode in ["SVT"]:
+            return SVTWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
+        return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
+
+        pass
+
+    def run(self):
+        """
+                Render thread
+                :param chunk_cnt:
+                :param start_frame: render start
+                :return:
+                """
+
+        def rename_chunk():
+            """Maintain Chunk json"""
+            if self.ARGS.is_img_output or self.kill:
+                return
+            chunk_desc_path = "chunk-{:0>3d}-{:0>8d}-{:0>8d}{}".format(chunk_cnt, start_frame, now_frame,
+                                                                       self.ARGS.output_ext)
+            chunk_desc_path = os.path.join(self.ARGS.project_dir, chunk_desc_path)
+            if os.path.exists(chunk_desc_path):
+                os.remove(chunk_desc_path)
+            os.rename(chunk_tmp_path, chunk_desc_path)
+            chunk_path_list.append(chunk_desc_path)
+            chunk_info_path = os.path.join(self.ARGS.project_dir, "chunk.json")
+
+            with open(chunk_info_path, "w", encoding="utf-8") as w:
+                chunk_info = {
+                    "project_dir": self.ARGS.project_dir,
+                    "input": self.ARGS.input,
+                    "chunk_cnt": chunk_cnt,
+                    "chunk_list": chunk_path_list,
+                    "last_frame": now_frame,
+                    "target_fps": self.ARGS.target_fps,
+                }
+                json.dump(chunk_info, w)
+            """
+            key: project_dir, input filename, chunk cnt, chunk list, last frame
+            """
+            if is_end:
+                if os.path.exists(chunk_info_path):
+                    os.remove(chunk_info_path)
+
+        # @profile
+        def check_audio_concat():
+            """Check Input file ext"""
+            if not self.ARGS.is_save_audio or self.main_error is not None:
+                return
+            if self.ARGS.is_img_output:
+                return
+            output_ext = self.output_ext
+
+            concat_filepath = f"{os.path.join(self.ARGS.output, 'concat_test')}" + output_ext
+            map_audio = f'-i "{self.ARGS.input}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy -shortest '
+            ffmpeg_command = f'{self.ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
+                             f'{Tools.fillQuotation(concat_filepath)} -y'
+
+            logger.info("Start Audio Concat Test")
+            sp = Tools.popen(ffmpeg_command)
+            sp.wait()
+            if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
+                if self.ARGS.input_ext in SupportFormat.vid_outputs:
+                    self.output_ext = self.ARGS.input_ext
+                    logger.warning(f"Concat Test found unavailable output extension {self.output_ext}, "
+                                   f"changed to {self.ARGS.input_ext}")
+                else:
+                    logger.error(f"Concat Test Error, {output_ext}, empty output")
+                    self.main_error = FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
+                    raise FileExistsError(
+                        "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
+                        "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+            else:
+                logger.info("Audio Concat Test Success")
+                os.remove(concat_filepath)
+
+        concat_test_flag = True
+
+        chunk_frame_cnt = 1  # number of frames of current output chunk
+        chunk_path_list = list()
+        chunk_tmp_path = os.path.join(self.ARGS.project_dir, f"chunk-tmp{self.ARGS.output_ext}")
+        frame_writer = self._generate_frame_renderer(chunk_tmp_path, start_frame)  # get frame renderer
+
+        now_frame = start_frame
+        is_end = False
+        frame_written = False
+        while True:
+            if self.kill:
+                logger.warning("Render thread killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
+                frame_writer.close()
+                is_end = True
+                rename_chunk()
+                break
+
+            frame_data = self._input_queue.get()
+            if frame_data is None:
+                if frame_written:
+                    frame_writer.close()
+                is_end = True
+                rename_chunk()
+                break
+
+            now_frame = frame_data[0]
+            frame = frame_data[1]
+
+            if self.ARGS.use_fast_denoise:
+                frame = cv2.fastNlMeansDenoising(frame)
+            if self.ARGS.use_sr and (self.ARGS.use_sr_mode == 1 or self.ARGS.render_only):
+                """先补后超"""
+                frame = self.sr_module.svfi_process(frame)
+
+            reminder_id = self.reminder_bearer.generate_reminder(30, logger, "Encoder",
+                                                                 "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
+            if frame is not None:
+                frame_written = True
+                frame_writer.writeFrame(frame)
+            self.reminder_bearer.terminate_reminder(reminder_id)
+
+            chunk_frame_cnt += 1
+            self.ARGS.task_info.update({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
+
+            if not chunk_frame_cnt % self.ARGS.render_gap:
+                frame_writer.close()
+                if concat_test_flag:
+                    check_audio_concat()
+                    concat_test_flag = False
+                rename_chunk()
+                chunk_cnt += 1
+                start_frame = now_frame + 1
+                frame_writer = self._generate_frame_renderer(chunk_tmp_path, start_frame)
+        return
+
+    def concatChunk(self):
+        pass
+    def getInitiatedLock(self):
+        return self.initiation_lock
+
+    def feedFrames(self, frames_list, is_end=False):
+        """
+                维护输出帧数组的输入（往输出渲染线程喂帧
+                :param frames_list:
+                :param is_end: 是否是视频结尾
+                :return:
+                """
+        frames_list_len = len(frames_list)
+        # TODO where does this belong?
+        for frame_i in range(frames_list_len):
+            if frames_list[frame_i] is None:
+                self.frames_output.put(None)
+                logger.info("Put None to write_buffer in advance")
+                return
+            self.frames_output.put(frames_list[frame_i])  # 往输出队列（消费者）喂正常的帧
+            if frame_i == frames_list_len - 1:
+                if is_end:
+                    self.frames_output.put(None)
+                    logger.info("Put None to write_buffer")
+                    return
+        pass
+
+    def get_output_path(self):
+        """
+        Get Output Path for Process
+        :return:
+        """
+        """Check Input file ext"""
+        output_ext = self.ARGS.output_ext
+        if "ProRes" in self.ARGS.render_encoder:
+            output_ext = ".mov"
+
+        output_filepath = f"{os.path.join(self.ARGS.output, Tools.get_filename(self.ARGS.input))}"
+        if self.ARGS.render_only:
+            output_filepath += "_SVFI_Render"  # 仅渲染
+        output_filepath += f"_{int(self.ARGS.target_fps)}fps"  # 补帧
+
+        if self.ARGS.is_render_slow_motion:  # 慢动作
+            output_filepath += f"_[SLM_{self.ARGS.render_slow_motion_fps}fps]"
+        if self.ARGS.use_deinterlace:
+            output_filepath += f"_[DI]"
+        if self.ARGS.use_fast_denoise:
+            output_filepath += f"_[DN]"
+
+        if not self.ARGS.render_only:
+            """RIFE"""
+            if self.ARGS.use_rife_auto_scale:
+                output_filepath += f"_[SA]"
+            else:
+                output_filepath += f"_[S-{self.ARGS.rife_scale}]"  # 全局光流尺度
+            if self.ARGS.use_ncnn:
+                output_filepath += "_[NCNN]"
+            output_filepath += f"_[{os.path.basename(self.ARGS.rife_model_name)}]"  # 添加模型信息
+            if self.ARGS.use_rife_fp16:
+                output_filepath += "_[FP16]"
+            if self.ARGS.is_rife_reverse:
+                output_filepath += "_[RR]"
+            if self.ARGS.use_rife_forward_ensemble:
+                output_filepath += "_[RFE]"
+            if self.ARGS.rife_tta_mode:
+                output_filepath += f"_[TTA-{self.ARGS.rife_tta_mode}-{self.ARGS.rife_tta_iter}]"
+            if self.ARGS.remove_dup_mode:  # 去重模式
+                output_filepath += f"_[RD-{self.ARGS.remove_dup_mode}]"
+
+        if self.ARGS.use_sr:  # 使用超分
+            sr_model = os.path.splitext(self.ARGS.use_sr_model)[0]
+            output_filepath += f"_[SR-{self.ARGS.use_sr_algo}-{sr_model}]"
+
+        output_filepath += f"_{self.ARGS.task_id[-6:]}"
+        output_filepath += output_ext  # 添加后缀名
+        return output_filepath, output_ext
+
+    # @profile
+    @overtime_reminder_deco(300, logger, "Concat Chunks",
+                            "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
+    def concat_all(self):
+        """
+        Concat all the chunks
+        :return:
+        """
+
+        os.chdir(self.ARGS.project_dir)
+        concat_path = os.path.join(self.ARGS.project_dir, "concat.ini")
+        logger.info("Final Round Finished, Start Concating")
+        concat_list = list()
+
+        for f in os.listdir(self.ARGS.project_dir):
+            if re.match("chunk-\d+-\d+-\d+", f):
+                concat_list.append(os.path.join(self.ARGS.project_dir, f))
+            else:
+                logger.debug(f"concat escape {f}")
+
+        concat_list.sort(key=lambda x: int(os.path.basename(x).split('-')[2]))  # sort as start-frame
+
+        if not len(concat_path):
+            raise OSError(
+                f"Could not find any chunks, the chunks could have already been concatenated or removed, please check your output folder.")
+
+        if os.path.exists(concat_path):
+            os.remove(concat_path)
+
+        with open(concat_path, "w+", encoding="UTF-8") as w:
+            for f in concat_list:
+                w.write(f"file '{f}'\n")
+
+        concat_filepath, output_ext = self.get_output_path()
+
+        if self.ARGS.is_save_audio and not self.ARGS.is_img_input:
+            audio_path = self.ARGS.input
+            map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy '
+            if self.ARGS.input_start_point or self.ARGS.input_end_point:
+                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -c:a aac -ab 640k '
+                if self.ARGS.input_end_point is not None:
+                    map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
+                if self.ARGS.input_start_point is not None:
+                    map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
+
+            if self.ARGS.input_ext in ['.vob'] and self.ARGS.output_ext in ['.mkv']:
+                map_audio += "-map_chapters -1 "
+
+        else:
+            map_audio = ""
+
+        # TODO restore here
+        # color_info_str = ' '.join(Tools.dict2Args(self.ARGS.color_info))
+        color_info_str = ' '
+
+        ffmpeg_command = f'{self.ffmpeg} -hide_banner -f concat -safe 0 -i "{concat_path}" {map_audio} -c:v copy ' \
+                         f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" ' \
+                         f'{color_info_str} ' \
+                         f'-y'
+
+        logger.debug(f"Concat command: {ffmpeg_command}")
+        sp = Tools.popen(ffmpeg_command)
+        sp.wait()
+        logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
+        if self.ARGS.hdr_mode == 3:
+            logger.info("Start DOVI Conversion")
+            dovi_maker = DoviProcesser(concat_filepath, logger, self.ARGS.project_dir, self.ARGS,
+                                       self.ARGS.interp_times)
+            dovi_maker.run()
+        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
+            logger.error(f"Concat Error, with output extension {output_ext}")
+            raise FileExistsError(
+                f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
+                "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+        # TODO conflict or same module in Readflow (remove all chunks), should be at main flow
+        if self.ARGS.is_output_only:
+            self.concat_check(del_chunk=True)
+
+    def concat_check(self, concat_list, concat_filepath):
+        """
+        Check if concat output is valid
+        :param concat_filepath:
+        :param concat_list:
+        :return:
+        """
+        original_concat_size = 0
+        for f in concat_list:
+            original_concat_size += os.path.getsize(f)
+        output_concat_size = os.path.getsize(concat_filepath)
+        if output_concat_size < original_concat_size * 0.9:
+            return False
+        return True
+
+class SuperResolutionFlow:
+    def __init__(self, _args: TaskArgumentManager, _reader_queue: Queue, _render_queue: Queue):
+        # TODO Feed and Process
+        self.ARGS = _args
+        self.initiation_lock = threading.Lock()
+        self.initiation_lock.locked()
+        self._input_queue = _reader_queue
+        self._output_queue = _render_queue
+
+        self.sr_module = SuperResolution()  # 超分类
+        sr_scale = self.ARGS.resize_exp
+        resize_param = self.ARGS.resize_param
+        # TODO new SR mode(add one and react one)
+        if self.ARGS.use_sr and sr_scale > 1:
+            try:
+                if self.ARGS.use_sr_algo == "waifu2x":
+                    import Utils.SuperResolutionModule
+                    self.sr_module = Utils.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
+                                                                           scale=sr_scale,
+                                                                           num_threads=self.ARGS.ncnn_thread,
+                                                                           resize=resize_param)
+                elif self.ARGS.use_sr_algo == "realSR":
+                    import Utils.SuperResolutionModule
+                    self.sr_module = Utils.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
+                                                                            scale=sr_scale,
+                                                                            resize=resize_param)
+                elif self.ARGS.use_sr_algo == "realESR":
+                    import Utils.RealESRModule
+                    self.sr_module = Utils.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
+                                                                     gpu_id=self.ARGS.use_specific_gpu,  # TODO Assign another card here
+                                                                     scale=sr_scale, tile=self.ARGS.sr_tilesize,
+                                                                     half=self.ARGS.use_rife_fp16,
+                                                                     resize=resize_param)
+                logger.info(
+                    f"Load AI SR at {self.ARGS.use_sr_algo}, {self.ARGS.use_sr_model}, "
+                    f"scale = {sr_scale}, resize = {resize_param}")
+            except ImportError:
+                logger.error(
+                    f"Import SR Module failed\n"
+                    f"{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
+        else:
+            self.ARGS.use_sr = False
+            logger.warning("Abort to load AI SR since Resolution Rate <= 1")
+
+        pass
+    def feedFrames(self, frame_pack):
+        pass
+    def renderFrames(self):
+        pass
+    def getInitiatedLock(self):
+        return self.initiation_lock
+
+
+class ProgressUpdateFlow(threading.Thread):
+    def __init__(self, _args: TaskArgumentManager):
+        super().__init__()
+        self.kill = False
+    def run(self):
+        nonlocal previous_cnt
+        scene_status = self.scene_detection.get_scene_status()
+
+        render_status = self.task_info  # render status quo
+        """(chunk_cnt, start_frame, end_frame, frame_cnt)"""
+        # TODO while True
+        pbar.set_description(
+            f"Process at Chunk {render_status['chunk_cnt']:0>3d}")
+        pbar.set_postfix({"R": f"{render_status['render']}", "C": f"{now_frame}",
+                          "S": f"{scene_status['recent_scene']}",
+                          "SC": f"{self.scene_detection.scdet_cnt}", "TAT": f"{task_acquire_time:.2f}s",
+                          "PT": f"{process_time:.2f}s", "QL": f"{self.rife_task_queue.qsize()}"})
+        pbar.update(now_frame - previous_cnt)
+        previous_cnt = now_frame
+        pass
+
+
+class SteamFlow(SteamUtils):
+    def __init__(self, _args: TaskArgumentManager):
+        self.ARGS = _args
+        super().__init__(self.ARGS.is_steam, logger)
+        self.kill = False
+        pass
+    def steam_update_achv(self, output_path):
+        """
+        Update Steam Achievement
+        :return:
+        """
+        if not self.ARGS.is_steam or self.kill:
+            """If encountered serious error in the process, end steam update"""
+            return
+        """Get Stat"""
+        STAT_INT_FINISHED_CNT = self.GetStat("STAT_INT_FINISHED_CNT", int)
+        STAT_FLOAT_FINISHED_MINUTE = self.GetStat("STAT_FLOAT_FINISHED_MIN", float)
+
+        """Update Stat"""
+        STAT_INT_FINISHED_CNT += 1
+        reply = self.SetStat("STAT_INT_FINISHED_CNT", STAT_INT_FINISHED_CNT)
+        if self.ARGS.all_frames_cnt >= 0 and not self.ARGS.render_only:
+            """Update Mission Process Time only in interpolation"""
+            STAT_FLOAT_FINISHED_MINUTE += self.ARGS.all_frames_cnt / self.ARGS.target_fps / 60
+            reply = self.SetStat("STAT_FLOAT_FINISHED_MIN", round(STAT_FLOAT_FINISHED_MINUTE, 2))
+
+        """Get ACHV"""
+        ACHV_Task_Frozen = self.GetAchv("ACHV_Task_Frozen")
+        ACHV_Task_Cruella = self.GetAchv("ACHV_Task_Cruella")
+        ACHV_Task_Suzumiya = self.GetAchv("ACHV_Task_Suzumiya")
+        ACHV_Task_1000M = self.GetAchv("ACHV_Task_1000M")
+        ACHV_Task_10 = self.GetAchv("ACHV_Task_10")
+        ACHV_Task_50 = self.GetAchv("ACHV_Task_50")
+
+        """Update ACHV"""
+        if 'Frozen' in output_path and not ACHV_Task_Frozen:
+            reply = self.SetAchv("ACHV_Task_Frozen")
+        if 'Cruella' in output_path and not ACHV_Task_Cruella:
+            reply = self.SetAchv("ACHV_Task_Cruella")
+        if any([i in output_path for i in ['Suzumiya', 'Haruhi', '涼宮', '涼宮ハルヒの憂鬱', '涼宮ハルヒの消失', '凉宫春日']]) \
+                and not ACHV_Task_Suzumiya:
+            reply = self.SetAchv("ACHV_Task_Suzumiya")
+        if STAT_INT_FINISHED_CNT > 10 and not ACHV_Task_10:
+            reply = self.SetAchv("ACHV_Task_10")
+        if STAT_INT_FINISHED_CNT > 50 and not ACHV_Task_50:
+            reply = self.SetAchv("ACHV_Task_50")
+        if STAT_FLOAT_FINISHED_MINUTE > 1000 and not ACHV_Task_1000M:
+            reply = self.SetAchv("ACHV_Task_1000M")
+        self.Store()
+        pass
+
+class InterpWorkFlow:
+    # @profile
+    def __init__(self, __args: TaskArgumentManager, **kwargs):
+        global logger
+        self.ARGS = __args
+
+        """EULA"""
+        self.eula = EULAWriter()
+        self.eula.boom()
+
+        """Set Flow"""
+        self.steam_flow = SteamFlow(self.ARGS)
+        self.sr_flow = SuperResolutionFlow(self.ARGS, )  # TODO Assign Queue
+        self.render_flow = RenderFlow(self.ARGS, )
+        self.read_flow = ReadFlow(self.ARGS)
+        self.update_progress_flow = ProgressUpdateFlow(self.ARGS)
+
+
+    # @profile
+    def feed_to_render(self, frames_list: list, is_end=False):
+        """
+        维护输出帧数组的输入（往输出渲染线程喂帧
+        :param frames_list:
+        :param is_end: 是否是视频结尾
+        :return:
+        """
+        frames_list_len = len(frames_list)
+
+        for frame_i in range(frames_list_len):
+            if frames_list[frame_i] is None:
+                self.frames_output.put(None)
+                logger.info("Put None to write_buffer in advance")
+                return
+            self.frames_output.put(frames_list[frame_i])  # 往输出队列（消费者）喂正常的帧
+            if frame_i == frames_list_len - 1:
+                if is_end:
+                    self.frames_output.put(None)
+                    logger.info("Put None to write_buffer")
+                    return
+        pass
+
+    # @profile
+    def nvidia_vram_test(self):
+        """
+        显存测试
+        :return:
+        """
+        try:
+            if self.ARGS.resize_width and self.ARGS.resize_height:
+                w, h = self.ARGS.resize_width, self.ARGS.resize_height
+            else:
+                w, h = list(map(lambda x: round(x), self.video_info["size"]))
+
+            logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
+
+            test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
+                                   np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
+            self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
+            logger.info(f"VRAM Test Success, Resume of workflow ahead")
+            del test_img0, test_img1
+        except Exception as e:
+            logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
+                limit=ArgumentManager.traceback_limit))
+            raise e
 
     # @profile
     def run(self):
@@ -1512,16 +1768,16 @@ class InterpWorkFlow:
 
         """Check Steam Validation"""
         if self.ARGS.is_steam:
-            if not self.STEAM.steam_valid:
-                error = str(self.STEAM.steam_error).split('\n')[-1]
+            if not self.steam_flow.steam_valid:
+                error = str(self.steam_flow.steam_error).split('\n')[-1]
                 logger.error(f"Steam Validation Failed: {error}")
                 return
             else:
-                valid_response = self.STEAM.CheckSteamAuth()
+                valid_response = self.steam_flow.CheckSteamAuth()
                 if valid_response != 0:
                     logger.error(f"Steam Validation Failed, code {valid_response}")
                     return
-            steam_dlc_check = self.STEAM.CheckProDLC(0)
+            steam_dlc_check = self.steam_flow.CheckProDLC(0)
             if not steam_dlc_check:
                 _msg = "SVFI - Pro DLC Not Purchased,"
                 if self.ARGS.extract_only or self.ARGS.render_only:
@@ -1539,7 +1795,7 @@ class InterpWorkFlow:
         if self.ARGS.concat_only:
             # self.project_dir = self.input
             # self.ARGS.is_img_input = False
-            self.concat_all()
+            self.render_flow.concat_all()
         elif self.ARGS.extract_only:
             self.extract_only()
             pass
@@ -1569,7 +1825,7 @@ class InterpWorkFlow:
             if os.path.exists(concat_filepath):
                 logger.warning("Mission Already Finished, "
                                "Jump to Dolby Vision Check")
-                if self.hdr_check_status == 3:
+                if self.ARGS.hdr_mode == 3:
                     """Dolby Vision"""
                     dovi_maker = DoviProcesser(concat_filepath, logger, self.project_dir, self.ARGS,
                                                self.interp_exp)
@@ -1716,8 +1972,6 @@ class InterpWorkFlow:
                 if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
                     self.concat_all()
 
-                self.steam_update_achv()  # TODO Check Steam ACHV available for render only etc.
-
         # if os.path.exists(self.ARGS.config):
         #     logger.info("Successfully Remove Config File")
         #     os.remove(self.ARGS.config)
@@ -1727,54 +1981,6 @@ class InterpWorkFlow:
                     "Check EULA for more details")
         self.reminder_bearer.terminate_all()
         utils_overtime_reminder_bearer.terminate_all()
-        pass
-
-    def steam_update_achv(self):
-        """
-        Update Steam Achievement
-        :return:
-        """
-        if not self.ARGS.is_steam or self.main_error is not None:
-            """If encountered serious error in the process, end steam update"""
-            return
-        """Get Stat"""
-        STAT_INT_FINISHED_CNT = self.STEAM.GetStat("STAT_INT_FINISHED_CNT", int)
-        STAT_FLOAT_FINISHED_MINUTE = self.STEAM.GetStat("STAT_FLOAT_FINISHED_MIN", float)
-
-        """Update Stat"""
-        STAT_INT_FINISHED_CNT += 1
-        reply = self.STEAM.SetStat("STAT_INT_FINISHED_CNT", STAT_INT_FINISHED_CNT)
-        if self.all_frames_cnt >= 0 and not self.ARGS.render_only:
-            """Update Mission Process Time only in interpolation"""
-            STAT_FLOAT_FINISHED_MINUTE += self.all_frames_cnt / self.target_fps / 60
-            reply = self.STEAM.SetStat("STAT_FLOAT_FINISHED_MIN", round(STAT_FLOAT_FINISHED_MINUTE, 2))
-
-        """Get ACHV"""
-        ACHV_Task_Frozen = self.STEAM.GetAchv("ACHV_Task_Frozen")
-        ACHV_Task_Cruella = self.STEAM.GetAchv("ACHV_Task_Cruella")
-        ACHV_Task_Suzumiya = self.STEAM.GetAchv("ACHV_Task_Suzumiya")
-        ACHV_Task_1000M = self.STEAM.GetAchv("ACHV_Task_1000M")
-        ACHV_Task_10 = self.STEAM.GetAchv("ACHV_Task_10")
-        ACHV_Task_50 = self.STEAM.GetAchv("ACHV_Task_50")
-
-        """Update ACHV"""
-        output_path, _ = self.get_output_path()
-        if 'Frozen' in output_path and not ACHV_Task_Frozen:
-            reply = self.STEAM.SetAchv("ACHV_Task_Frozen")
-        if 'Cruella' in output_path and not ACHV_Task_Cruella:
-            reply = self.STEAM.SetAchv("ACHV_Task_Cruella")
-        if any([i in output_path for i in ['Suzumiya', 'Haruhi', '涼宮', '涼宮ハルヒの憂鬱', '涼宮ハルヒの消失', '凉宫春日']]) \
-                and not ACHV_Task_Suzumiya:
-            reply = self.STEAM.SetAchv("ACHV_Task_Suzumiya")
-        if STAT_INT_FINISHED_CNT > 10 and not ACHV_Task_10:
-            reply = self.STEAM.SetAchv("ACHV_Task_10")
-        if STAT_INT_FINISHED_CNT > 50 and not ACHV_Task_50:
-            reply = self.STEAM.SetAchv("ACHV_Task_50")
-        if STAT_FLOAT_FINISHED_MINUTE > 1000 and not ACHV_Task_1000M:
-            reply = self.STEAM.SetAchv("ACHV_Task_1000M")
-        self.STEAM.Store()
-        pass
-
     def extract_only(self):
         if self.output_ext not in SupportFormat.img_outputs:
             self.output_ext = ".png"
@@ -1850,147 +2056,21 @@ class InterpWorkFlow:
         if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
             self.concat_all()
 
-    def get_output_path(self):
-        """
-        Get Output Path for Process
-        :return:
-        """
-        """Check Input file ext"""
-        output_ext = self.output_ext
-        if "ProRes" in self.ARGS.render_encoder:
-            output_ext = ".mov"
+GLOBAL_ARGS = TaskArgumentManager(global_args)
 
-        output_filepath = f"{os.path.join(self.output, Tools.get_filename(self.input))}"
-        if self.ARGS.render_only:
-            output_filepath += "_SVFI_Render"  # 仅渲染
-        output_filepath += f"_{int(self.target_fps)}fps"  # 补帧
+"""设置可见的gpu"""
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+if int(GLOBAL_ARGS.rife_cuda_cnt) != 0 and GLOBAL_ARGS.use_rife_multi_cards:
+    cuda_devices = [str(i) for i in range(GLOBAL_ARGS.rife_cuda_cnt)]
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(cuda_devices)}"
+else:
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{GLOBAL_ARGS.use_specific_gpu}"
 
-        if self.ARGS.is_render_slow_motion:  # 慢动作
-            output_filepath += f"_[SLM_{self.ARGS.render_slow_motion_fps}fps]"
-        if self.ARGS.use_deinterlace:
-            output_filepath += f"_[DI]"
-        if self.ARGS.use_fast_denoise:
-            output_filepath += f"_[DN]"
-
-        if not self.ARGS.render_only:
-            """RIFE"""
-            if self.ARGS.use_rife_auto_scale:
-                output_filepath += f"_[SA]"
-            else:
-                output_filepath += f"_[S-{self.ARGS.rife_scale}]"  # 全局光流尺度
-            if self.ARGS.use_ncnn:
-                output_filepath += "_[NCNN]"
-            output_filepath += f"_[{os.path.basename(self.ARGS.rife_model_name)}]"  # 添加模型信息
-            if self.ARGS.use_rife_fp16:
-                output_filepath += "_[FP16]"
-            if self.ARGS.is_rife_reverse:
-                output_filepath += "_[RR]"
-            if self.ARGS.use_rife_forward_ensemble:
-                output_filepath += "_[RFE]"
-            if self.ARGS.rife_tta_mode:
-                output_filepath += f"_[TTA-{self.ARGS.rife_tta_mode}-{self.ARGS.rife_tta_iter}]"
-            if self.ARGS.remove_dup_mode:  # 去重模式
-                output_filepath += f"_[RD-{self.ARGS.remove_dup_mode}]"
-
-        if self.ARGS.use_sr:  # 使用超分
-            sr_model = os.path.splitext(self.ARGS.use_sr_model)[0]
-            output_filepath += f"_[SR-{self.ARGS.use_sr_algo}-{sr_model}]"
-
-        output_filepath += f"_{self.ARGS.task_id[-6:]}"
-        output_filepath += output_ext  # 添加后缀名
-        return output_filepath, output_ext
-
-    # @profile
-    @overtime_reminder_deco(300, logger, "Concat Chunks",
-                            "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
-    def concat_all(self):
-        """
-        Concat all the chunks
-        :return:
-        """
-
-        os.chdir(self.project_dir)
-        concat_path = os.path.join(self.project_dir, "concat.ini")
-        logger.info("Final Round Finished, Start Concating")
-        concat_list = list()
-
-        for f in os.listdir(self.project_dir):
-            if re.match("chunk-\d+-\d+-\d+", f):
-                concat_list.append(os.path.join(self.project_dir, f))
-            else:
-                logger.debug(f"concat escape {f}")
-
-        concat_list.sort(key=lambda x: int(os.path.basename(x).split('-')[2]))  # sort as start-frame
-
-        if not len(concat_path):
-            raise OSError(
-                f"Could not find any chunks, the chunks could have already been concatenated or removed, please check your output folder.")
-
-        if os.path.exists(concat_path):
-            os.remove(concat_path)
-
-        with open(concat_path, "w+", encoding="UTF-8") as w:
-            for f in concat_list:
-                w.write(f"file '{f}'\n")
-
-        concat_filepath, output_ext = self.get_output_path()
-
-        if self.ARGS.is_save_audio and not self.ARGS.is_img_input:
-            audio_path = self.input
-            map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy '
-            if self.ARGS.input_start_point or self.ARGS.input_end_point:
-                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -c:a aac -ab 640k '
-                if self.ARGS.input_end_point is not None:
-                    map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
-                if self.ARGS.input_start_point is not None:
-                    map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
-
-            if self.input_ext in ['.vob'] and self.output_ext in ['.mkv']:
-                map_audio += "-map_chapters -1 "
-
-        else:
-            map_audio = ""
-
-        color_info_str = ' '.join(Tools.dict2Args(self.color_info))
-
-        ffmpeg_command = f'{self.ffmpeg} -hide_banner -f concat -safe 0 -i "{concat_path}" {map_audio} -c:v copy ' \
-                         f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" ' \
-                         f'{color_info_str} ' \
-                         f'-y'
-
-        logger.debug(f"Concat command: {ffmpeg_command}")
-        sp = Tools.popen(ffmpeg_command)
-        sp.wait()
-        logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
-        if self.hdr_check_status == 3:
-            logger.info("Start DOVI Conversion")
-            dovi_maker = DoviProcesser(concat_filepath, logger, self.project_dir, self.ARGS,
-                                       self.interp_exp)
-            dovi_maker.run()
-        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            logger.error(f"Concat Error, with output extension {output_ext}")
-            raise FileExistsError(
-                f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
-                "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
-        if self.ARGS.is_output_only:
-            self.check_chunk(del_chunk=True)
-
-    def concat_check(self, concat_list, concat_filepath):
-        """
-        Check if concat output is valid
-        :param concat_filepath:
-        :param concat_list:
-        :return:
-        """
-        original_concat_size = 0
-        for f in concat_list:
-            original_concat_size += os.path.getsize(f)
-        output_concat_size = os.path.getsize(concat_filepath)
-        if output_concat_size < original_concat_size * 0.9:
-            return False
-        return True
+"""强制使用CPU"""
+if GLOBAL_ARGS.force_cpu:
+    os.environ["CUDA_VISIBLE_DEVICES"] = f""
 
 
-interpworkflow = InterpWorkFlow(ARGS)
-interpworkflow.run()
+global_workflow = InterpWorkFlow(GLOBAL_ARGS)
+global_workflow.run()
 sys.exit(0)

@@ -1,6 +1,7 @@
 # coding: utf-8
 import datetime
 import functools
+import glob
 import hashlib
 import json
 import logging
@@ -381,86 +382,74 @@ class Tools:
                 os.kill(pid, signal.SIGABRT)
                 print(f"Warning: Kill Process before exit: {pname}")
 
-
-class ImgSeqIO:
-    def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
-                 output_ext=".png", exp=2, resize=(0, 0), is_esr=False, **kwargs):
-        # TODO 解耦成Input，Output，Tool三个类
-        if logger is None:
-            self.logger = Tools.get_logger(name="ImgIO", log_path=folder)
-        else:
-            self.logger = logger
-
-        if output_ext[0] != ".":
-            output_ext = "." + output_ext
-        self.output_ext = output_ext
-
+class ImageIO:
+    def __init__(self, logger, folder, start_frame=0, exp=2, **kwargs):
+        """
+        Image I/O Operation Base Class
+        :param logger:
+        :param folder:
+        :param start_frame:
+        :param exp:
+        :param kwargs:
+        """
+        self.logger = logger
         if folder is None or os.path.isfile(folder):
-            self.logger.error(f"Invalid ImgSeq Folder: {folder}")
-            return
-        self.seq_folder = folder  # + "/tmp"  # weird situation, cannot write to target dir, father dir instead
-        if not os.path.exists(self.seq_folder):
-            os.makedirs(self.seq_folder, exist_ok=True)
-            start_frame = 0
-        elif start_frame == -1 and not is_read:
-            # write: start writing at the end of sequence
-            start_frame = self.get_write_start_frame()
-        elif start_frame != -1 and is_read:
-            start_frame = int(start_frame / (2 ** exp))
-
+            raise OSError(f"Invalid Image Sequence Folder: {folder}")
+        self.folder = folder  # + "/tmp"  # weird situation, cannot write to target dir, father dir instead
+        os.makedirs(self.folder, exist_ok=True)
         self.start_frame = start_frame
+        self.exp = exp
         self.frame_cnt = 0
         self.img_list = list()
 
-        self.write_queue = Queue(maxsize=1000)
-        self.thread_cnt = thread
-        self.thread_pool = list()
-
-        self.use_imdecode = False
-        self.resize = resize
-        self.resize_flag = all(self.resize)
-        self.is_esr = is_esr
-
-        self.exp = exp
-
-        if is_tool:
-            return
-        if is_read:
-            img_list = os.listdir(self.seq_folder)
-            img_list.sort()
-            for p in img_list:
-                fn, ext = os.path.splitext(p)
-                if ext.lower() in SupportFormat.img_inputs:
-                    if self.frame_cnt < start_frame:
-                        self.frame_cnt += 1  # update frame_cnt
-                        continue  # do not read frame until reach start_frame img
-                    self.img_list.append(os.path.join(self.seq_folder, p))
-            self.logger.debug(f"Load {len(self.img_list)} frames at {self.frame_cnt}")
-        else:
-            """Write Img"""
-            self.frame_cnt = start_frame
-            self.logger.debug(f"Start Writing {self.output_ext} at No. {self.frame_cnt}")
-            for t in range(self.thread_cnt):
-                _t = threading.Thread(target=self.write_buffer, name=f"[IMG.IO] Write Buffer No.{t + 1}")
-                self.thread_pool.append(_t)
-            for _t in self.thread_pool:
-                _t.start()
-
     def get_write_start_frame(self):
+        raise NotImplementedError()
+
+    def get_frames_cnt(self):
         """
-        Get Start Frame when start_frame is at its default value
+        Get Frames Cnt with EXP
         :return:
         """
-        img_list = list()
-        for f in os.listdir(self.seq_folder):
-            fn, ext = os.path.splitext(f)
-            if ext in SupportFormat.img_inputs:
-                img_list.append(fn)
-        if not len(img_list):
-            return 0
-        # img_list.sort()
-        # last_img = img_list[-1]  # biggest
-        return len(img_list)
+        return len(self.img_list) * 2 ** self.exp
+
+    def read_frame(self, path):
+        raise NotImplementedError()
+
+    def write_frame(self, img, path):
+        raise NotImplementedError()
+
+    def nextFrame(self):
+        raise NotImplementedError()
+
+    def write_buffer(self):
+        raise NotImplementedError()
+
+    def writeFrame(self, img):
+        raise NotImplementedError()
+
+    def close(self):
+        raise NotImplementedError()
+
+
+class ImageRead(ImageIO):
+    def __init__(self, logger, folder, start_frame=0, exp=2, resize=(0, 0), is_esr=False, **kwargs):
+        super().__init__(logger, folder, start_frame, exp)
+        self.resize = resize
+        self.resize_flag = all(self.resize)
+
+        if self.start_frame != -1:
+            self.start_frame = int(self.start_frame / (2 ** self.exp))
+
+        img_list = os.listdir(self.folder)
+        img_list.sort()
+        for p in img_list:
+            fn, ext = os.path.splitext(p)
+            if ext.lower() in SupportFormat.img_inputs:
+                if self.frame_cnt < start_frame:
+                    self.frame_cnt += 1  # update frame_cnt
+                    continue  # do not read frame until reach start_frame img
+                self.img_list.append(os.path.join(self.folder, p))
+        self.logger.debug(f"Load {len(self.img_list)} frames at {self.frame_cnt}")
 
     def get_frames_cnt(self):
         """
@@ -475,17 +464,51 @@ class ImgSeqIO:
             img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_LANCZOS4)
         return img
 
-    def write_frame(self, img, path):
-        if self.resize_flag:
-            img = cv2.resize(img, (self.resize[0], self.resize[1]))
-        cv2.imencode(self.output_ext, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))[1].tofile(path)
-        # good
-
     def nextFrame(self):
         for p in self.img_list:
             img = self.read_frame(p)
             for e in range(2 ** self.exp):
                 yield img
+
+    def close(self):
+        return
+
+
+class ImageWrite(ImageIO):
+    def __init__(self, logger, folder, start_frame=0, exp=2, resize=(0, 0), output_ext='.png', thread_cnt=4, is_tool=False, **kwargs):
+        super().__init__(logger, folder, start_frame, exp)
+        self.resize = resize
+        self.resize_flag = all(self.resize)
+        self.output_ext = output_ext
+        self.thread_cnt = thread_cnt
+        self.thread_pool = list()
+        if self.start_frame != -1:
+            self.start_frame = int(self.start_frame / (2 ** self.exp))
+        self.write_queue = Queue()
+        self.frame_cnt = start_frame
+        if not is_tool:
+            self.logger.debug(f"Start Writing {self.output_ext} at No. {self.frame_cnt}")
+            for t in range(self.thread_cnt):
+                _t = threading.Thread(target=self.write_buffer, name=f"[IMG.IO] Write Buffer No.{t + 1}")
+                self.thread_pool.append(_t)
+            for _t in self.thread_pool:
+                _t.start()
+
+
+    def get_write_start_frame(self):
+        """
+        Get Start Frame when start_frame is at its default value
+        :return:
+        """
+        img_list = list()
+        for f in os.listdir(self.folder):  # output folder
+            fn, ext = os.path.splitext(f)
+            if ext in SupportFormat.img_inputs:
+                img_list.append(fn)
+        if not len(img_list):
+            return 0
+        return len(img_list)
+
 
     def write_buffer(self):
         while True:
@@ -496,7 +519,7 @@ class ImgSeqIO:
             self.write_frame(img_data[1], img_data[0])
 
     def writeFrame(self, img):
-        img_path = os.path.join(self.seq_folder, f"{self.frame_cnt:0>8d}{self.output_ext}")
+        img_path = os.path.join(self.folder, f"{self.frame_cnt:0>8d}{self.output_ext}")
         img_path = img_path.replace("\\", "/")
         if img is None:
             for t in range(self.thread_cnt):
@@ -512,8 +535,6 @@ class ImgSeqIO:
         for _t in self.thread_pool:
             while _t.is_alive():
                 time.sleep(0.2)
-        # if os.path.exists(self.seq_folder):
-        #     shutil.rmtree(self.seq_folder)
         return
 
 
@@ -576,15 +597,14 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.6.12"
+    gui_version = "3.7.0"
     version_tag = f"{gui_version}.beta.1 " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.10.13"
+    ols_version = "6.11.0"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fallback from 3.6.13 to 3.6.12 to remove SR Pipe
     """
 
     path_len_limit = 230
@@ -629,13 +649,13 @@ class ArgumentManager:
         self.use_manual_buffer = args.get("use_manual_buffer", False)
         self.manual_buffer_size = args.get("manual_buffer_size", 1)
 
-        self.resize_width = args.get("resize_width", "")
-        self.resize_height = args.get("resize_height", "")
-        self.resize = args.get("resize", "")
+        self.resize_width = args.get("resize_width", 0)
+        self.resize_height = args.get("resize_height", 0)
+        self.resize_param = [self.resize_width, self.resize_height]  # crop parameter, 裁切参数
         self.resize_exp = args.get("resize_exp", 1)
-        self.crop_width = args.get("crop_width", "")
-        self.crop_height = args.get("crop_height", "")
-        self.crop = args.get("crop", "")
+        self.crop_width = args.get("crop_width", 0)
+        self.crop_height = args.get("crop_height", 0)
+        self.crop_param = [self.crop_width, self.crop_height]  # crop parameter, 裁切参数
 
         self.use_sr = args.get("use_sr", False)
         self.use_sr_algo = args.get("use_sr_algo", "")
@@ -733,8 +753,8 @@ class VideoFrameInterpolation:
 
 
 class Hdr10PlusProcesser:
-    def __init__(self, logger: logging, project_dir: str, args: ArgumentManager,
-                 interpolation_exp: int, video_info: dict, **kwargs):
+    def __init__(self, logger: logging, project_dir: str, render_gap: int,
+                 interp_times: int, hdr10_metadata: dict, **kwargs):
         """
 
         :param logger:
@@ -744,21 +764,21 @@ class Hdr10PlusProcesser:
         """
         self.logger = logger
         self.project_dir = project_dir
-        self.ARGS = args
-        self.interp_exp = interpolation_exp
-        self.video_info = video_info
+        self.interp_times = interp_times
+        self.render_gap = render_gap
+        self.hdr10_metadata_dict = hdr10_metadata
         self.hdr10plus_metadata_4interp = []
         self._initialize()
 
     def _initialize(self):
-        if not len(self.video_info['hdr10plus_metadata']):
+        if not len(self.hdr10_metadata_dict):
             return
-        hdr10plus_metadata = self.video_info['hdr10plus_metadata'].copy()
+        hdr10plus_metadata = self.hdr10_metadata_dict.copy()
         hdr10plus_metadata = hdr10plus_metadata['SceneInfo']
         hdr10plus_metadata.sort(key=lambda x: int(x['SceneFrameIndex']))
         current_index = -1
         for m in hdr10plus_metadata:
-            for j in range(int(self.interp_exp)):
+            for j in range(int(self.interp_times)):
                 current_index += 1
                 _m = m.copy()
                 _m['SceneFrameIndex'] = current_index
@@ -773,12 +793,12 @@ class Hdr10PlusProcesser:
         if not len(self.hdr10plus_metadata_4interp) or start_frame < 0 or start_frame > len(
                 self.hdr10plus_metadata_4interp):
             return ""
-        if start_frame + self.ARGS.render_gap < len(self.hdr10plus_metadata_4interp):
-            hdr10plus_metadata = self.hdr10plus_metadata_4interp[start_frame:start_frame + self.ARGS.render_gap]
+        if start_frame + self.render_gap < len(self.hdr10plus_metadata_4interp):
+            hdr10plus_metadata = self.hdr10plus_metadata_4interp[start_frame:start_frame + self.render_gap]
         else:
             hdr10plus_metadata = self.hdr10plus_metadata_4interp[start_frame:]
         hdr10plus_metadata_path = os.path.join(self.project_dir,
-                                               f'hdr10plus_metadata_{start_frame}_{start_frame + self.ARGS.render_gap}.json')
+                                               f'hdr10plus_metadata_{start_frame}_{start_frame + self.render_gap}.json')
         json.dump(hdr10plus_metadata, open(hdr10plus_metadata_path, 'w'))
         return hdr10plus_metadata_path.replace('/', '\\')
 
@@ -932,8 +952,174 @@ class DoviProcesser:
         self.logger.info(f"DV Processing FINISHED")
         return True
 
-
 class VideoInfo:
+    def __init__(self, input_file: str, logger, project_dir: str, interp_exp=0, **kwargs):
+        """
+
+        :param input_file:
+        :param logger:
+        :param project_dir:
+        :param interp_exp:
+        :param kwargs:
+        """
+        self.input_file = input_file
+        self.logger = logger
+        self.img_input = not os.path.isfile(self.input_file)
+        self.ffmpeg = "ffmpeg"
+        self.ffprobe = "ffprobe"
+        self.hdr10_parser = "hdr10plus_parser"
+        self.hdr_mode = -1
+        self.project_dir = project_dir
+        self.color_data_tag = [('color_range', 'tv'),
+                               ('color_space', 'bt709'),
+                               ('color_transfer', 'bt709'),
+                               ('color_primaries', 'bt709')]
+
+        self.interp_exp = interp_exp
+        self.fps = 0  # float
+        self.frames_size = (0, 0)  # width, height, float
+        self.frames_cnt = 0  # int
+        self.duration = 0
+        self.video_info = dict()
+        self.audio_info = dict()
+        self.hdr10plus_metadata_path = None
+        self.update_info()
+
+    def update_hdr_mode(self):
+        if any([i in str(self.video_info) for i in ['dv_profile', 'DOVI']]):
+            self.hdr_mode = 3  # Dolby Vision
+            self.logger.warning("Dolby Vision Content Detected")
+            return
+        if "color_transfer" not in self.video_info:
+            self.hdr_mode = 0
+            self.logger.warning("Not Find Color Transfer Characteristics")
+            return
+
+        color_trc = self.video_info["color_transfer"]
+        if "smpte2084" in color_trc or "bt2020" in color_trc:
+            self.hdr_mode = 1  # hdr(normal)
+            self.logger.warning("HDR Content Detected")
+            if any([i in str(self.video_info).lower()]
+                   for i in ['mastering-display', "mastering display", "content light level metadata"]):
+                self.hdr_mode = 2  # hdr10
+                self.logger.warning("HDR10+ Content Detected")
+                self.hdr10plus_metadata_path = os.path.join(self.project_dir, "hdr10plus_metadata.json")
+                check_command = (f'{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.input_file)} -c:v copy '
+                                 f'-vbsf hevc_mp4toannexb -f hevc - | '
+                                 f'{self.hdr10_parser} -o {Tools.fillQuotation(self.hdr10plus_metadata_path)} -')
+                try:
+                    check_output(shlex.split(check_command), shell=True)
+                except Exception:
+                    self.logger.warning("Failed to extract HDR10+ data")
+                    self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+
+        elif "arib-std-b67" in color_trc:
+            self.hdr_mode = 4  # HLG
+            self.logger.warning("HLG Content Detected")
+        pass
+
+    def update_frames_info_ffprobe(self):
+        check_command = (f'{self.ffprobe} -v error '
+                         f'-show_streams -print_format json '
+                         f'{Tools.fillQuotation(self.input_file)}')
+        result = check_output(shlex.split(check_command))
+        try:
+            stream_info = json.loads(result)['streams']  # select first video stream as input
+        except Exception as e:
+            self.logger.warning(f"Parse Video Info Failed: {result}")
+            raise e
+        """Select first stream"""
+        for stream in stream_info:
+            if stream['codec_type'] == 'video':
+                self.video_info = stream
+                break
+        for stream in stream_info:
+            if stream['codec_type'] == 'audio':
+                self.audio_info = stream
+                break
+
+        for cdt in self.color_data_tag:
+            if cdt[0] not in self.video_info:
+                self.video_info[cdt[0]] = cdt[1]
+
+        self.update_hdr_mode()
+
+        # update frame size info
+        if 'width' in self.video_info and 'height' in self.video_info:
+            self.frames_size = (int(self.video_info['width']), int(self.video_info['height']))
+
+        if "r_frame_rate" in self.video_info:
+            fps_info = self.video_info["r_frame_rate"].split('/')
+            self.fps = int(fps_info[0]) / int(fps_info[1])
+            self.logger.info(f"Auto Find FPS in r_frame_rate: {self.fps}")
+        else:
+            self.logger.warning("Auto Find FPS Failed")
+            return False
+
+        if "nb_frames" in self.video_info:
+            self.frames_cnt = int(self.video_info["nb_frames"])
+            self.logger.info(f"Auto Find frames cnt in nb_frames: {self.frames_cnt}")
+        elif "duration" in self.video_info:
+            self.duration = float(self.video_info["duration"])
+            self.frames_cnt = round(float(self.duration * self.fps))
+            self.logger.info(f"Auto Find Frames Cnt by duration deduction: {self.frames_cnt}")
+        else:
+            self.logger.warning("FFprobe Not Find Frames Cnt")
+            return False
+        return True
+
+    def update_frames_info_cv2(self):
+        if self.img_input:
+            return
+        video_input = cv2.VideoCapture(self.input_file)
+        try:
+            if not self.fps:
+                self.fps = video_input.get(cv2.CAP_PROP_FPS)
+            if not self.frames_cnt:
+                self.frames_cnt = video_input.get(cv2.CAP_PROP_FRAME_COUNT)
+            if not self.duration:
+                self.duration = self.frames_cnt / self.fps
+            if self.frames_size == (0,0):
+                self.frames_size = (
+                    round(video_input.get(cv2.CAP_PROP_FRAME_WIDTH)), round(video_input.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        except Exception:
+            self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+
+    def update_info(self):
+        if self.img_input:
+            seq_list = []
+            for ext in SupportFormat.img_inputs:
+                glob_expression = os.path.join(self.input_file, f"*{ext}")
+                seq_list.extend(glob.glob(glob_expression))
+            if not len(seq_list):
+                raise OSError("Input Dir does not contain any valid images(png, jpg, tiff only)")
+            self.frames_cnt = len(seq_list) * 2 ** self.interp_exp
+            img = cv2.imdecode(np.fromfile(os.path.join(self.input_file, seq_list[0]), dtype=np.uint8), 1)[:, :,
+                  ::-1].copy()
+            self.frames_size = (0, 0)  # for img input, do not question their size for non-monotonous resolution input
+            return
+        self.update_frames_info_ffprobe()
+        self.update_frames_info_cv2()
+
+    def getInputColorInfo(self) -> dict:
+        return dict(map(lambda x: (x[0], self.video_info.get(x[0], x[1])), self.color_data_tag))
+        pass
+
+    def getInputHdr10PlusMetadata(self) -> dict:
+        """
+
+        :return: dict
+        """
+        if self.hdr10plus_metadata_path is not None and os.path.exists(self.hdr10plus_metadata_path):
+            try:
+                hdr10plus_metadata = json.load(open(self.hdr10plus_metadata_path, 'r'))
+                return hdr10plus_metadata
+            except json.JSONDecodeError:
+                self.logger.error("Unable to Decode HDR10Plus Metadata")
+        return {}
+
+
+class VideoInfo_obsolete:
     def __init__(self, file_input: str, logger, project_dir: str, app_dir=None, img_input=False,
                  hdr_mode=False, exp=0, **kwargs):
         self.filepath = file_input
