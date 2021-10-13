@@ -4,7 +4,6 @@ import datetime
 import math
 import os
 import re
-import shlex
 import sys
 import threading
 import time
@@ -16,45 +15,52 @@ import numpy as np
 import psutil
 import tqdm
 
-from Utils.utils import STEAMWORKS, SteamUtils, ArgumentManager, appDir, DefaultConfigParser, Tools, VideoInfo, \
-    SupportFormat, OverTimeReminderBearer, ImageRead, ImageWrite, TransitionDetection_ST, \
-    VideoFrameInterpolation, Hdr10PlusProcesser, DoviProcesser, EULAWriter, utils_overtime_reminder_bearer, \
-    SuperResolution, overtime_reminder_deco
+from Utils.LicenseModule import EULAWriter
+from Utils.StaticParameters import appDir, SupportFormat
+from Utils.utils import ArgumentManager, DefaultConfigParser, Tools, VideoInfoProcessor, \
+    ImageRead, ImageWrite, TransitionDetection_ST, \
+    VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, \
+    SuperResolutionBase, overtime_reminder_deco, OverTimeReminderTask
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
-from steamworks.exceptions import *
+from steamworks import STEAMWORKS
+from steamworks.exceptions import GenericSteamException
 
+print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
+
+"""Validation Module Initiation"""
 if ArgumentManager.is_steam:
+    from Utils.LicenseModule import SteamValidation as ValidationModule
+
     try:
         _steamworks = STEAMWORKS(ArgumentManager.app_id)
     except:
         pass
-
-print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
-# TODO Fix up SVT-HEVC
+else:
+    from Utils.LicenseModule import RetailValidation as ValidationModule
 
 """设置环境路径"""
 os.chdir(appDir)
 sys.path.append(appDir)
 
 """Parse Args"""
-parser = argparse.ArgumentParser(prog="#### SVFI CLI tool by Jeanna ####",
-                                 description='Interpolation for long video/imgs footage')
-basic_parser = parser.add_argument_group(title="Basic Settings, Necessary")
-basic_parser.add_argument('-i', '--input', dest='input', type=str, required=True,
-                          help="原视频/图片序列文件夹路径")
-basic_parser.add_argument("-c", '--config', dest='config', type=str, required=True, help="配置文件路径")
-basic_parser.add_argument("-t", '--task-id', dest='task_id', type=str, required=True, help="任务id")
-basic_parser.add_argument('--concat-only', dest='concat_only', action='store_true', help='只执行合并已有区块操作')
-basic_parser.add_argument('--extract-only', dest='extract_only', action='store_true', help='只执行拆帧操作')
-basic_parser.add_argument('--render-only', dest='render_only', action='store_true', help='只执行渲染操作')
+global_args_parser = argparse.ArgumentParser(prog="#### SVFI CLI tool by Jeanna ####",
+                                             description='Interpolation for long video/imgs footage')
+global_basic_parser = global_args_parser.add_argument_group(title="Basic Settings, Necessary")
+global_basic_parser.add_argument('-i', '--input', dest='input', type=str, required=True,
+                                 help="原视频/图片序列文件夹路径")
+global_basic_parser.add_argument("-c", '--config', dest='config', type=str, required=True, help="配置文件路径")
+global_basic_parser.add_argument("-t", '--task-id', dest='task_id', type=str, required=True, help="任务id")
+global_basic_parser.add_argument('--concat-only', dest='concat_only', action='store_true', help='只执行合并已有区块操作')
+global_basic_parser.add_argument('--extract-only', dest='extract_only', action='store_true', help='只执行拆帧操作')
+global_basic_parser.add_argument('--render-only', dest='render_only', action='store_true', help='只执行渲染操作')
 
 """Clean Args"""
-args_read = parser.parse_args()
+global_args_read = global_args_parser.parse_args()
 global_config_parser = DefaultConfigParser(allow_no_value=True)  # 把SVFI GUI传来的参数格式化
-global_config_parser.read(args_read.config, encoding='utf-8')
+global_config_parser.read(global_args_read.config, encoding='utf-8')
 global_config_parser_items = dict(global_config_parser.items("General"))
 global_args = Tools.clean_parsed_config(global_config_parser_items)
-global_args.update(vars(args_read))  # update -i -o -c，将命令行参数更新到config生成的字典
+global_args.update(vars(global_args_read))  # update -i -o -c，将命令行参数更新到config生成的字典
 
 """Set Global Logger"""
 logger = Tools.get_logger('TMP', '')
@@ -78,6 +84,7 @@ class TaskArgumentManager(ArgumentManager):
                           "rife_now_frame": 0,
                           "recent_scene": 0, "scene_cnt": 0,
                           "decode_process_time": 0,
+                          "render_process_time": 0,
                           "rife_task_acquire_time": 0,
                           "rife_process_time": 0,
                           "rife_queue_len": 0,
@@ -89,10 +96,11 @@ class TaskArgumentManager(ArgumentManager):
         self.__validate_io_path()
         self.__initiate_logger()
         self.__set_ffmpeg_path()
-        self.video_info_instance = VideoInfo(input_file=self.input, logger=logger, project_dir=self.project_dir,
-                                             interp_exp=self.rife_exp)
+        self.video_info_instance = VideoInfoProcessor(input_file=self.input, logger=logger,
+                                                      project_dir=self.project_dir,
+                                                      interp_exp=self.rife_exp)
         self.__update_hdr_mode()
-        self.__update_io_fps()
+        self.__update_io_info()
         self.__update_frames_cnt()
         self.__update_frame_size()
         self.__update_task_queue_size_by_memory()
@@ -100,7 +108,7 @@ class TaskArgumentManager(ArgumentManager):
 
         """Check Initiation Info"""
         logger.info(
-            f"Check Interpolation Source: "
+            f"Check Input Source: "
             f"FPS: {self.input_fps} -> {self.target_fps}, FRAMES_CNT: {self.all_frames_cnt}, "
             f"INTERP_TIMES: {self.interp_times}, "
             f"HDR: {self.hdr_mode}, FRAME_SIZE: {self.frame_size}, QUEUE_LEN: {self.frames_queue_len}, "
@@ -114,12 +122,12 @@ class TaskArgumentManager(ArgumentManager):
         self.input_ext = self.input_ext.lower()
         if not self.output_ext.startswith('.'):
             self.output_ext = "." + self.output_ext
-        if "ProRes" in self.render_encoder and not self.is_img_output:
+        if "ProRes" in self.render_encode_format and not self.is_img_output:
             self.output_ext = ".mov"
         if self.is_img_output and self.output_ext not in SupportFormat.img_outputs:
             self.output_ext = ".png"
 
-    def __update_io_fps(self):
+    def __update_io_info(self):
         """
         Update io fps and interp times
         :return:
@@ -128,18 +136,22 @@ class TaskArgumentManager(ArgumentManager):
         if not self.is_img_input:  # 输入不是文件夹，使用检测到的帧率
             self.input_fps = self.video_info_instance.fps
         elif not self.input_fps:  # 输入是文件夹，使用用户的输入帧率; 用户有毒，未发现有效的输入帧率
-            raise OSError("Not Find FPS, Input File is not valid")
-        if not self.target_fps:  # 未找到用户的输出帧率
-            self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
-        if self.is_img_input:  # 图片序列输入，不保留音频（也无音频可保留
-            self.is_save_audio = False
+            raise OSError("Not Find Input FPS, Input File is not valid")
+        if self.render_only:
+            self.target_fps = self.input_fps
+            logger.info(f"Render only, target fps is changed to input fps: {self.target_fps}")
+        else:
+            if not self.target_fps:  # 未找到用户的输出帧率
+                self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
+            if self.is_img_input or not len(self.video_info_instance.audio_info):  # 图片序列输入，不保留音频（也无音频可保留
+                logger.warning("Image Sequence input found or Video does not contain audio, will not mux audio")
+                self.is_save_audio = False
 
         """Set interpolation exp related to hdr mode"""
         self.interp_times = round(self.target_fps / self.input_fps)
-        if self.hdr_mode == 3 or (
-                self.hdr_mode == 2 and self.video_info_instance.getInputHdr10PlusMetadata() is not None):
-            """DoVi or Valid HDR10 Metadata Detected, change target fps"""
+        if self.hdr_mode == 3 or self.hdr_mode == 2:
             self.target_fps = self.interp_times * self.input_fps
+            logger.info(f"DoVi or HDR10+ Content Detected, target fps is changed to {self.target_fps}")
 
     def __update_task_queue_size_by_memory(self):
         """Guess Memory and Fix Resolution"""
@@ -154,7 +166,9 @@ class TaskArgumentManager(ArgumentManager):
         if not self.use_manual_buffer:
             self.frames_queue_len = int(max(10.0, self.frames_queue_len))
         self.dup_skip_limit = int(0.5 * self.input_fps) + 1  # 当前跳过的帧计数超过这个值，将结束当前判断循环
-        logger.info(f"Update QLen to {self.frames_queue_len}, dup_skip_limit to {self.dup_skip_limit}")
+        logger.info(f"Free RAM: {free_mem / 1024:.1f}G, "
+                    f"Update Task Queue Len:  {self.frames_queue_len}, "
+                    f"Duplicate Frames Cnt Upper Limit: {self.dup_skip_limit}")
 
     def __update_frame_size(self):
         """规整化输出输入分辨率"""
@@ -169,7 +183,8 @@ class TaskArgumentManager(ArgumentManager):
 
     def __update_hdr_mode(self):
         if self.hdr_mode == 0:  # Auto
-            logger.info(f"Auto HDR Mode, Set HDR mode to {self.video_info_instance.hdr_mode}")
+            hdr_mode_map = {-1: "-", 0: "-", 1: "Standard BT2020", 2: "HDR10+", 3: "Dolby Vision", 4: "HLG", }
+            logger.info(f"Auto Sets HDR mode to {hdr_mode_map.get(self.video_info_instance.hdr_mode, '-')}")
             self.hdr_mode = self.video_info_instance.hdr_mode
             # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
             # hdr_check_status indicates the final process mode for (hdr) input
@@ -180,7 +195,7 @@ class TaskArgumentManager(ArgumentManager):
 
     def __validate_io_path(self):
         if not len(self.input):
-            raise OSError("Input Path is empty")
+            raise OSError("Input Path is empty, Program will not proceed")
         if not len(self.output_dir):
             """未填写输出文件夹"""
             self.output_dir = os.path.dirname(self.input)
@@ -194,10 +209,9 @@ class TaskArgumentManager(ArgumentManager):
 
         """Extract Only Mode"""
         if self.extract_only and self.output_ext not in SupportFormat.img_outputs:
-            # TODO Extract only mode Be removed soon
             self.is_img_output = True
             self.output_ext = ".png"
-            logger.warning("Auto change output extension to png")
+            logger.warning("Output extension is changed to .png")
 
         """Check Img IO status"""
         if self.is_img_output:
@@ -210,7 +224,7 @@ class TaskArgumentManager(ArgumentManager):
         """Set Global Logger"""
         global logger
         logger = Tools.get_logger("CLI", self.project_dir, debug=self.debug)
-        logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
+        logger.info(f"Initial New Interpolation Project: PROJECT DIR: %s, INPUT FILEPATH: %s", self.project_dir,
                     self.input)
 
     def update_task_info(self, update_dict: dict):
@@ -226,10 +240,10 @@ class TaskArgumentManager(ArgumentManager):
         self.main_error.append(e)
 
 
-class SteamFlow(SteamUtils):
+class ValidationFlow(ValidationModule):
     def __init__(self, _args: TaskArgumentManager):
         self.ARGS = _args
-        super().__init__(self.ARGS.is_steam, logger)
+        super().__init__(logger)
         self.kill = False
         pass
 
@@ -281,12 +295,12 @@ class SteamFlow(SteamUtils):
 
 
 class IOFlow(threading.Thread):
-    def __init__(self, __args: TaskArgumentManager):
+    def __init__(self, __args: TaskArgumentManager, __logger):
         super().__init__()
         self.ARGS = __args
+        self.logger = __logger
         self.initiation_event = threading.Event()
         self.initiation_event.clear()
-        self.reminder_bearer = OverTimeReminderBearer()
         self._kill = False
         self.task_done = False
 
@@ -333,7 +347,6 @@ class IOFlow(threading.Thread):
 
     def kill(self):
         self._kill = True
-        self.reminder_bearer.terminate_all()
 
     def _task_done(self):
         self.task_done = True
@@ -348,8 +361,8 @@ class IOFlow(threading.Thread):
 
 class ReadFlow(IOFlow):
 
-    def __init__(self, _args: TaskArgumentManager, _output_queue: Queue):
-        super().__init__(_args)
+    def __init__(self, _args: TaskArgumentManager, __logger, _output_queue: Queue):
+        super().__init__(_args, __logger)
         self.name = 'Reader'
         self._output_queue = _output_queue
         self.scene_detection = TransitionDetection_ST(self.ARGS.project_dir, int(0.3 * self.ARGS.input_fps),
@@ -358,7 +371,7 @@ class ReadFlow(IOFlow):
                                                       use_fixed_scdet=self.ARGS.use_scdet_fixed,
                                                       fixed_max_scdet=self.ARGS.scdet_fixed_max,
                                                       scdet_output=self.ARGS.is_scdet_output)
-        self.vfi_core = VideoFrameInterpolation(self.ARGS)
+        self.vfi_core = VideoFrameInterpolationBase(self.ARGS)
 
     def __crop(self, img):
         """
@@ -386,8 +399,11 @@ class ReadFlow(IOFlow):
         logger.info("Resuming Video Frames...")
 
         """Get Frames to interpolate"""
-        reminder_id = self.reminder_bearer.generate_reminder(300, logger, "Decode Input",
-                                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
+        # TODO Optimize this since progress bar started after reading initiation is complete
+        _over_time_reminder_task = OverTimeReminderTask(10, "Decode Input",
+                                                        "Decoding takes too long, Please consider to terminate the program, and check input's parameters and restart. It's normal to wait for at least 10 minutes when it's 4K input at performing resume of workflow")
+        self.ARGS.put_overtime_task(_over_time_reminder_task)
+
         videogen = self.__generate_frame_reader(start_frame).nextFrame()
         videogen_check = None
         if dedup:
@@ -395,13 +411,14 @@ class ReadFlow(IOFlow):
         videogen_available_check = self.__generate_frame_reader(start_frame, frame_check=True).nextFrame()
 
         check_img1 = self.__crop(Tools.gen_next(videogen_available_check))
-        self.reminder_bearer.terminate_reminder(reminder_id)
+        _over_time_reminder_task.deactive()
+
         videogen_available_check.close()
         if check_img1 is None:
             main_error = OSError(
-                f"Input file is not available: {self.ARGS.input}, is img input: {self.ARGS.is_img_input},"
-                f"Please Check Your Input Settings"
-                f"(Start Chunk, Start Frame, Start Point, Start Frame)")
+                f"Input file is not available: {self.ARGS.input}, is img input?: {self.ARGS.is_img_input},"
+                f"Please Check Your Input Parameters: "
+                f"Start Chunk, Start Frame, Start Point, Start Frame")
             self.ARGS.save_main_error(main_error)
             raise main_error
         return chunk_cnt, start_frame, videogen, videogen_check
@@ -420,7 +437,7 @@ class ReadFlow(IOFlow):
             img_reader = ImageRead(logger, folder=self.ARGS.input, start_frame=self.ARGS.interp_start,
                                    exp=self.ARGS.rife_exp, resize=resize_param, )
             self.ARGS.all_frames_cnt = img_reader.get_frames_cnt()
-            logger.info(f"Img Input, update frames count to {self.ARGS.all_frames_cnt}")
+            logger.info(f"This is Img Input, update frames count to {self.ARGS.all_frames_cnt}")
             return img_reader
 
         """If input is a video"""
@@ -454,7 +471,7 @@ class ReadFlow(IOFlow):
                 clip_fps = self.ARGS.target_fps
                 self.ARGS.all_frames_cnt = round(clip_duration.total_seconds() * clip_fps)
                 logger.info(
-                    f"Update Input Range: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, "
+                    f"Update Input Section: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, "
                     f"all_frames_cnt -> {self.ARGS.all_frames_cnt}")
             else:
                 if '-ss' in input_dict:
@@ -462,12 +479,11 @@ class ReadFlow(IOFlow):
                 if '-to' in input_dict:
                     input_dict.pop('-to')
                 logger.warning(
-                    f"Invalid Input Section, change to original course")
-        else:
-            logger.info(f"Input Time Section is original course")
+                    f"Invalid Input Section, changed to original section")
 
-        output_dict = {
-            "-vframes": str(10 ** 10), }  # use read frames cnt to avoid ffprobe, fuck
+        output_dict = {"-map": "0:v:0", "-vframes": str(10 ** 10),
+                       "-sws_flags": "lanczos",
+                       }  # use read frames cnt to avoid ffprobe, fuck
 
         output_dict.update(self._get_color_info_dict())
 
@@ -485,25 +501,25 @@ class ReadFlow(IOFlow):
 
         if frame_check:
             """用以一拍二一拍N除重模式的预处理"""
-            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                "-s": f"300x300"})
+            output_dict.update({"-s": f"300x300"})
         else:
             if not self.ARGS.use_sr:
                 """直接用最终输出分辨率"""
                 if self.ARGS.frame_size != self.ARGS.resize_param and all(self.ARGS.resize_param):
-                    output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                        "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
+                    output_dict.update({"-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
             else:
                 """超分"""
                 if self.ARGS.frame_size != self.ARGS.transfer_param and all(self.ARGS.transfer_param):
-                    output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                        "-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
+                    output_dict.update({"-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
         """Quick Extraction"""
-        if not self.ARGS.is_quick_extract:
-            vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
-
-        vf_args += f",minterpolate=fps={self.ARGS.target_fps}:mi_mode=dup"
+        if not self.ARGS.is_quick_extract and not frame_check:
+            # vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
+            if self.ARGS.hdr_mode <= 0:
+                """Only BT709 could zscale,,, to avoid banding"""
+                vf_args += f",zscale=min=709:m=709,format=yuv444p10le,format=rgb48be,format=rgb24"
+            output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd",})
+        vf_args += f",minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
 
         """Update video filters"""
         output_dict["-vf"] = vf_args
@@ -512,13 +528,17 @@ class ReadFlow(IOFlow):
 
     def __run_rest(self, run_time: float):
         rest_exp = 3600
+        # TODO Check here
         if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
                 time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
             logger.info(
-                f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
+                f"\n\nINFO - Time to Rest for 5 minutes! Rest for every {self.ARGS.multi_task_rest_interval} hour. ")
             time.sleep(600)
             return time.time()
         return run_time
+
+    def update_decode_process_time(self, decode_time):
+        self.ARGS.update_task_info({'decode_process_time': decode_time})
 
     def remove_duplicate_frames(self, videogen_check: FFmpegReader.nextFrame, init=False) -> (list, list, dict):
         """
@@ -664,7 +684,7 @@ class ReadFlow(IOFlow):
 
         if init:
             pbar.close()
-            logger.info("Start Remove First Batch of Duplicated Frames")
+            logger.info("Start Removing First Batch of Duplicated Frames")
 
         max_epoch = self.ARGS.remove_dup_mode  # 一直去除到一拍N，N为max_epoch，默认去除一拍二
         opt = []  # 已经被标记，识别的帧
@@ -713,16 +733,71 @@ class ReadFlow(IOFlow):
         check_frame_list = [i for i in check_frame_list if i > -1]
         return check_frame_list, scene_frame_list, check_frame_data
 
+    def _no_dedup_run(self):
+        """
+        Extract Frames Without any dedup(or scene detection)
+        :return:
+        """
+
+        logger.info("Activate Any FPS Mode without Dedup(or scene detection)")
+        chunk_cnt, now_frame, videogen, _ = self.__input_check(dedup=False)
+        img1 = self.__crop(Tools.gen_next(videogen))
+        logger.info("Input Frames loaded")
+        is_end = False
+        """Start Process"""
+        run_time = time.time()
+        self._release_initiation()
+        while True:
+            if is_end:
+                break
+
+            if self._kill or self.ARGS.get_main_error() is not None:
+                logger.debug("Reader Thread Exit")
+                break
+
+            run_time = self.__run_rest(run_time)
+            decode_time = time.time()
+            img0 = img1
+            img1 = self.__crop(Tools.gen_next(videogen))
+
+            now_frame += 1
+
+            # Decode Review, should be annoted
+            # title = f"decode:"
+            # comp_stack = cv2.resize(img0, (2880, 1620))
+            # # comp_stack = img0
+            # cv2.imshow(title, cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB))
+            # cv2.moveWindow(title, 0, 0)
+            # cv2.resizeWindow(title, 2880, 1620)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+
+            if img1 is None:
+                is_end = True
+                self.__feed_to_rife(now_frame, img0, img0, n=0, is_end=is_end)
+                self.update_decode_process_time(time.time() - decode_time)
+                break
+            self.__feed_to_rife(now_frame, img0, img0, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
+            self.scene_detection.update_scene_status(now_frame, "normal")
+            self.update_decode_process_time(time.time() - decode_time)
+
+            self.ARGS.update_task_info({"read_now_frame": now_frame})
+            self.update_scene_status()
+            pass
+
+        self._output_queue.put(None)  # bad way to end
+        videogen.close()
+
     # @profile
-    def rife_run(self):
+    def _dedup_1xn_run(self):
         """
         Go through all procedures to produce interpolation result in dedup mode
         :return:
         """
 
-        logger.info("Activate Remove Duplicate Frames Mode")
+        logger.info("Activate Duplicate Frames Removal Mode")
         chunk_cnt, now_frame_key, videogen, videogen_check = self.__input_check(dedup=True)
-        logger.info("Loaded Input Frames")
+        logger.info("Input Frames loaded")
         is_end = False
 
         """Start Process"""
@@ -733,8 +808,8 @@ class ReadFlow(IOFlow):
             if is_end:
                 break
 
-            if self._kill:
-                logger.critical("Reader Thread Killed")
+            if self._kill or self.ARGS.get_main_error() is not None:
+                logger.debug("Reader Thread Exit")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -822,20 +897,17 @@ class ReadFlow(IOFlow):
         videogen.close()
         videogen_check.close()
 
-    def update_decode_process_time(self, decode_time):
-        self.ARGS.update_task_info({'decode_process_time': decode_time})
-
     # @profile
-    def rife_run_any_fps(self):
+    def _dedup_any_fps_run(self):
         """
         Go through all procedures to produce interpolation result in any fps mode(from a fps to b fps)
         :return:
         """
 
         logger.info("Activate Any FPS Mode")
-        chunk_cnt, now_frame, videogen, videogen_check = self.__input_check(dedup=True)
+        chunk_cnt, now_frame, videogen, _ = self.__input_check(dedup=False)
         img1 = self.__crop(Tools.gen_next(videogen))
-        logger.info("Loaded Input Frames")
+        logger.info("Input Frames loaded")
         is_end = False
 
         """Update Interp Mode Info"""
@@ -852,8 +924,8 @@ class ReadFlow(IOFlow):
             if is_end:
                 break
 
-            if self._kill:
-                logger.critical("Reader Thread Killed")
+            if self._kill or self.ARGS.get_main_error() is not None:
+                logger.debug("Reader Thread Exit")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -936,7 +1008,6 @@ class ReadFlow(IOFlow):
 
         self._output_queue.put(None)  # bad way to end
         videogen.close()
-        videogen_check.close()
 
     def __feed_to_rife(self, now_frame: int, img0, img1, n=0, exp=0, is_end=False, add_scene=False, ):
         """
@@ -951,7 +1022,7 @@ class ReadFlow(IOFlow):
         :return:
         """
         scale = self.ARGS.rife_scale
-        if self.ARGS.use_rife_auto_scale:
+        if self.ARGS.use_rife_auto_scale and not self.ARGS.render_only and not self.ARGS.extract_only:
             """使用动态光流"""
             if img0 is None or img1 is None:
                 scale = 1.0
@@ -962,7 +1033,7 @@ class ReadFlow(IOFlow):
             {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "scale": scale,
              "is_end": is_end, "add_scene": add_scene})
 
-    def update_vfi_core(self, vfi_core: VideoFrameInterpolation):
+    def update_vfi_core(self, vfi_core: VideoFrameInterpolationBase):
         self.vfi_core = vfi_core
 
     def update_scene_status(self):
@@ -972,10 +1043,12 @@ class ReadFlow(IOFlow):
 
     def run(self):
         try:
-            if self.ARGS.remove_dup_mode in [0, 1]:
-                self.rife_run_any_fps()
+            if self.ARGS.render_only and self.ARGS.is_no_dedup_render:
+                self._no_dedup_run()
+            elif self.ARGS.remove_dup_mode in [0, 1]:
+                self._dedup_any_fps_run()
             else:  # 1, 2 => 去重一拍二或一拍三
-                self.rife_run()
+                self._dedup_1xn_run()
             self._task_done()
         except Exception as e:
             logger.critical("Read Thread Panicked")
@@ -985,16 +1058,16 @@ class ReadFlow(IOFlow):
 
 
 class RenderFlow(IOFlow):
-    def __init__(self, _args: TaskArgumentManager, _reader_queue: Queue):
-        super().__init__(_args)
+    def __init__(self, _args: TaskArgumentManager, __logger, _reader_queue: Queue):
+        super().__init__(_args, __logger)
         self.name = 'Render'
         self.__ffmpeg = "ffmpeg"
-        self.__hdr10_metadata_processer = Hdr10PlusProcesser(logger, self.ARGS.project_dir, self.ARGS.render_gap,
+        self.__hdr10_metadata_processer = Hdr10PlusProcessor(logger, self.ARGS.project_dir, self.ARGS.render_gap,
                                                              self.ARGS.interp_times,
                                                              self.ARGS.video_info_instance.getInputHdr10PlusMetadata())
         self._input_queue = _reader_queue
         self.is_audio_failed_concat = False
-        self.steam_flow = None
+        self.validation_flow = None
 
     def __modify_hdr_params(self):
         if self.ARGS.is_img_input or self.ARGS.hdr_mode == 1:  # img input or ordinary hdr
@@ -1002,19 +1075,19 @@ class RenderFlow(IOFlow):
 
         if self.ARGS.hdr_mode == 2:
             """HDR10"""
-            self.ARGS.render_hwaccel_mode = "CPU"
-            if "H265" in self.ARGS.render_encoder:
-                self.ARGS.render_encoder = "H265, 10bit"
-            elif "H264" in self.ARGS.render_encoder:
-                self.ARGS.render_encoder = "H264, 10bit"
+            self.ARGS.render_encoder = "CPU"
+            if "H265" in self.ARGS.render_encode_format:
+                self.ARGS.render_encode_format = "H265, 10bit"
+            elif "H264" in self.ARGS.render_encode_format:
+                self.ARGS.render_encode_format = "H264, 10bit"
             self.ARGS.render_encoder_preset = "medium"
         elif self.ARGS.hdr_mode == 4:
             """HLG"""
-            self.ARGS.render_encoder = "H265, 10bit"
-            self.ARGS.render_hwaccel_mode = "CPU"
+            self.ARGS.render_encode_format = "H265, 10bit"
+            self.ARGS.render_encoder = "CPU"
             self.ARGS.render_encoder_preset = "medium"
 
-    def __generate_frame_writer(self, start_frame: int, output_path: str):
+    def __generate_frame_writer(self, start_frame: int, output_path: str, _assign_last_n_frames=0):
         """
         渲染帧
         :param start_frame: for IMG IO, select start_frame to generate IO instance
@@ -1023,32 +1096,32 @@ class RenderFlow(IOFlow):
         """
         hdr10plus_metadata_path = self.__hdr10_metadata_processer.get_hdr10plus_metadata_path_at_point(start_frame)
         params_libx265s = {
-            "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
-                    "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
-                    "min-keyint=1:rc-lookahead=25:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
-                    "crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1",
-            "8bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
-                    "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
-                    "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
-                    "qcomp=0.65:deblock=-1:sao=0",
-            "10bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
-                     "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
-                     "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
-                     "deblock=-1:sao=0",
-            "hdr10": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
-                     'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
-                     'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                     'deblock=-1:sao=0:'
+            "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=2:"
+                    "subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:"
+                    "rc-lookahead=15:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
+                    "deblock=-1:sao=0:repeat-headers=1:info=0",
+            "8bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
+                    "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
+                    "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
+                    "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1:info=0",
+            "10bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
+                     "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
+                     "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
+                     "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1:info=0",
+            "hdr10": 'high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:'
+                     'limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:'
+                     'open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
+                     'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:'
                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                     'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                     'max-cll="1000,100":hdr10-opt=1:repeat-headers=1',
-            "hdr10+": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
-                      'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
-                      'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                      'deblock=-1:sao=0:'
+                     'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
+                     "max-cll=1000,100:hdr10-opt=1:repeat-headers=1:info=0",
+            "hdr10+": 'high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:'
+                      'limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:'
+                      'open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
+                      'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:'
                       'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                      'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                      f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata_path}"'
+                      'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
+                      f"max-cll=1000,100:dhdr10-info='{hdr10plus_metadata_path}'"
         }
 
         params_libx264s = {
@@ -1082,89 +1155,103 @@ class RenderFlow(IOFlow):
         """Output Video"""
         input_dict = {"-vsync": "cfr"}
 
-        output_dict = {"-r": f"{self.ARGS.target_fps}", "-preset": self.ARGS.render_encoder_preset,
+        output_dict = {"-r": f"{self.ARGS.target_fps:.3f}", "-preset:v": self.ARGS.render_encoder_preset,
                        "-metadata": f'title="Powered By SVFI {self.ARGS.version}"'}
 
         output_dict.update(self._get_color_info_dict())
 
         if not self.ARGS.is_img_input:
-            input_dict.update({"-r": f"{self.ARGS.target_fps}"})
+            input_dict.update({"-r": f"{self.ARGS.target_fps:.3f}"})
         else:
             """Img Input"""
-            input_dict.update({"-r": f"{self.ARGS.input_fps * self.ARGS.interp_times}"})
+            input_dict.update({"-r": f"{self.ARGS.input_fps * self.ARGS.interp_times:.3f}"})
 
         """Slow motion design"""
         if self.ARGS.is_render_slow_motion:
             if self.ARGS.render_slow_motion_fps:
-                input_dict.update({"-r": f"{self.ARGS.render_slow_motion_fps}"})
+                input_dict.update({"-r": f"{self.ARGS.render_slow_motion_fps:.3f}"})
             else:
-                input_dict.update({"-r": f"{self.ARGS.target_fps}"})
+                input_dict.update({"-r": f"{self.ARGS.target_fps:.3f}"})
             output_dict.pop("-r")
 
         vf_args = "copy"  # debug
         output_dict.update({"-vf": vf_args})
 
-        if self.ARGS.use_sr and all(self.ARGS.resize_param):
-            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
+        if all(self.ARGS.resize_param):
+            output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
+                                "-s": f"{self.ARGS.resize_param[0]}x{self.ARGS.resize_param[1]}"})
 
         """Assign Render Codec"""
         """CRF / Bitrate Control"""
-        if self.ARGS.render_hwaccel_mode == "CPU":
-            if "H264" in self.ARGS.render_encoder:
+        if self.ARGS.render_encoder == "CPU":
+            if "H264" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "libx264", "-preset:v": self.ARGS.render_encoder_preset})
-                if "8bit" in self.ARGS.render_encoder:
+                if "8bit" in self.ARGS.render_encode_format:
                     output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "high",
                                         "-x264-params": params_libx264s["8bit"]})
                 else:
                     """10bit"""
-                    output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "high10",
+                    output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "high10",
                                         "-x264-params": params_libx264s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x264-params": params_libx264s["fast"]})
-                if self.ARGS.hdr_mode == 2:
+                if self.ARGS.hdr_mode == 1:
                     """HDR10"""
                     output_dict.update({"-x264-params": params_libx264s["hdr10"]})
-            elif "H265" in self.ARGS.render_encoder:
+
+                if self.ARGS.use_render_encoder_default_preset:
+                    output_dict.pop('-x264-params')
+            elif "H265" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
-                if "8bit" in self.ARGS.render_encoder:
+                if "8bit" in self.ARGS.render_encode_format:
                     output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main",
                                         "-x265-params": params_libx265s["8bit"]})
                 else:
                     """10bit"""
-                    output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "main10",
+                    output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "main10",
                                         "-x265-params": params_libx265s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x265-params": params_libx265s["fast"]})
-                if self.ARGS.hdr_mode == 2:
+                if self.ARGS.hdr_mode in [1, 2]:
                     """HDR10"""
                     output_dict.update({"-x265-params": params_libx265s["hdr10"]})
                     if os.path.exists(hdr10plus_metadata_path):
                         output_dict.update({"-x265-params": params_libx265s["hdr10+"]})
+                if self.ARGS.use_render_encoder_default_preset:
+                    output_dict.pop('-x265-params')
+            elif "AV1" in self.ARGS.render_encode_format:
+                encoder_preset_map = {"slow": "4", "ultrafast": "8", "fast": "7", "medium": "6", "veryslow": "3", }
+                output_dict.update({"-c:v": "libsvtav1",
+                                    "-preset:v": encoder_preset_map[self.ARGS.render_encoder_preset]})
+                if "8bit" in self.ARGS.render_encode_format:
+                    output_dict.update({"-pix_fmt": "yuv420p"})
+                else:
+                    """10bit"""
+                    output_dict.update({"-pix_fmt": "yuv420p10le"})
             else:
                 """ProRes"""
-                if "-preset" in output_dict:
-                    output_dict.pop("-preset")
+                if "-preset:v" in output_dict:
+                    output_dict.pop("-preset:v")
                 output_dict.update({"-c:v": "prores_ks", "-profile:v": self.ARGS.render_encoder_preset, })
-                if "422" in self.ARGS.render_encoder:
+                if "422" in self.ARGS.render_encode_format:
                     output_dict.update({"-pix_fmt": "yuv422p10le"})
                 else:
                     output_dict.update({"-pix_fmt": "yuv444p10le"})
 
-        elif self.ARGS.render_hwaccel_mode == "NVENC":
-            output_dict.update({"-pix_fmt": "yuv420p"})
-            if "10bit" in self.ARGS.render_encoder:
-                output_dict.update({"-pix_fmt": "yuv420p10le"})
+        elif self.ARGS.render_encoder == "NVENC":
+            output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main", "-rc:v": "constqp"})
+            if "10bit" in self.ARGS.render_encode_format:
+                output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "main10"})
                 pass
-            if "H264" in self.ARGS.render_encoder:
+            if "H264" in self.ARGS.render_encode_format:
                 output_dict.update(
-                    {f"-g": f"{int(self.ARGS.target_fps * 3)}", "-c:v": "h264_nvenc", "-rc:v": "vbr_hq", })
-            elif "H265" in self.ARGS.render_encoder:
-                output_dict.update({"-c:v": "hevc_nvenc", "-rc:v": "vbr_hq",
+                    {f"-g": f"{int(self.ARGS.target_fps * 3)}", "-c:v": "h264_nvenc", })
+            elif "H265" in self.ARGS.render_encode_format:
+                output_dict.update({"-c:v": "hevc_nvenc",
                                     f"-g": f"{int(self.ARGS.target_fps * 3)}", })
 
             if self.ARGS.render_encoder_preset != "loseless":
-                hwacccel_preset = self.ARGS.render_hwaccel_preset
+                hwacccel_preset = self.ARGS.render_nvenc_preset
                 if hwacccel_preset != "None":
                     output_dict.update({"-i_qfactor": "0.71", "-b_qfactor": "1.3", "-keyint_min": "1",
                                         f"-rc-lookahead": "120", "-forced-idr": "1", "-nonref_p": "1",
@@ -1176,9 +1263,9 @@ class RenderFlow(IOFlow):
                     elif hwacccel_preset == "7th+":
                         output_dict.update({"-bf": "4", "-temporal-aq": "1", "-b_ref_mode": "2"})
             else:
-                output_dict.update({"-preset": "10", })
+                output_dict.update({"-preset:v": "10", })
 
-        elif self.ARGS.render_hwaccel_mode == "NVENCC":
+        elif self.ARGS.render_encoder == "NVENCC":
             _input_dict = {  # '--avsw': '',
                 'encc': "NVENCC",
                 '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
@@ -1204,17 +1291,17 @@ class RenderFlow(IOFlow):
 
             if '-s' in output_dict:
                 _output_dict.update({'--output-res': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
+            if "10bit" in self.ARGS.render_encode_format:
                 _output_dict.update({"--output-depth": "10"})
-            if "H264" in self.ARGS.render_encoder:
+            if "H264" in self.ARGS.render_encode_format:
                 _output_dict.update({f"-c": f"h264",
-                                     "--profile": "high10" if "10bit" in self.ARGS.render_encoder else "high", })
-            elif "H265" in self.ARGS.render_encoder:
+                                     "--profile": "high10" if "10bit" in self.ARGS.render_encode_format else "high", })
+            elif "H265" in self.ARGS.render_encode_format:
                 _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "-b": "5"})
 
-            if self.ARGS.hdr_mode == 2:
+            if self.ARGS.hdr_mode in [1,2]:
                 """HDR10"""
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10",
@@ -1232,7 +1319,7 @@ class RenderFlow(IOFlow):
             input_dict = _input_dict
             output_dict = _output_dict
             pass
-        elif self.ARGS.render_hwaccel_mode == "QSVENCC":
+        elif self.ARGS.render_encoder == "QSVENCC":
             _input_dict = {  # '--avsw': '',
                 'encc': "QSVENCC",
                 '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
@@ -1255,18 +1342,18 @@ class RenderFlow(IOFlow):
 
             if '-s' in output_dict:
                 _output_dict.update({'--output-res': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
+            if "10bit" in self.ARGS.render_encode_format:
                 _output_dict.update({"--output-depth": "10"})
-            if "H264" in self.ARGS.render_encoder:
+            if "H264" in self.ARGS.render_encode_format:
                 _output_dict.update({f"-c": f"h264",
                                      "--profile": "high", "--repartition-check": "", "--trellis": "all"})
-            elif "H265" in self.ARGS.render_encoder:
+            elif "H265" in self.ARGS.render_encode_format:
                 _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64", })
-            if self.ARGS.hdr_mode == 2:
+            if self.ARGS.hdr_mode in [1,2]:
                 _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64",
                                      "--max-cll": "1000,100",
                                      "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
@@ -1276,52 +1363,64 @@ class RenderFlow(IOFlow):
             input_dict = _input_dict
             output_dict = _output_dict
             pass
-        elif self.ARGS.render_hwaccel_mode == "SVT":
+        elif self.ARGS.render_encoder == "SVT":
             _input_dict = {  # '--avsw': '',
-                '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
                 "-pix_fmt": "rgb24",
-                '-n': f"{self.ARGS.render_gap}"
+                '-n': f"{self.ARGS.render_gap}",
             }
-            _output_dict = {
-                "encc": "hevc", "-brr": "1", "-sharp": "1", "-b": ""
-            }
-            if "VP9" in self.ARGS.render_encoder:
+            if _assign_last_n_frames:
+                _input_dict.update({'n': f"{_assign_last_n_frames}"})
+            if "H265" in self.ARGS.render_encode_format:
                 _output_dict = {
-                    "encc": "vp9", "-tune": "0", "-b": ""
+                    "encc": "hevc",
+                    '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                    "-bit-depth": "8",
+                    "-profile": "1",
+                    "-level": "6.2",
+                    "-lad": "17",
+                    "-brr": "1", "-sharp": "1",
                 }
-            # TODO SVT Color Info
-            # if '-color_range' in output_dict:
-            #     _output_dict.update({"--colorrange": output_dict["-color_range"]})
-            # if '-colorspace' in output_dict:
-            #     _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
-            # if '-color_trc' in output_dict:
-            #     _output_dict.update({"--transfer": output_dict["-color_trc"]})
-            # if '-color_primaries' in output_dict:
-            #     _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+            elif "VP9" in self.ARGS.render_encode_format:
+                _output_dict = {
+                    "encc": "vp9",
+                    '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                    "-bit-depth": "8",
+                    "-tune": "0",
+                    "-level": "6.2",
+                }
+                """Source Height must be a multiple of 8"""
+                shit_flag = False
+                if self.ARGS.resize_param[1] > 0:
+                    if self.ARGS.resize_param[1] % 8:
+                        shit_flag = True
+                elif self.ARGS.frame_size[1] > 0 and self.ARGS.frame_size[1] % 8:
+                    shit_flag = True
+                if shit_flag:
+                    raise OSError("For VP9 Encode, Source Height must be a multiple of 8, please alter input's height "
+                                  "to a valid one")
+            else:
+                """AV1"""
+                _output_dict = {
+                    "encc": "av1",
+                    "--input-depth": "8",
+                    "--profile": "0",
+                    "--level": "6.2",
+                }
+            preset_mapper = {"slowest": "2", "slow": "4", "fast": "6", "faster": "8"}
+            if "H265" in self.ARGS.render_encode_format:
+                _output_dict.update({"-encMode": preset_mapper[self.ARGS.render_encoder_preset]})
+            elif "VP9" in self.ARGS.render_encode_format:
+                _output_dict.update({"-enc-mode": preset_mapper[self.ARGS.render_encoder_preset]})
+            else:
+                """AV1"""
+                _output_dict.update({"--preset": preset_mapper[self.ARGS.render_encoder_preset]})
 
             if '-s' in output_dict:
                 _output_dict.update({'-s': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
-                _output_dict.update({"-bit-depth": "10"})
-            else:
-                _output_dict.update({"-bit-depth": "8"})
-
-            preset_mapper = {"slowest": "4", "slow": "5", "fast": "7", "faster": "9"}
-
-            if "H265" in self.ARGS.render_encoder_preset:
-                _output_dict.update({"-encMode": preset_mapper[self.ARGS.render_encoder_preset]})
-            elif "VP9" in self.ARGS.render_encoder_preset:
-                _output_dict.update({"-enc-mode": preset_mapper[self.ARGS.render_encoder_preset]})
-
-            # TODO SVT max cll, master display
-            # if self.ARGS.hdr_mode == 2:
-            #     _output_dict.update({"-c": "hevc",
-            #                          "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
-            #                          "--tier": "main", "--sao": "luma", "--ctu": "64",
-            #                          "--max-cll": "1000,100",
-            #                          "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
-            #                          })
-
+            # TODO 10bit support for SVT encoders
+            # if "10bit" in self.ARGS.render_encoder:
+            #     _output_dict.update({"-bit-depth": "10"})
+            # else:
             input_dict = _input_dict
             output_dict = _output_dict
             pass
@@ -1329,72 +1428,82 @@ class RenderFlow(IOFlow):
         else:
             """QSV"""
             output_dict.update({"-pix_fmt": "yuv420p"})
-            if "10bit" in self.ARGS.render_encoder:
+            if "10bit" in self.ARGS.render_encode_format:
                 output_dict.update({"-pix_fmt": "yuv420p10le"})
                 pass
-            if "H264" in self.ARGS.render_encoder:
+            if "H264" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "h264_qsv",
                                     "-i_qfactor": "0.75", "-b_qfactor": "1.1",
                                     f"-rc-lookahead": "120", })
-            elif "H265" in self.ARGS.render_encoder:
+            elif "H265" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "hevc_qsv",
                                     f"-g": f"{int(self.ARGS.target_fps * 3)}", "-i_qfactor": "0.75",
                                     "-b_qfactor": "1.1",
                                     f"-look_ahead": "120", })
 
-        if "ProRes" not in self.ARGS.render_encoder and self.ARGS.render_encoder_preset != "loseless":
+        if "ProRes" not in self.ARGS.render_encode_format and self.ARGS.render_encoder_preset != "loseless":
 
             if self.ARGS.render_crf and self.ARGS.use_crf:
-                if self.ARGS.render_hwaccel_mode != "CPU":
-                    hwaccel_mode = self.ARGS.render_hwaccel_mode
-                    if hwaccel_mode == "NVENC":
-                        output_dict.update({"-cq:v": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "QSV":
+                encoder = self.ARGS.render_encoder
+                if encoder == "CPU":
+                    if 'AV1' in self.ARGS.render_encode_format:
+                        output_dict.update({"-qp": str(self.ARGS.render_crf)})
+                    else:
+                        output_dict.update({"-crf": str(self.ARGS.render_crf)})
+                elif encoder == "NVENC":
+                    output_dict.update({"-cq:v": str(self.ARGS.render_crf)})
+                elif encoder == "QSV":
+                    output_dict.update({"-q": str(self.ARGS.render_crf)})
+                elif encoder == "NVENCC":
+                    output_dict.update({"--vbr": "0", "--vbr-quality": str(self.ARGS.render_crf)})
+                elif encoder == "QSVENCC":
+                    output_dict.update({"--la-icq": str(self.ARGS.render_crf)})
+                elif encoder == "SVT":
+                    if "VP9" in self.ARGS.render_encode_format or "H265" in self.ARGS.render_encode_format:
                         output_dict.update({"-q": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "NVENCC":
-                        output_dict.update({"--vbr": "0", "--vbr-quality": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "QSVENCC":
-                        output_dict.update({"--la-icq": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "SVT":
-                        output_dict.update({"-q": str(self.ARGS.render_crf)})
-
-                else:  # CPU
-                    output_dict.update({"-crf": str(self.ARGS.render_crf)})
-
+                    else:
+                        """AV1"""
+                        output_dict.update({"--crf": str(self.ARGS.render_crf)})
             if self.ARGS.render_bitrate and self.ARGS.use_bitrate:
-                if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
+                if self.ARGS.render_encoder in ["NVENCC", "QSVENCC"]:
                     output_dict.update({"--vbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
-                elif self.ARGS.render_hwaccel_mode == "SVT":
-                    output_dict.update({"-tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
+                elif self.ARGS.render_encoder == "SVT":
+                    if "VP9" in self.ARGS.render_encode_format or "H265" in self.ARGS.render_encode_format:
+                        output_dict.update({"-tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
+                    else:
+                        """AV1"""
+                        output_dict.update({"--tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
                 else:
+                    """CPU"""
+                    # TODO wait ffmpeg to improve vbr mode for AV1
+                    # if 'AV1' in self.ARGS.render_encode_format:
+                    #     output_dict.update({"-rc:v": "vbr"})
+                    if 'NVENC' in self.ARGS.render_encoder:
+                        output_dict.update({"-rc:v": f'vbr'})
                     output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
-                if self.ARGS.render_hwaccel_mode == "QSV":
+                if self.ARGS.render_encoder == "QSV":
                     output_dict.update({"-maxrate": "200M"})
 
-        if self.ARGS.use_manual_encode_thread:
-            if self.ARGS.render_hwaccel_mode == "NVENCC":
-                output_dict.update({"--output-thread": f"{self.ARGS.use_manual_encode_thread}"})
-            else:
-                output_dict.update({"-threads": f"{self.ARGS.use_manual_encode_thread}"})
+        if self.ARGS.use_manual_encode_thread and self.ARGS.render_encoder == "CPU":
+            output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
 
-        logger.debug(f"writer: {output_dict}, {input_dict}")
+        logger.debug(f"render system parameters: {output_dict}, {input_dict}")
 
-        """Customize FFmpeg Render Command"""
+        """Customize FFmpeg Render Parameters"""
         ffmpeg_customized_command = {}
-        if len(self.ARGS.render_ffmpeg_customized):
-            shlex_out = shlex.split(self.ARGS.render_ffmpeg_customized)
-            if len(shlex_out) % 2 != 0:
-                logger.warning(f"Customized FFmpeg is invalid: {self.ARGS.render_ffmpeg_customized}")
-            else:
-                for i in range(int(len(shlex_out) / 2)):
-                    ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
-        logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
+        if type(self.ARGS.render_ffmpeg_customized) is str and len(self.ARGS.render_ffmpeg_customized):
+            for param, arg in Tools.get_custom_cli_params(self.ARGS.render_ffmpeg_customized).items():
+                ffmpeg_customized_command.update({param: arg})
+        logger.debug(f"render detected custom parameters: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
-        if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
-            return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
-        elif self.ARGS.render_hwaccel_mode in ["SVT"]:
-            return SVTWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
-        return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
+        if self.ARGS.render_encoder in ["NVENCC", "QSVENCC"]:
+            return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
+                              verbosity=self.ARGS.debug)
+        elif self.ARGS.render_encoder in ["SVT"]:
+            return SVTWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
+                             verbosity=self.ARGS.debug)
+        return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
+                            verbosity=self.ARGS.debug)
 
     def __rename_chunk(self, chunk_from_path: str, chunk_cnt: int, start_frame: int, end_frame: int):
         """Maintain Chunk json"""
@@ -1408,29 +1517,28 @@ class RenderFlow(IOFlow):
         if os.path.exists(chunk_from_path):
             os.rename(chunk_from_path, chunk_desc_path)
         else:
-            logger.warning(f"Rename Chunk Not find {chunk_from_path}")
+            logger.warning(f"Renamed Chunk Not found: {chunk_from_path}")
 
     def __check_audio_concat(self, chunk_tmp_path: str, fail_signal=0):
         """Check Input file ext"""
-        if not self.ARGS.is_save_audio or self.ARGS.get_main_error() is not None:
+        if not self.ARGS.is_save_audio or self.ARGS.is_encode_audio or self.ARGS.get_main_error() is not None:
             return
         if self.ARGS.is_img_output:
             return
-
         concat_filepath = f"{os.path.join(self.ARGS.output_dir, 'concat_test')}" + self.ARGS.output_ext
         map_audio = f'-i "{self.ARGS.input}" -map 0:v:0 -map 1:a:0 -map 1:s? -c:a copy -c:s copy -shortest '
         ffmpeg_command = f'{self.__ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
                          f'{Tools.fillQuotation(concat_filepath)} -y'
 
-        logger.info("Start Audio Concat Test")
+        logger.info("Start Audio Mux Test")
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            logger.warning(f"Audio Concat Test found unavailable audio codec for output extension "
-                           f"{self.ARGS.output_ext}, audio codec changed to aac 640kbps")
+            logger.warning(f"Audio Mux Test found unavailable audio codec for output extension: "
+                           f"{self.ARGS.output_ext}, audio codec is changed to AAC 640kbps")
             self.is_audio_failed_concat = True
         else:
-            logger.info("Audio Concat Test Success")
+            logger.info("Audio Mux Test Succeeds")
             os.remove(concat_filepath)
 
     def get_output_path(self):
@@ -1440,7 +1548,7 @@ class RenderFlow(IOFlow):
         """
         """Check Input file ext"""
         output_ext = self.ARGS.output_ext
-        if "ProRes" in self.ARGS.render_encoder:
+        if "ProRes" in self.ARGS.render_encode_format:
             output_ext = ".mov"
 
         output_filepath = f"{os.path.join(self.ARGS.output_dir, Tools.get_filename(self.ARGS.input))}"
@@ -1483,9 +1591,16 @@ class RenderFlow(IOFlow):
         output_filepath += output_ext  # 添加后缀名
         return output_filepath, output_ext
 
+    def concat_when_default_fail(self):
+        if not self.ARGS.is_encode_audio:
+            self.ARGS.is_encode_audio = True
+            logger.warning("Audio will be Encoded into AAC 640kbps to avoid mux error")
+            return True
+        return False
+
     # @profile
-    @overtime_reminder_deco(300, logger, "Concat Chunks",
-                            "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
+    @overtime_reminder_deco(120, "Concat Chunks",
+                            "This is normal for long footage concat which more than 30 chunks, please wait patiently until concat is done")
     def concat_all(self):
         """
         Concat all the chunks
@@ -1494,20 +1609,20 @@ class RenderFlow(IOFlow):
 
         os.chdir(self.ARGS.project_dir)
         concat_path = os.path.join(self.ARGS.project_dir, "concat.ini")
-        logger.info("Final Round Finished, Start Concating")
+        logger.info("Final Interpolation Round is Finished, Start Concating")
         concat_list = list()
 
         for f in os.listdir(self.ARGS.project_dir):
             if re.match("chunk-\d+-\d+-\d+", f):
                 concat_list.append(os.path.join(self.ARGS.project_dir, f))
             else:
-                logger.debug(f"concat escape {f}")
+                logger.debug(f"Concat escape {f}")
 
         concat_list.sort(key=lambda x: int(os.path.basename(x).split('-')[2]))  # sort as start-frame
 
         if not len(concat_path):
             raise OSError(
-                f"Could not find any chunks, the chunks could have already been concatenated or removed, "
+                f"Could not find any chunks in your output project folder, the chunks could have already been concatenated or removed, "
                 f"please check your output folder.")
 
         if os.path.exists(concat_path):
@@ -1528,10 +1643,10 @@ class RenderFlow(IOFlow):
                     map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
                 if self.ARGS.input_start_point is not None:
                     map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
-            elif self.is_audio_failed_concat:
+            elif self.is_audio_failed_concat or self.ARGS.is_encode_audio:
                 # not specific io point, and audio concat test failed, so audio is encoded into aac compulsorily,
                 # and subtitle is disabled
-                map_audio = f'-i "{audio_path}" -map 0:v:0 -c:a aac -ab 640k '
+                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a aac -ab 640k '
             # Special Case Optimization
             # if self.ARGS.input_ext in ['.vob'] and self.ARGS.output_ext in ['.mkv']:
             #     map_audio += "-map_chapters -1 "
@@ -1549,27 +1664,41 @@ class RenderFlow(IOFlow):
                          f'-y'
 
         logger.debug(f"Concat command: {ffmpeg_command}")
-        sp = Tools.popen(ffmpeg_command)
-        sp.wait()
-        logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
+        try:
+            sp = Tools.popen(ffmpeg_command)
+            sp.wait()
+        except Exception as e:
+            if self.concat_when_default_fail():
+                logger.warning("Retry Concat after FFmpeg failed")
+                self.concat_all()
+            else:
+                logger.info("Failed To Concat Chunks, all chunks will be preserved")
+                self.ARGS.save_main_error(e)
+                raise e
+
+        logger.info(f"{len(concat_list)} files concatenated to {os.path.basename(concat_filepath)}")
+        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
+            if self.concat_when_default_fail():
+                logger.warning("Retry Concat after Output File Validity Check failed")
+                self.concat_all()
+            else:
+                main_error = FileExistsError(
+                    f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
+                    "WARNING - e.g. mkv input should match .mkv as output extension to avoid possible muxing issues")
+                self.ARGS.save_main_error(main_error)
+                raise main_error
         if self.ARGS.hdr_mode == 3:
             self.__run_dovi(concat_filepath)
-        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            main_error = FileExistsError(
-                f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
-                "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
-            self.ARGS.save_main_error(main_error)
-            raise main_error
         if self.ARGS.is_output_only:
             self.__del_existed_chunks()
 
-        if self.steam_flow is SteamFlow:
-            self.steam_flow.steam_update_achv(concat_filepath)
+        if self.validation_flow is not None:
+            self.validation_flow.steam_update_achv(concat_filepath)
 
     def check_concat_result(self):
         concat_filepath, output_ext = self.get_output_path()
         if os.path.exists(concat_filepath):
-            logger.warning("Mission Already Finished, "
+            logger.warning("Project with same task_id is already finished, "
                            "Jump to Dolby Vision Check")
             if self.ARGS.hdr_mode == 3:
                 """Dolby Vision"""
@@ -1585,9 +1714,19 @@ class RenderFlow(IOFlow):
 
     def __run_dovi(self, concat_filepath: str):
         logger.info("Start DOVI Conversion")
-        dovi_maker = DoviProcesser(concat_filepath, self.ARGS.input, self.ARGS.project_dir,
+        dovi_maker = DoviProcessor(concat_filepath, self.ARGS.input, self.ARGS.project_dir,
                                    self.ARGS.interp_times, logger)
         dovi_maker.run()
+
+    def wait_for_input(self):
+        outside_ok = True
+        while self._input_queue.qsize() == 0:
+            time.sleep(0.1)
+            if self.ARGS.get_main_error():
+                """Sth out there dead"""
+                outside_ok = False
+                break
+        return outside_ok
 
     def run(self):
         """
@@ -1598,20 +1737,19 @@ class RenderFlow(IOFlow):
         chunk_cnt, start_frame = self.check_chunk()
         chunk_frame_cnt = 1  # number of frames of current output chunk
         chunk_tmp_path = os.path.join(self.ARGS.project_dir, f"chunk-tmp{self.ARGS.output_ext}")
-        frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )  # get frame renderer
-
-        now_frame = start_frame
-        is_end = False
-        frame_written = False
-        self._release_initiation()
+        if self.ARGS.all_frames_cnt < self.ARGS.render_gap:
+            self.ARGS.render_gap = self.ARGS.render_gap
         try:
+            frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )  # get frame renderer
+            now_frame = start_frame
+            frame_written = False
+            self._release_initiation()
             while True:
-                if self._kill:
+                if self._kill or not self.wait_for_input():
                     if frame_written:
                         frame_writer.close()
-                    logger.warning("Render thread killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
+                    logger.debug("Render thread exit")  # 主线程已结束，这里的锁其实没用，调试用的
                     frame_writer.close()
-                    is_end = True
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
 
@@ -1619,7 +1757,6 @@ class RenderFlow(IOFlow):
                 if frame_data is None:
                     if frame_written:
                         frame_writer.close()
-                    is_end = True
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
 
@@ -1628,13 +1765,28 @@ class RenderFlow(IOFlow):
 
                 if self.ARGS.use_fast_denoise:
                     frame = cv2.fastNlMeansDenoising(frame)
+                _over_time_reminder_task = OverTimeReminderTask(15, "Encoder",
+                                                                "Low Encoding speed detected (>15s per image), Please check your encode settings to avoid performance issues")
+                self.ARGS.put_overtime_task(_over_time_reminder_task)
 
-                reminder_id = self.reminder_bearer.generate_reminder(30, logger, "Encoder",
-                                                                     "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
+                render_process_time = time.time()
+
+                # Write Review, should be annoted
+                # title = f"render:"
+                # comp_stack = cv2.resize(frame, (1440, 819))
+                # # comp_stack = img0
+                # cv2.imshow(title, cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB))
+                # cv2.moveWindow(title, 0, 0)
+                # cv2.resizeWindow(title,1440, 819 )
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+
                 if frame is not None:
                     frame_written = True
                     frame_writer.writeFrame(frame)
-                self.reminder_bearer.terminate_reminder(reminder_id)
+                render_process_time = time.time() - render_process_time
+                self.ARGS.update_task_info({'render_process_time': render_process_time})
+                _over_time_reminder_task.deactive()
 
                 chunk_frame_cnt += 1
                 self.ARGS.task_info.update({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
@@ -1647,7 +1799,8 @@ class RenderFlow(IOFlow):
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     chunk_cnt += 1
                     start_frame = now_frame + 1
-                    frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )
+                    _assign_last_n_frames = 0
+                    frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, _assign_last_n_frames)
             if not self.ARGS.is_no_concat and not self.ARGS.is_img_output \
                     and not self._kill and self.ARGS.get_main_error() is None:
                 # Do not concat when main error is detected
@@ -1661,23 +1814,23 @@ class RenderFlow(IOFlow):
 
         return
 
-    def update_steam_flow(self, steam_flow: SteamFlow):
-        self.steam_flow = steam_flow
+    def update_validation_flow(self, validation_flow: ValidationFlow):
+        self.validation_flow = validation_flow
 
 
 class SuperResolutionFlow(IOFlow):
-    def __init__(self, _args: TaskArgumentManager, _reader_queue: Queue, _render_queue: Queue):
-        super().__init__(_args)
+    def __init__(self, _args: TaskArgumentManager, __logger, _reader_queue: Queue, _render_queue: Queue):
+        super().__init__(_args, __logger)
         self.name = 'SuperResolution'
         self._input_queue = _reader_queue
         self._output_queue = _render_queue
-        self.sr_module = SuperResolution()  # 超分类
+        self.sr_module = SuperResolutionBase()  # 超分类
         self._vram_check_lock = threading.Event()
         self._vram_check_lock.clear()
         if not self.ARGS.use_sr:
             self._release_vram_check_lock()
             return
-        sr_scale = self.ARGS.resize_exp  # TODO evict this later
+        sr_scale = self.ARGS.resize_exp
         resize_param = self.ARGS.frame_size
         if all(self.ARGS.transfer_param):
             resize_param = self.ARGS.transfer_param
@@ -1707,8 +1860,8 @@ class SuperResolutionFlow(IOFlow):
                                                                  half=self.ARGS.use_realesr_fp16,
                                                                  resize=resize_param)
             logger.info(
-                f"Load SuperResolutionModule at {self.ARGS.use_sr_algo}, "
-                f"Model at {self.ARGS.use_sr_model}, scale_times = {sr_scale}")
+                f"Load Super Resolution Module at {self.ARGS.use_sr_algo}, "
+                f"Model at {self.ARGS.use_sr_model}, scale_times = output resolution / transfer resolution = {sr_scale}")
         except ImportError:
             logger.error(
                 f"Import SR Module failed\n"
@@ -1734,7 +1887,7 @@ class SuperResolutionFlow(IOFlow):
             if all(self.ARGS.transfer_param):
                 w, h = self.ARGS.transfer_param
             else:
-                w, h = self.ARGS.video_info_instance.frames_size
+                w, h = self.ARGS.frame_size
 
             logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
 
@@ -1749,6 +1902,16 @@ class SuperResolutionFlow(IOFlow):
             self._release_vram_check_lock()
             raise e
 
+    def wait_for_input(self):
+        outside_ok = True
+        while self._input_queue.qsize() == 0:
+            time.sleep(0.1)
+            if self.ARGS.get_main_error():
+                """Sth out there dead"""
+                outside_ok = False
+                break
+        return outside_ok
+
     def run(self):
         """
         SR thread
@@ -1758,10 +1921,10 @@ class SuperResolutionFlow(IOFlow):
         try:
             self.vram_test()
             while True:
-                if self._kill:
-                    logger.warning("Super Resolution thread killed, break")
-                    break
                 task_acquire_time = time.time()
+                if self._kill or not self.wait_for_input():
+                    logger.debug("Super Resolution thread exit")
+                    break
                 task = self._input_queue.get()
                 task_acquire_time = time.time() - task_acquire_time
                 if task is None:
@@ -1773,27 +1936,24 @@ class SuperResolutionFlow(IOFlow):
                     now_frame = task["now_frame"]
                     img0 = task["img0"]
                     img1 = task["img1"]
-                    ori_img0 = None
-                    reminder_id = self.reminder_bearer.generate_reminder(60, logger,
-                                                                         "Super Resolution",
-                                                                         "Low Super Resolution speed detected, Please consider lower your output settings to enhance speed")
+                    _over_time_reminder_task = OverTimeReminderTask(60,
+                                                                    "Super Resolution",
+                                                                    "Low Super Resolution speed detected (>60s per image), Please consider lower your output settings to enhance speed")
+                    self.ARGS.put_overtime_task(_over_time_reminder_task)
+
                     sr_process_time = time.time()
                     if img0 is not None:
-                        ori_img0 = img0.copy()
                         img0 = self.sr_module.svfi_process(img0)
                     sr_process_time = time.time() - sr_process_time
                     if img1 is not None:
-                        if ori_img0 is not None and np.all(img0 == img1):
-                            img1 = img0.copy()  # img0 already sr, make a copy
-                        else:
-                            img1 = self.sr_module.svfi_process(img1)
+                        img1 = self.sr_module.svfi_process(img1)
                     task['img0'] = img0
                     task['img1'] = img1
                     self.ARGS.update_task_info({'sr_now_frame': now_frame,
                                                 'sr_task_acquire_time': task_acquire_time,
                                                 'sr_process_time': sr_process_time,
                                                 'sr_queue_len': self._input_queue.qsize()})
-                    self.reminder_bearer.terminate_reminder(reminder_id)
+                    _over_time_reminder_task.deactive()
                 self._output_queue.put(task)
         except Exception as e:
             logger.critical("Super Resolution Thread Panicked")
@@ -1807,14 +1967,26 @@ class SuperResolutionFlow(IOFlow):
 
 
 class ProgressUpdateFlow(IOFlow):
-    def __init__(self, _args: TaskArgumentManager, _read_flow: ReadFlow):
-        super().__init__(_args)
+    def __init__(self, _args: TaskArgumentManager, __logger, _read_flow: ReadFlow):
+        super().__init__(_args, __logger)
         self.name = 'Pbar'
         self.start_frame = 0
         self.read_flow = _read_flow
 
     def update_start_frame(self, start_frame: int):
         self.start_frame = start_frame
+
+    def proceed_overtime_reminder_task(self):
+        if self.ARGS.is_empty_overtime_task_queue():
+            return
+        _over_time_reminder_task = self.ARGS.get_overtime_task()
+        # assert type(_over_time_reminder_task) is OverTimeReminderTask, "[OverTimeReminderProcess]: Not Match Type"
+        if _over_time_reminder_task.is_active():
+            if _over_time_reminder_task.is_overdue():
+                function_name, interval, function_warning = _over_time_reminder_task.get_msgs()
+                self.logger.warning(f"Function [{function_name}] exceeds {interval} seconds, {function_warning}")
+            else:
+                self.ARGS.put_overtime_task(_over_time_reminder_task)
 
     def run(self):
         """
@@ -1829,24 +2001,27 @@ class ProgressUpdateFlow(IOFlow):
         previous_cnt = self.start_frame
         self._release_initiation()
         while True:
-            if self._kill:
+            if self._kill or self.ARGS.get_main_error() is not None:
                 break
+            self.proceed_overtime_reminder_task()
             task_status = self.ARGS.task_info  # render status quo
+            postfix_dict = {"R": f"{task_status['render']}",
+                            "C": f"{task_status['read_now_frame']}",
+                            "RPT": f"{task_status['decode_process_time']:.2f}s",
+                            "WPT": f"{task_status['render_process_time']:.2f}s"}
             if self.ARGS.render_only or self.ARGS.extract_only:
                 now_frame = task_status['render']
                 pbar_description = f"Process at Frame {now_frame}"
-                postfix_dict = {"R": f"{task_status['render']}", "C": f"{task_status['read_now_frame']}", }
             else:
                 now_frame = task_status['rife_now_frame']
                 pbar_description = f"Process at Chunk {task_status['chunk_cnt']:0>3d}"
-                postfix_dict = {"R": f"{task_status['render']}",
-                                "C": f"{now_frame}",
-                                "S": f"{task_status['recent_scene']}",
-                                "SC": f"{task_status['scene_cnt']}",
-                                "RPT": f"{task_status['decode_process_time']:.2f}s",
-                                "TAT": f"{task_status['rife_task_acquire_time']:.2f}s",
-                                "PT": f"{task_status['rife_process_time']:.2f}s",
-                                "QL": f"{task_status['rife_queue_len']}"}
+                postfix_dict.update({
+                    "C": f"{now_frame}",
+                    "S": f"{task_status['recent_scene']}",
+                    "SC": f"{task_status['scene_cnt']}",
+                    "TAT": f"{task_status['rife_task_acquire_time']:.2f}s",
+                    "PT": f"{task_status['rife_process_time']:.2f}s",
+                    "QL": f"{task_status['rife_queue_len']}"})
             if self.ARGS.use_sr:
                 postfix_dict.update({'SR': f"{task_status['sr_now_frame']}",
                                      'SRTAT': f"{task_status['sr_task_acquire_time']:.2f}s",
@@ -1880,27 +2055,16 @@ class InterpWorkFlow:
         self.rife_task_queue = Queue(maxsize=queue_len)
         self.render_task_queue = Queue(maxsize=queue_len)
 
-        """Set Flow"""
-        """self.steam_flow = SteamFlow(self.ARGS)
-        self.sr_flow = SuperResolutionFlow(self.ARGS, self.read_task_queue, self.rife_task_queue)
-        if not self.ARGS.use_sr:
-            self.read_flow = ReadFlow(self.ARGS, self.rife_task_queue)
-            self.sr_flow.kill()
-        else:
-            self.read_flow = ReadFlow(self.ARGS, self.read_task_queue)
-        self.render_flow = RenderFlow(self.ARGS, self.render_task_queue)
-        self.update_progress_flow = ProgressUpdateFlow(self.ARGS, self.read_flow)"""
-        self.steam_flow = SteamFlow(self.ARGS)
-        self.read_flow = ReadFlow(self.ARGS, self.read_task_queue)
-        self.sr_flow = SuperResolutionFlow(self.ARGS, self.read_task_queue, self.rife_task_queue)
-        self.render_flow = RenderFlow(self.ARGS, self.render_task_queue)
-        self.update_progress_flow = ProgressUpdateFlow(self.ARGS, self.read_flow)
+        self.validation_flow = ValidationFlow(self.ARGS)
+        self.read_flow = ReadFlow(self.ARGS, logger, self.read_task_queue)
+        self.sr_flow = SuperResolutionFlow(self.ARGS, logger, self.read_task_queue, self.rife_task_queue)
+        self.render_flow = RenderFlow(self.ARGS, logger, self.render_task_queue)
+        self.update_progress_flow = ProgressUpdateFlow(self.ARGS, logger, self.read_flow)
 
         """Set VFI Core"""
-        self.vfi_core = VideoFrameInterpolation(self.ARGS)
+        self.vfi_core = VideoFrameInterpolationBase(self.ARGS)
 
         """Set 'Global' Reminder"""
-        self.reminder_bearer = OverTimeReminderBearer()
 
     def feed_to_render(self, frames_list: list, is_end=False):
         """
@@ -1928,51 +2092,51 @@ class InterpWorkFlow:
         :return:
         """
         if self.ARGS.use_sr:
-            logger.info("Waiting for SR Module VRAM Check Lock")
+            logger.debug("Waiting for SR Module VRAM Check Lock")
             self.sr_flow.acquire_vram_check_lock()
         try:
             if self.ARGS.resize_width and self.ARGS.resize_height:
                 w, h = self.ARGS.resize_width, self.ARGS.resize_height
             else:
-                w, h = self.ARGS.video_info_instance.frames_size
+                w, h = self.ARGS.frame_size
 
-            logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
+            logger.info(f"Start RIFE VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
                                    np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
-            logger.info(f"VRAM Test Success, Resume of workflow ahead")
+            logger.info(f"RIFE VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
         except Exception as e:
-            logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
+            logger.error("RIFE VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
                 limit=ArgumentManager.traceback_limit))
             raise e
 
-    def check_params_with_steam(self):
-        if self.ARGS.is_steam:
-            if not self.steam_flow.steam_valid:
-                error = str(self.steam_flow.steam_error).split('\n')[-1]
-                logger.error(f"Steam Validation Failed: {error}")
-                return
-            else:
-                valid_response = self.steam_flow.CheckSteamAuth()
-                if valid_response != 0:
-                    logger.error(f"Steam Validation Failed, code {valid_response}")
-                    raise GenericSteamException(f"Steam Validation Failed, code {valid_response}")
-
-            steam_dlc_check = self.steam_flow.CheckProDLC(0)
-            if not steam_dlc_check:
-                _msg = "SVFI - Professional DLC Not Purchased,"
-                if self.ARGS.extract_only or self.ARGS.render_only:
-                    raise GenericSteamException(f"{_msg} Extract/Render ToolBox Unavailable")
-                if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
-                    raise GenericSteamException(f"{_msg} Manual Input Section Unavailable")
-                if self.ARGS.is_scdet_output or self.ARGS.is_scdet_mix:
-                    raise GenericSteamException(f"{_msg} Scdet Output/Mix Unavailable")
-                if self.ARGS.use_sr:
-                    raise GenericSteamException(f"{_msg} Super Resolution Module Unavailable")
-                if self.ARGS.use_rife_multi_cards:
-                    raise GenericSteamException(f"{_msg} Multi Video Cards Work flow Unavailable")
+    def check_validation(self):
+        if not self.validation_flow.CheckValidateStart():
+            if self.validation_flow.GetValidateError() is not None:
+                logger.error(f"Validation Failed: ")
+                raise self.validation_flow.GetValidateError()
+            return
+        steam_dlc_check = self.validation_flow.CheckProDLC(0)
+        if not steam_dlc_check:
+            _msg = "SVFI - Professional DLC Not Purchased,"
+            # if self.ARGS.extract_only or self.ARGS.render_only:
+            #     raise GenericSteamException(f"{_msg} Extract/Render ToolBox Unavailable")
+            if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
+                raise GenericSteamException(f"{_msg} Manual Input Section Unavailable")
+            if self.ARGS.is_scdet_output or self.ARGS.is_scdet_mix:
+                raise GenericSteamException(f"{_msg} Scdet Output/Mix Unavailable")
+            if self.ARGS.use_sr:
+                raise GenericSteamException(f"{_msg} Super Resolution Module Unavailable")
+            if self.ARGS.use_rife_multi_cards:
+                raise GenericSteamException(f"{_msg} Multi Video Cards Work flow Unavailable")
+            if self.ARGS.use_deinterlace:
+                raise GenericSteamException(f"{_msg} DeInterlace is Unavailable")
+            if self.ARGS.use_rife_auto_scale:
+                raise GenericSteamException(f"{_msg} RIFE Dynamic Scale is Unavailable")
+            if self.ARGS.is_rife_reverse:
+                raise GenericSteamException(f"{_msg} RIFE Reversed Flow is Unavailable")
 
     def check_interp_prerequisite(self):
         if self.ARGS.render_only or self.ARGS.extract_only or self.ARGS.concat_only:
@@ -2006,16 +2170,11 @@ class InterpWorkFlow:
             self.task_failed()
 
     def task_finish(self):
-        if self.ARGS.get_main_error() is not None:
-            logger.error("Error after finish RIFE Task:")
-            self.feed_to_render([None], is_end=True)
-            raise self.ARGS.get_main_error()
+        self.check_outside_error()
         logger.info(f"Program finished at {datetime.datetime.now()}: "
                     f"Duration: {datetime.datetime.now() - self.run_all_time}")
         logger.info("Please Note That Commercial Use of SVFI's Output is Strictly PROHIBITED, "
                     "Check EULA for more details")
-        self.reminder_bearer.terminate_all()
-        utils_overtime_reminder_bearer.terminate_all()
         pass
 
     def task_failed(self):
@@ -2023,12 +2182,20 @@ class InterpWorkFlow:
         self.render_flow.kill()
         self.sr_flow.kill()
         self.update_progress_flow.kill()
-        self.reminder_bearer.terminate_all()
-        utils_overtime_reminder_bearer.terminate_all()
-        logger.info(f"\n\n\nProgram Failed at {datetime.datetime.now()}: "
-                    f"Duration: {datetime.datetime.now() - self.run_all_time}")
-        if self.ARGS.get_main_error() is not None:
+        logger.error(f"\n\n\nProgram Failed at {datetime.datetime.now()}: "
+                     f"Duration: {datetime.datetime.now() - self.run_all_time}")
+        if self.ARGS.get_main_error():
             raise self.ARGS.get_main_error()
+
+    def wait_for_input(self):
+        outside_ok = True
+        while self.rife_task_queue.qsize() == 0:
+            time.sleep(0.1)
+            if self.ARGS.get_main_error():
+                """Sth out there dead"""
+                outside_ok = False
+                break
+        return outside_ok
 
     def run(self):
         """
@@ -2037,7 +2204,7 @@ class InterpWorkFlow:
         """
 
         """Check Steam Validation"""
-        self.check_params_with_steam()
+        self.check_validation()
 
         """Go through the process"""
         if self.ARGS.concat_only:
@@ -2055,6 +2222,7 @@ class InterpWorkFlow:
         """Load RIFE Model"""
         self.check_interp_prerequisite()
         self.read_flow.start()
+        self.render_flow.update_validation_flow(self.validation_flow)
         self.render_flow.start()
         self.update_progress_flow.start()
 
@@ -2067,16 +2235,10 @@ class InterpWorkFlow:
 
         try:
             while True:
-                # outside_dead = False
-                # while self.rife_task_queue.qsize() == 0:
-                #     time.sleep(0.1)
-                #     if self.ARGS.get_main_error():
-                #         """Sth out there dead"""
-                #         outside_dead = True
-                #         break
-                # if outside_dead:
-                #     break
                 task_acquire_time = time.time()
+                if not self.wait_for_input():
+                    logger.debug("Main thread about to exit")
+                    break
                 task = self.rife_task_queue.get(timeout=3600)
                 task_acquire_time = time.time() - task_acquire_time
                 process_time = time.time()
@@ -2104,20 +2266,20 @@ class InterpWorkFlow:
                     self.feed_to_render([None], is_end=True)
                     break
 
-                if all(self.ARGS.resize_param):
-                    img0 = cv2.resize(img0, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
-                                      interpolation=cv2.INTER_LANCZOS4)
-                    img1 = cv2.resize(img1, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
-                                      interpolation=cv2.INTER_LANCZOS4)
+                # if all(self.ARGS.resize_param):
+                #     img0 = cv2.resize(img0, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
+                #                       interpolation=cv2.INTER_LANCZOS4)
+                #     img1 = cv2.resize(img1, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
+                #                       interpolation=cv2.INTER_LANCZOS4)
 
                 frames_list = [img0]
                 if self.ARGS.is_scdet_mix and add_scene:
                     mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
                     frames_list.extend(mix_list)
                 else:
-                    reminder_id = self.reminder_bearer.generate_reminder(60, logger,
-                                                                         "Video Frame Interpolation",
-                                                                         "Low interpolate speed detected, Please consider lower your output settings to enhance speed")
+                    _over_time_reminder_task = OverTimeReminderTask(60, "Video Frame Interpolation",
+                                                                    "Low interpolate speed detected (>60s per pair), Please consider lower your output settings to enhance speed")
+                    self.ARGS.put_overtime_task(_over_time_reminder_task)
                     if n > 0:
                         if n > PURE_SCENE_THRESHOLD and Tools.check_pure_img(img0):
                             """It's Pure Img Sequence, Copy img0"""
@@ -2128,7 +2290,7 @@ class InterpWorkFlow:
                             frames_list.extend(interp_list)
                     if add_scene:  # [AA BBB CC DDD] E
                         frames_list.append(img1)
-                    self.reminder_bearer.terminate_reminder(reminder_id)
+                    _over_time_reminder_task.deactive()
 
                 feed_list = list()
                 for i in frames_list:
@@ -2151,8 +2313,6 @@ class InterpWorkFlow:
             logger.critical("Main Thread Panicked")
             logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self.ARGS.save_main_error(e)
-            self.task_failed()
-            return
         if self.ARGS.get_main_error() is not None:
             """Shit happened after receiving None as end signal"""
             self.task_failed()
@@ -2172,20 +2332,20 @@ class InterpWorkFlow:
         pass
 
 
-GLOBAL_ARGS = TaskArgumentManager(global_args)
+global_task_args_manager = TaskArgumentManager(global_args)
 
 """设置可见的gpu"""
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-if int(GLOBAL_ARGS.rife_cuda_cnt) != 0 and GLOBAL_ARGS.use_rife_multi_cards:
-    cuda_devices = [str(i) for i in range(GLOBAL_ARGS.rife_cuda_cnt)]
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(cuda_devices)}"
+if int(global_task_args_manager.rife_cuda_cnt) != 0 and global_task_args_manager.use_rife_multi_cards:
+    global_cuda_devices = [str(i) for i in range(global_task_args_manager.rife_cuda_cnt)]
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(global_cuda_devices)}"
 else:
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{GLOBAL_ARGS.use_specific_gpu}"
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{global_task_args_manager.use_specific_gpu}"
 
 """强制使用CPU"""
-if GLOBAL_ARGS.force_cpu:
+if global_task_args_manager.force_cpu:
     os.environ["CUDA_VISIBLE_DEVICES"] = f""
 
-global_workflow = InterpWorkFlow(GLOBAL_ARGS)
+global_workflow = InterpWorkFlow(global_task_args_manager)
 global_workflow.run()
 sys.exit(0)

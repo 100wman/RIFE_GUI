@@ -17,14 +17,16 @@ import cv2
 import psutil
 import torch
 from PyQt5 import QtCore
-from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtCore import QCoreApplication, Qt
 from PyQt5.QtCore import QSettings, pyqtSignal, pyqtSlot, QThread, QTime, QVariant, QPoint, QSize
 from PyQt5.QtGui import QIcon, QTextCursor
-from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog
+from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog, QSplashScreen
 
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
-from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator
-from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamUtils, appDir
+from Utils.LicenseModule import RetailValidation, SteamValidation
+from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator, StateTooltip
+from Utils.StaticParameters import appDir, TASKBAR_STATE, SupportFormat, EncodePresetAssemply
+from Utils.utils import Tools, ArgumentManager, ImageWrite
 
 MAC = True
 try:
@@ -134,6 +136,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         self.ExpertModeChecker.setChecked(appPref.value("expert", False, type=bool))
         self.PreviewArgsModeChecker.setChecked(appPref.value("is_preview_args", False, type=bool))
         self.RudeExitModeChecker.setChecked(appPref.value("is_rude_exit", True, type=bool))
+        self.DisableDedupRenderChecker.setChecked(appPref.value("is_no_dedup_render", True, type=bool))
         self.QuietModeChecker.setChecked(appPref.value("is_gui_quiet", False, type=bool))
         self.WinOnTopChecker.setChecked(appPref.value("is_windows_ontop", False, type=bool))
         self.OneWayModeChecker.setChecked(appPref.value("use_clear_inputs", False, type=bool))
@@ -152,6 +155,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         appPref.setValue("expert", self.ExpertModeChecker.isChecked())
         appPref.setValue("is_preview_args", self.PreviewArgsModeChecker.isChecked())
         appPref.setValue("is_rude_exit", self.RudeExitModeChecker.isChecked())
+        appPref.setValue("is_no_dedup_render", self.DisableDedupRenderChecker.isChecked())
         appPref.setValue("is_gui_quiet", self.QuietModeChecker.isChecked())
         appPref.setValue("is_windows_ontop", self.WinOnTopChecker.isChecked())
         appPref.setValue("use_clear_inputs", self.OneWayModeChecker.isChecked())
@@ -188,7 +192,7 @@ class UiRunThread(QThread):
 
 
 class UiRun(QThread):
-    run_signal = pyqtSignal(str)
+    run_signal = pyqtSignal(dict)
 
     def __init__(self, parent=None, concat_only=False, extract_only=False, render_only=False, task_list: list = None):
         """
@@ -254,10 +258,10 @@ class UiRun(QThread):
         update sub process status
         :return:
         """
-        emit_json = {"cnt": len(self.task_list), "current": self.current_step, "finished": finished,
+        emit_dict = {"cnt": len(self.task_list), "current": self.current_step, "finished": finished,
                      "notice": notice, "subprocess": sp_status, "returncode": returncode}
-        emit_json = json.dumps(emit_json)
-        self.run_signal.emit(emit_json)
+        # emit_json = json.dumps(emit_json)
+        self.run_signal.emit(emit_dict)
 
     @staticmethod
     def maintain_multitask():
@@ -284,9 +288,9 @@ class UiRun(QThread):
                 logger.info("Add All tasks into queue")
                 self.task_list = list(range(self.task_cnt))
 
-            if self.task_cnt > 1:
-                """MultiTask"""
-                appData.setValue("batch", True)
+            # if self.task_cnt > 1:
+            #     """MultiTask"""
+            #     appData.setValue("batch", True)
 
             interval_time = time.time()
             try:
@@ -337,18 +341,27 @@ class UiRun(QThread):
                             line = self.current_proc.stdout.readline()
                             self.current_proc.stdout.flush()
 
+                            if '\\u' in line:
+                                try:
+                                    line = line.encode('utf-8').decode('unicode_escape')
+                                except UnicodeDecodeError:
+                                    pass
+
                             """Replace Field"""
                             flush_lines += line.replace("[A", "")
 
-                            if "error" in flush_lines.lower() or 'Program Failed' in flush_lines \
-                                    or 'Thread Panicked' in flush_lines:
-                                """Imediately Upload"""
-                                logger.error(f"[In ONE LINE SHOT]: {flush_lines}")
+                            must_kill_sign = ['Program Failed', ]
+                            panic_sign = ['Thread Panicked', 'VRAM Check Failed', 'Broken pipe', 'CUDA out of memory']
+                            panic_sign.extend(must_kill_sign)
+                            if any([i.lower() in flush_lines.lower() for i in panic_sign]):
+                                """Imediately Kill and Upload"""
+                                logger.error(f"[OLS Program Failed]\n {flush_lines}")
                                 self.update_status(False, sp_status=f"{flush_lines}")
                                 self.main_error = flush_lines
                                 flush_lines = ""
-                                if 'Program Failed' in flush_lines or 'Thread Panicked' in flush_lines:
+                                if any([i.lower() in flush_lines.lower() for i in must_kill_sign]):
                                     self.kill_proc_exec()
+
                             elif len(flush_lines) and time.time() - interval_time > 0.1:
                                 interval_time = time.time()
                                 self.update_status(False, sp_status=f"{flush_lines}")
@@ -395,7 +408,9 @@ class UiRun(QThread):
         self.kill = True
         self.current_step = len(self.task_list) if self.task_list is not None else 0
         if self.current_proc is not None:
-            self.current_proc.terminate()
+            self.current_proc.kill()
+            if appPref.value("is_rude_exit", False, type=bool):
+                Tools.kill_svfi_related()
             _msg = _translate('', '补帧已被强制结束')
             self.update_status(False, notice=f"\n\nWARNING, {_msg}", returncode=-1)
             logger.info("Kill Process")
@@ -418,10 +433,7 @@ class UiRun(QThread):
 
 
 class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
-    kill_proc = pyqtSignal(int)
-    notfound = pyqtSignal(int)
-
-    def __init__(self, parent=None):
+    def __init__(self, splash_screen: QSplashScreen, taskbar, parent=None):
         """
         SVFI 主界面类初始化方法
 
@@ -436,7 +448,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         添加新选项/变量 3/3 实现先于load_current_settings的特殊新配置
         :param parent:
         """
+        self._splash_screen = splash_screen
+        self.splash_screen_initiating("Initiating Display Platform...")
         super(UiBackend, self).__init__()
+        self._super_hwnd = self.winId()
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
         _app.installTranslator(translator)  # 重新翻译主界面
@@ -485,48 +500,243 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_dilapidation_hide()
         self.settings_load_settings_templates()
 
-        self.STEAM = SteamUtils(self.is_steam, logger=logger)
+        self.splash_screen_initiating("Validating Software...")
         if self.is_steam:
-            if not self.STEAM.steam_valid:
-                warning_title = _translate('', "Steam认证出错！SVFI用不了啦！")
-                error = self.STEAM.steam_error
-                logger.error(f"Steam Validation failed\n{error}")
-                self.function_send_msg(warning_title, error)
-            else:
-                valid_response = self.STEAM.CheckSteamAuth()
-                # debug
-                # valid_response = 1
-                if valid_response != 0:
-                    self.STEAM.steam_valid = False
-                    warning_title = _translate('', "Steam认证失败！SVFI用不了啦！")
-                    warning_code_msg = _translate('', '错误代码：')
-                    warning_msg = f"{warning_code_msg}{valid_response}"
-                    _bpg_msg = _translate('', '白嫖怪爬呀！')
-                    if valid_response == 1:
-                        warning_msg = f"Ticket is not valid.\n{_bpg_msg}"
-                    elif valid_response == 2:
-                        warning_msg = "A ticket has already been submitted for this steamID"
-                    elif valid_response == 3:
-                        warning_msg = "Ticket is from an incompatible interface version"
-                    elif valid_response == 4:
-                        warning_msg = f"Ticket is not for this game\n{_bpg_msg}"
-                    elif valid_response == 5:
-                        _expired_msg = _translate('', '购买的凭证过期')
-                        warning_msg = f"Ticket has expired\n{_expired_msg}"
-                    self.function_send_msg(warning_title, warning_msg)
-                    return
-
-                if not self.is_free:
-                    valid_response = self.STEAM.CheckProDLC(0)
-                    if not valid_response:
-                        self.STEAM.steam_valid = False
-                        warning_title = _translate('', "未购买专业版！SVFI用不了啦！")
-                        warning_msg = _translate('', "请确保专业版DLC已安装")
-                        self.function_send_msg(warning_title, warning_msg)
-                        return
+            self.Validation = SteamValidation(logger=logger)
+        else:
+            self.Validation = RetailValidation(logger=logger)
+        if not self.Validation.CheckValidateStart():
+            warning_title = _translate('', "登录验证出错！SVFI用不了啦！")
+            error = self.Validation.GetValidateError()
+            logger.error(f"Validation failed\n{error}")
+            self.function_send_msg(warning_title, error)
+            return
+        if not self.is_free:
+            valid_response = self.Validation.CheckProDLC(0)
+            if not valid_response:
+                warning_title = _translate('', "未购买专业版！SVFI用不了啦！")
+                warning_msg = _translate('', "请确保专业版DLC已安装")
+                self.function_send_msg(warning_title, warning_msg)
+                return
 
         os.chdir(appDir)
         self.function_check_read_tutorial()
+
+        """Pending Dialog"""
+        self.state_tooltip = None
+        self.task_bar_controller = taskbar
+
+    def update_QCandyUi_hwnd(self, hwnd):
+        """
+        This can only be called once
+        :param hwnd:
+        :return:
+        """
+        self.task_bar_controller.ActivateTab(hwnd)
+        self._super_hwnd = hwnd
+
+    def splash_screen_initiating(self, msg: str):
+        """
+        Update Initiation Information via splash screen widget
+        :return:
+        """
+        self._splash_screen.showMessage(msg, Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
+
+    def steam_update_achv(self):
+        if not self.is_steam:
+            return
+        ACHV_Use_MX250 = self.Validation.GetAchv("ACHV_Use_MX250")
+        ACHV_Use_RTX2060 = self.Validation.GetAchv("ACHV_Use_RTX2060")
+        current_GPU = self.DiscreteCardSelector.currentText()
+        if all([i in current_GPU for i in ['MX', '250']]) and not ACHV_Use_MX250:
+            reply = self.Validation.SetAchv("ACHV_Use_MX250")
+        if all([i in current_GPU for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
+            reply = self.Validation.SetAchv("ACHV_Use_RTX2060")
+        self.Validation.Store()
+
+    def process_update_rife(self, data_subprocess: dict):
+        """
+        Communicate with RIFE Thread
+        :return:
+        """
+
+        def process_update_taskbar_progress(subprocess_line):
+            progress_data = re.findall("\|.*?(\d+)/(\d+)", subprocess_line)
+            if not len(progress_data):
+                return
+            complete_cnt, total_cnt = progress_data[-1]
+            self.function_update_task_bar_value(int(complete_cnt), int(total_cnt))
+
+        def generate_error_log():
+            self.function_generate_log(0)
+            # TODO Combine OLS and GUI log
+
+        def remove_last_line():
+            _cursor = self.OptionCheck.textCursor()
+            _cursor.movePosition(QTextCursor.End)
+            _cursor.select(QTextCursor.LineUnderCursor)
+            text = _cursor.selectedText()
+            if not any([i in text for i in dup_keys_list]):
+                _cursor.movePosition(QTextCursor.Start)
+                return
+            _cursor.removeSelectedText()
+            _cursor.deletePreviousChar()
+            _cursor.movePosition(QTextCursor.Start)
+            self.OptionCheck.setTextCursor(_cursor)
+
+        def error_handle():
+            now_text = self.OptionCheck.toPlainText().lower() + data.get("subprocess", "").lower()  # 复合寻找错误
+            if self.current_failed:
+                return
+            if "input file is not available" in now_text:
+                self.function_send_msg("Inputs Failed", _translate('', "你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符"), )
+                self.current_failed = True
+                return
+            elif "json" in now_text:
+                self.function_send_msg("Input File Failed", _translate('', "文件读取失败，请确保软件有足够权限且输入文件未被其他软件占用"), )
+                self.current_failed = True
+                return
+            elif "ascii" in now_text:
+                self.function_send_msg("Software Path Failure", _translate('', "请把软件所在文件夹移到纯英文、无中文、无空格路径下"), )
+                self.current_failed = True
+                return
+            elif "cuda out of memory" in now_text:
+                self.function_send_msg("CUDA Failed",
+                                       _translate('', "你的显存不够啦！去清一下后台占用显存的程序，或者去'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型~"), )
+                self.current_failed = True
+                return
+            elif "cudnn" in now_text and "fail" in now_text:
+                self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx"), )
+                self.current_failed = True
+                return
+            elif 'error: unable to allocate' in now_text:
+                self.function_send_msg("Memory Failed", _translate('', "申请内存失败，请关闭后台程序或增加虚拟内存"), )
+                self.current_failed = True
+                return
+            elif "concat test error" in now_text or "concat error" in now_text:
+                self.function_send_msg("Concat Failed", _translate('', "区块合并音轨失败，请检查输出文件格式是否支持源文件音频"), )
+                self.current_failed = True
+                return
+            elif "broken pipe" in now_text:
+                self.function_send_msg("Render Failed", _translate('', "请检查渲染设置，确保输出分辨率宽高为偶数，尝试关闭硬件编码以解决问题"), )
+                self.current_failed = True
+                return
+            elif "rife_ncnn_vulkan" in now_text:
+                self.function_send_msg("NCNN Import Failed", _translate('', "你的A卡不支持NCNN-RIFE补帧，请更换设备"), )
+                self.current_failed = True
+                return
+            elif "steam validation failed" in now_text:
+                self.function_send_msg("Steam Validation Failed",
+                                       _translate('', "Steam验证失败，请确保软件联网并退出Steam重试；如有疑问详询开发人员"), )
+                self.current_failed = True
+                return
+            elif "error" in now_text:
+                logger.error(f"[At the end of One Line Shot]: \n {data.get('subprocess')}")
+                __msg1 = _translate('', '程序运行出现错误！')
+                __msg2 = _translate('', '请联系开发人员解决')
+                self.function_send_msg("Something went wrong",
+                                       f"{__msg1}\n{data.get('subprocess')}\n{__msg2}", )
+                self.current_failed = True
+                return
+            if 'torchvision' not in now_text:
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
+
+        dup_keys_list = ["Process at", "frame=", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
+                         "AppID", "SteamInternal", "torchvision"]
+
+        data = data_subprocess
+        self.progressBar.setMaximum(int(data["cnt"]))
+        self.progressBar.setValue(int(data["current"]))
+        new_text = ""
+
+        if len(data.get("notice", "")):
+            new_text += data["notice"] + "\n"
+
+        if len(data.get("subprocess", "")):
+            data_subprocess = data['subprocess']
+            if 'error' not in data_subprocess and any([i in data_subprocess for i in dup_keys_list]):
+                tmp = ""
+                lines = data_subprocess.splitlines()
+                for line in lines:
+                    tmp_lines = list()
+                    if any([i in line for i in dup_keys_list]):
+                        tmp_lines = line.split(']', maxsplit=1)
+                    else:
+                        tmp_lines.append(line)
+                    for _line in tmp_lines:
+                        # special judge of progress bar data when data in the same line
+                        if not any([i in _line for i in dup_keys_list]) and len(_line.strip()):
+                            tmp += _line + "\n"
+                # if tmp.strip() == lines[-1].strip():
+                #     lines[-1] = ""
+                data["subprocess"] = tmp + lines[-1]
+                process_update_taskbar_progress(data['subprocess'])
+                remove_last_line()
+            new_text += data["subprocess"]
+
+        main_error = self.rife_thread.get_main_error()
+        if self.rife_thread is not None and len(main_error):
+            new_text += f"\n[LAST ERROR MSG in OLS]:\n{main_error}"
+
+        for line in new_text.splitlines():
+            line = html.escape(line)
+            check_line = line.lower()
+            if "process at" in check_line:
+                add_line = f'<p><span style=" font-weight:600;">{line}</span></p>'
+            elif "program finished" in check_line:
+                add_line = f'<p><span style=" font-weight:600; color:#55aa00;">{line}</span></p>'
+            elif "info" in check_line:
+                add_line = f'<p><span style=" font-weight:600; color:#17C2FF;">{line}</span></p>'
+            elif any([i in check_line for i in
+                      ["error", "invalid", "incorrect", "critical", "fail", "can't", "can not"]]):
+                if all([i not in check_line for i in
+                        ["invalid dts", "incorrect timestamps"]]):
+                    add_line = f'<p><span style=" font-weight:600; color:#ff0000;">{line}</span></p>'
+                else:
+                    add_line = f'<p><span>{line}</span></p>'
+            elif "warn" in check_line:
+                add_line = f'<p><span style=" font-weight:600; color:#ffaa00;">{line}</span></p>'
+            # elif "duration" in line.lower():
+            #     add_line = f'<p><span style=" font-weight:600; color:#550000;">{line}</span></p>'
+            else:
+                add_line = f'<p><span>{line}</span></p>'
+            self.OptionCheck.append(add_line)
+
+        if data["finished"]:
+            """Error Handle"""
+            returncode = data["returncode"]
+            complete_msg = f"For {data['cnt']} Tasks:\n"
+            if returncode == 0 or "Program Finished" in self.OptionCheck.toPlainText() or (
+                    returncode is not None and returncode > 3000):
+                """What the fuck is SWIG?"""
+                complete_msg += _translate('', '成功！')
+                os.startfile(self.OutputFolder.text())
+                self.InputFileName.refreshTasks()
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
+            else:
+                # if not self.DebugChecker.isChecked():
+                _msg1 = _translate('', '失败, 返回码：')
+                _msg2 = _translate('', '请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度')
+                complete_msg += f"{_msg1}{returncode}\n{_msg2}"
+                error_handle()
+                generate_error_log()
+                self.on_PauseProcess_clicked(reset=True)
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
+            if not self.DebugChecker.isChecked():
+                self.function_send_msg(_translate('', "任务完成"), complete_msg, 2)
+            self.ConcatAllButton.setEnabled(True)
+            self.StartExtractButton.setEnabled(True)
+            self.StartRenderButton.setEnabled(True)
+            self.AllInOne.setEnabled(True)
+            self.InputFileName.setEnabled(True)
+            self.current_failed = False
+
+            if appPref.value("use_clear_inputs", False, type=bool):
+                self.InputFileName.clear()
+            self.function_enable_inputfilename_connection()
+        #
+        self.OptionCheck.moveCursor(QTextCursor.End)
+        self.OptionCheck.moveCursor(QTextCursor.StartOfLine)
 
     def settings_change_lang(self, lang: str):
         logger.debug(f"Translate To Lang = {lang}")
@@ -548,6 +758,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AutoInterpScalePredictSizeSelector.setVisible(False)
         self.AiSrMode.setVisible(False)
         self.SrModeLabel.setVisible(False)
+        self.FastDenoiseChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -564,11 +775,13 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.DupFramesTSelector.setValue(0.2)
         self.DupRmMode.clear()
         ST_RmMode = [_translate('', "不去除重复帧"),
-                     _translate('', "单一识别")]
+                     _translate('', "单一识别"),
+                     _translate('', "去除一拍二"),
+                     ]
         for m in ST_RmMode:
             self.DupRmMode.addItem(m)
 
-        ST_HwaccelMode = ['CPU', 'QSV']
+        ST_HwaccelMode = ['CPU', 'NVENC', 'QSV']
         try:
             self.HwaccelSelector.disconnect()
         except:
@@ -583,37 +796,38 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         for m in ST_HdrMode:
             self.HDRModeSelector.addItem(m)
 
-        self.StartPoint.setVisible(False)
-        self.EndPoint.setVisible(False)
-        self.StartPointLabel.setVisible(False)
-        self.EndPointLabel.setVisible(False)
-        self.ScdetOutput.setVisible(False)
-        self.ScdetUseMix.setVisible(False)
+        self.StartPoint.setEnabled(False)
+        self.EndPoint.setEnabled(False)
+        self.StartPointLabel.setEnabled(False)
+        self.EndPointLabel.setEnabled(False)
+
+        self.ScdetOutput.setEnabled(False)
+        self.ScdetUseMix.setEnabled(False)
+
         self.UseAiSR.setChecked(False)
         self.UseAiSR.setEnabled(False)
         self.SrField.setVisible(False)
-        self.RenderSettingsLabel.setVisible(False)
-        self.RenderSettingsGroup.setVisible(False)
-        self.UseMultiCardsChecker.setVisible(False)
-        self.TtaModeSelector.setVisible(False)
-        self.TtaIterTimesSelector.setVisible(False)
-        self.TtaModeLabel.setVisible(False)
-        self.EvictFlickerChecker.setVisible(False)
-        self.AutoInterpScaleChecker.setVisible(False)
-        self.ReverseChecker.setVisible(False)
-        self.ProAdLabel_1.setVisible(True)
 
-        self.DeinterlaceChecker.setVisible(False)
-        self.FastDenoiseChecker.setVisible(False)
-        self.HwaccelDecode.setVisible(False)
-        self.EncodeThreadField.setVisible(False)
+        self.RenderSettingsGroup.setEnabled(False)
+        self.UseMultiCardsChecker.setEnabled(False)
+        self.TtaModeSelector.setEnabled(False)
+        self.TtaIterTimesSelector.setEnabled(False)
+        self.TtaModeLabel.setEnabled(False)
+        self.EvictFlickerChecker.setEnabled(False)
+        self.AutoInterpScaleChecker.setEnabled(False)
+        self.ReverseChecker.setEnabled(False)
+
+        self.DeinterlaceChecker.setEnabled(False)
+        self.FastDenoiseChecker.setEnabled(False)
+        self.EncodeThreadField.setEnabled(False)
         self.HwaccelPresetLabel.setVisible(False)
         self.HwaccelPresetSelector.setVisible(False)
 
         self.GifBox.setEnabled(False)
-        self.RenderBox.setEnabled(False)
-        self.ExtractBox.setEnabled(False)
         self.SettingsPresetBox.setEnabled(False)
+
+        self.StartExtractButton.setVisible(False)
+        self.StartRenderButton.setVisible(False)
 
         self.DebugChecker.setVisible(False)
 
@@ -713,6 +927,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.EncodeThreadSelector.setValue(appData.value("render_encode_thread", 16, type=int))
         self.EncoderSelector.setCurrentText(appData.value("render_encoder", "H264,8bit"))
         self.PresetSelector.setCurrentText(appData.value("render_encoder_preset", "slow"))
+        self.DefaultEncodePresetChecker.setChecked(appData.value("use_render_encoder_default_preset", False, type=bool))
+        self.EncodeAudioChecker.setChecked(appData.value("is_encode_audio", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
         self.FFmpegCustomer.setText(appData.value("render_ffmpeg_customized", ""))
         self.ExtSelector.setCurrentText(appData.value("output_ext", "mp4"))
@@ -720,13 +936,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SaveAudioChecker.setChecked(appData.value("is_save_audio", True, type=bool))
         self.FastDenoiseChecker.setChecked(appData.value("use_fast_denoise", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
-        self.QuickExtractChecker.setChecked(appData.value("is_quick_extract", True, type=bool))
+        self.QuickExtractChecker.setChecked(appData.value("is_quick_extract", False, type=bool))
         self.DeinterlaceChecker.setChecked(appData.value("use_deinterlace", False, type=bool))
 
         """Slowmotion Configuration"""
         self.slowmotion.setChecked(appData.value("is_render_slow_motion", False, type=bool))
         self.SlowmotionFPS.setText(appData.value("render_slow_motion_fps", "", type=str))
         self.GifLoopChecker.setChecked(appData.value("gif_loop", True, type=bool))
+        self.ToolBoxEncodeAudioChecker.setChecked(appData.value("encode_audio_checker", False, type=bool))
 
         """Scdet and RD Configuration"""
         self.ScedetChecker.setChecked(not appData.value("is_no_scdet", False, type=bool))
@@ -829,6 +1046,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("render_hwaccel_preset", self.HwaccelPresetSelector.currentText())
         appData.setValue("use_hwaccel_decode", self.HwaccelDecode.isChecked())
         appData.setValue("use_manual_encode_thread", self.UseEncodeThread.isChecked())
+        appData.setValue("use_render_encoder_default_preset", self.DefaultEncodePresetChecker.isChecked())
+        appData.setValue("is_encode_audio", self.EncodeAudioChecker.isChecked())
         appData.setValue("render_encode_thread", self.EncodeThreadSelector.value())
         appData.setValue("is_quick_extract", self.QuickExtractChecker.isChecked())
         appData.setValue("hdr_mode", self.HDRModeSelector.currentIndex())
@@ -838,6 +1057,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         """Special Render Effect"""
         appData.setValue("gif_loop", self.GifLoopChecker.isChecked())
+        appData.setValue("encode_audio_checker", self.ToolBoxEncodeAudioChecker.isChecked())
         appData.setValue("is_render_slow_motion", self.slowmotion.isChecked())
         appData.setValue("render_slow_motion_fps", self.SlowmotionFPS.text())
         if appData.value("is_render_slow_motion", False, type=bool):
@@ -1036,9 +1256,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if self.ImgOutputChecker.isChecked():
             """Img Output"""
-            img_io = ImgSeqIO(logger=logger, folder=project_dir, is_tool=True,
-                              output_ext=self.ExtSelector.currentText())
-            last_img = img_io.get_write_start_frame()  # output_dir
+            img_writer = ImageWrite(logger, folder=project_dir, is_tool=True)
+            last_img = img_writer.get_write_start_frame()
             if last_img:
                 reply = self.function_send_msg(f"Resume Workflow?", _translate('', "检测到未完成的图片序列补帧任务，载入进度？"), 3)
                 if reply == QMessageBox.No:
@@ -1119,7 +1338,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SettingsTemplateSelector.clear()
         for tp in template_paths:
             template_name = re.findall('SVFI_Config_Template_(.*?)\.ini', tp)
-            if len(template_name) and "Presets" not in template_name:
+            if len(template_name) and "Presets" not in tp:
                 self.SettingsTemplateSelector.addItem(template_name[0])
 
     def settings_update_gpu_info(self, item_update=False):
@@ -1247,6 +1466,21 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)  # 置顶
 
+    def settings_maintain_io(self, widget_data: dict):
+        input_path = widget_data.get('input_path')
+        if os.path.isfile(input_path):
+            input_fps = Tools.get_fps(input_path)
+            self.InputFPS.setText(f"{input_fps:.5f}")
+            if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
+                try:
+                    exp = int(self.ExpSelecter.currentText()[1:])
+                    self.OutputFPS.setText(f"{input_fps * exp:.5f}")
+                except Exception:
+                    pass
+        else:
+            if not len(self.InputFPS.text()):
+                self.InputFPS.setText("0")
+
     def function_generate_log(self, mode=0):
         """
         生成日志并提示用户
@@ -1288,6 +1522,28 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             except:
                 pass
         return widgetres
+
+    def function_update_task_bar_value(self, complete_cnt: int, total_cnt: int):
+        self.task_bar_controller.SetProgressValue(self._super_hwnd, complete_cnt, total_cnt)
+
+    def function_update_task_bar_state(self, state):
+        self.task_bar_controller.SetProgressState(self._super_hwnd, state.value)
+
+    def function_show_pending_dialog(self, title: str, content: str):
+        self.state_tooltip = StateTooltip(title, content, self)
+        # self.state_tooltip.move(self.pos().x(), self.pos().y())
+        self.state_tooltip.show()
+        QApplication.processEvents()
+        pass
+
+    def function_finish_pending_dialog(self, finish_content: str, close_immediately=False):
+        if self.state_tooltip is None:
+            return
+        if close_immediately:
+            self.state_tooltip.hide()
+        self.state_tooltip.setContent(finish_content)
+        self.state_tooltip.setState(True)
+        pass
 
     def function_send_msg(self, title, string, msg_type=1):
         """
@@ -1360,15 +1616,21 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         ffmpeg_command = (f"{self.ffmpeg} -i {Tools.fillQuotation(input_a)} -i {Tools.fillQuotation(input_v)} "
                           f"-map 1:v:0 -map 0:a:0 -c:v copy -c:a copy "
                           f"-shortest {Tools.fillQuotation(output_v)} -y").replace("\\", "/")
+        if self.ToolBoxEncodeAudioChecker.isChecked():
+            ffmpeg_command = (f"{self.ffmpeg} -i {Tools.fillQuotation(input_a)} -i {Tools.fillQuotation(input_v)} "
+                              f"-map 1:v:0 -map 0:a:0 -c:v copy -c:a aac -ab 640k "
+                              f"-shortest {Tools.fillQuotation(output_v)} -y").replace("\\", "/")
         logger.info(f"[GUI] concat {ffmpeg_command}")
         self.chores_thread = UiRunThread(ffmpeg_command, data={"type": "音视频合并"})
         self.chores_thread.run_signal.connect(self.function_update_chores_finish)
         self.chores_thread.start()
+        self.function_show_pending_dialog("Muxing...", _translate("", "合并音视频中..."))
         self.ConcatButton.setEnabled(False)
 
     def function_update_chores_finish(self, data: dict):
         mission_type = data['data']['type']
         _msg1 = _translate('', '任务完成')
+        self.function_finish_pending_dialog("", True)
         self.function_send_msg("Chores Mission", f"{mission_type}{_msg1}", msg_type=2)
         self.ConcatButton.setEnabled(True)
         self.GifButton.setEnabled(True)
@@ -1405,6 +1667,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.chores_thread = UiRunThread(ffmpeg_command, data={"type": "GIF制作"})
         self.chores_thread.run_signal.connect(self.function_update_chores_finish)
         self.chores_thread.start()
+        self.function_show_pending_dialog("Gif Making...", _translate("", "压制Gif中..."))
         self.GifButton.setEnabled(False)
 
     def function_get_SuperResolution_paths(self, path_type=0, key_word=""):
@@ -1425,6 +1688,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         task_data = self.InputFileName.getItems()
         task_list = list()
         self.function_disable_inputfilename_connection()
+        self.function_show_pending_dialog("Saving Settings...", _translate("", "保存当前设置中..."))
 
         for t in task_data:
             if self.InputFileName.itemWidget(t).iniCheck.isChecked():
@@ -1432,6 +1696,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.InputFileName.setCurrentRow(row_)
                 self.on_InputFileName_currentItemChanged()
                 task_list.append(row_)
+                QApplication.processEvents()
         if load_all or (not len(task_list) and self.InputFileName.count() >= 1):
             """
             Activate All Tasks when load_all is assigned or 
@@ -1441,6 +1706,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             for it in range(self.InputFileName.count()):
                 self.InputFileName.setCurrentRow(it)
                 self.on_InputFileName_currentItemChanged()
+                QApplication.processEvents()
             task_list = list(range(self.InputFileName.count()))
         elif load_one:
             task_current_item = self.InputFileName.currentItem()
@@ -1451,6 +1717,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             pass
 
         self.function_enable_inputfilename_connection()
+        self.function_finish_pending_dialog(_translate("", "设置保存完成"), close_immediately=True)
         return task_list
 
     def function_get_templates(self):
@@ -1482,171 +1749,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             print(traceback.format_exc())
             pass
 
-    def steam_update_achv(self):
-        if not self.is_steam:
-            return
-        ACHV_Use_MX250 = self.STEAM.GetAchv("ACHV_Use_MX250")
-        ACHV_Use_RTX2060 = self.STEAM.GetAchv("ACHV_Use_RTX2060")
-        current_GPU = self.DiscreteCardSelector.currentText()
-        if all([i in current_GPU for i in ['MX', '250']]) and not ACHV_Use_MX250:
-            reply = self.STEAM.SetAchv("ACHV_Use_MX250")
-        if all([i in current_GPU for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
-            reply = self.STEAM.SetAchv("ACHV_Use_RTX2060")
-        self.STEAM.Store()
-
-    def process_update_rife(self, json_data):
-        """
-        Communicate with RIFE Thread
-        :return:
-        """
-
-        def generate_error_log():
-            self.function_generate_log(0)
-
-        def remove_last_line():
-            cursor = self.OptionCheck.textCursor()
-            cursor.movePosition(QTextCursor.End)
-            cursor.select(QTextCursor.LineUnderCursor)
-            cursor.removeSelectedText()
-            cursor.deletePreviousChar()
-            cursor.movePosition(QTextCursor.Start)
-            self.OptionCheck.setTextCursor(cursor)
-
-        def error_handle():
-            now_text = self.OptionCheck.toPlainText().lower() + data.get("subprocess", "").lower()  # 复合寻找错误
-            if self.current_failed:
-                return
-            if "input file is not available" in now_text:
-                self.function_send_msg("Inputs Failed", _translate('', "你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符"), )
-                self.current_failed = True
-                return
-            elif "json" in now_text:
-                self.function_send_msg("Input File Failed", _translate('', "文件读取失败，请确保软件有足够权限且输入文件未被其他软件占用"), )
-                self.current_failed = True
-                return
-            elif "ascii" in now_text:
-                self.function_send_msg("Software Path Failure", _translate('', "请把软件所在文件夹移到纯英文、无中文、无空格路径下"), )
-                self.current_failed = True
-                return
-            elif "cuda out of memory" in now_text:
-                self.function_send_msg("CUDA Failed",
-                                       _translate('', "你的显存不够啦！去清一下后台占用显存的程序，或者去'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型~"), )
-                self.current_failed = True
-                return
-            elif "cudnn" in now_text.lower() and "fail" in now_text.lower():
-                self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx"), )
-                self.current_failed = True
-                return
-            elif "concat test error" in now_text or "concat error" in now_text:
-                self.function_send_msg("Concat Failed", _translate('', "区块合并音轨失败，请检查输出文件格式是否支持源文件音频"), )
-                self.current_failed = True
-                return
-            elif "broken pipe" in now_text:
-                self.function_send_msg("Render Failed", _translate('', "请检查渲染设置，确保输出分辨率宽高为偶数，尝试关闭硬件编码以解决问题"), )
-                self.current_failed = True
-                return
-            elif "rife_ncnn_vulkan" in now_text:
-                self.function_send_msg("NCNN Import Failed", _translate('', "你的A卡不支持NCNN-RIFE补帧，请更换设备"), )
-                self.current_failed = True
-                return
-            elif "Steam Validation Failed" in now_text:
-                self.function_send_msg("Steam Validation Failed",
-                                       _translate('', "Steam验证失败，请确保软件联网并退出Steam重试；如有疑问详询开发人员"), )
-                self.current_failed = True
-                return
-            elif "error" in now_text:
-                logger.error(f"[At the end of One Line Shot]: \n {data.get('subprocess')}")
-                __msg1 = _translate('', '程序运行出现错误！')
-                __msg2 = _translate('', '请联系开发人员解决')
-                self.function_send_msg("Something went wrong",
-                                       f"{__msg1}\n{data.get('subprocess')}\n{__msg2}", )
-                self.current_failed = True
-                return
-
-        data = json.loads(json_data)
-        self.progressBar.setMaximum(int(data["cnt"]))
-        self.progressBar.setValue(int(data["current"]))
-        new_text = ""
-
-        if len(data.get("notice", "")):
-            new_text += data["notice"] + "\n"
-
-        if len(data.get("subprocess", "")):
-            dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
-                             "AppID", "SteamInternal"]
-            if 'error' not in data['subprocess'] and any([i in data["subprocess"] for i in dup_keys_list]):
-                tmp = ""
-                lines = data["subprocess"].splitlines()
-                for line in lines:
-                    if not any([i in line for i in dup_keys_list]) and len(line.strip()):
-                        tmp += line + "\n"
-                if tmp.strip() == lines[-1].strip():
-                    lines[-1] = ""
-                data["subprocess"] = tmp + lines[-1]
-                remove_last_line()
-            new_text += data["subprocess"]
-
-        if self.chores_thread is not None and len(self.chores_thread.get_main_error()):
-            main_error = self.chores_thread.get_main_error()
-            new_text += f"\nLAST ERROR MSG in OLS:\n{main_error}"
-
-        for line in new_text.splitlines():
-            line = html.escape(line)
-
-            check_line = line.lower()
-            if "process at" in check_line:
-                add_line = f'<p><span style=" font-weight:600;">{line}</span></p>'
-            elif "program finished" in check_line:
-                add_line = f'<p><span style=" font-weight:600; color:#55aa00;">{line}</span></p>'
-            elif "info" in check_line:
-                add_line = f'<p><span style=" font-weight:600; color:#17C2FF;">{line}</span></p>'
-            elif any([i in check_line for i in
-                      ["error", "invalid", "incorrect", "critical", "fail", "can't", "can not"]]):
-                if all([i not in check_line for i in
-                        ["invalid dts", "incorrect timestamps"]]):
-                    add_line = f'<p><span style=" font-weight:600; color:#ff0000;">{line}</span></p>'
-                else:
-                    add_line = f'<p><span>{line}</span></p>'
-            elif "warn" in check_line:
-                add_line = f'<p><span style=" font-weight:600; color:#ffaa00;">{line}</span></p>'
-            # elif "duration" in line.lower():
-            #     add_line = f'<p><span style=" font-weight:600; color:#550000;">{line}</span></p>'
-            else:
-                add_line = f'<p><span>{line}</span></p>'
-            self.OptionCheck.append(add_line)
-
-        if data["finished"]:
-            """Error Handle"""
-            returncode = data["returncode"]
-            complete_msg = f"For {data['cnt']} Tasks:\n"
-            if returncode == 0 or "Program Finished" in self.OptionCheck.toPlainText() or (
-                    returncode is not None and returncode > 3000):
-                """What the fuck is SWIG?"""
-                complete_msg += _translate('', '成功！')
-                os.startfile(self.OutputFolder.text())
-                self.InputFileName.refreshTasks()
-            else:
-                # if not self.DebugChecker.isChecked():
-                _msg1 = _translate('', '失败, 返回码：')
-                _msg2 = _translate('', '请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度')
-                complete_msg += f"{_msg1}{returncode}\n{_msg2}"
-                error_handle()
-                generate_error_log()
-            if not self.DebugChecker.isChecked():
-                self.function_send_msg(_translate('', "任务完成"), complete_msg, 2)
-            self.ConcatAllButton.setEnabled(True)
-            self.StartExtractButton.setEnabled(True)
-            self.StartRenderButton.setEnabled(True)
-            self.AllInOne.setEnabled(True)
-            self.InputFileName.setEnabled(True)
-            self.current_failed = False
-
-            if appPref.value("use_clear_inputs", False, type=bool):
-                self.InputFileName.clear()
-            self.function_enable_inputfilename_connection()
-
-        self.OptionCheck.moveCursor(QTextCursor.End)
-
     # @pyqtSlot(bool)
     def on_InputFileName_currentItemChanged(self):
         current_item = self.InputFileName.currentItem()
@@ -1664,21 +1766,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         self.settings_maintain_io(widget_data)
         return
-
-    def settings_maintain_io(self, widget_data: dict):
-        input_path = widget_data.get('input_path')
-        if os.path.isfile(input_path):
-            input_fps = Tools.get_fps(input_path)
-            self.InputFPS.setText(f"{input_fps:.5f}")
-            if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
-                try:
-                    exp = int(self.ExpSelecter.currentText()[1:])
-                    self.OutputFPS.setText(f"{input_fps * exp:.5f}")
-                except Exception:
-                    pass
-        else:
-            if not len(self.InputFPS.text()):
-                self.InputFPS.setText("0")
 
     def on_InputFileName_failImport(self, fail_code: int):
         """
@@ -1763,6 +1850,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.current_failed = False
         self.tabWidget.setCurrentIndex(1)  # redirect to info page
         self.steam_update_achv()
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
 
     @pyqtSlot(bool)
     def on_AutoSet_clicked(self):
@@ -1942,7 +2030,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         current_template = self.ResizeTemplate.currentText()
-
+        if "custom" in current_template.lower():
+            return
         width, height = 0, 0
         if "480p" in current_template:
             width, height = 480, 270
@@ -1978,8 +2067,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ResizeHeightSettings.setValue(height)
         if self.UseAiSR.isChecked() and self.AiSrModuleExpDisplay.text() != "Unknown":
             sr_exp = int(self.AiSrModuleExpDisplay.text()[:-1])
-            self.TransferWidthSettings.setValue(width // sr_exp)
-            self.TransferHeightSettings.setValue(height // sr_exp)
+            if self.TransferWidthSettings.value() == 0 and self.TransferHeightSettings.value() == 0:
+                self.TransferWidthSettings.setValue(width // sr_exp)
+                self.TransferHeightSettings.setValue(height // sr_exp)
 
     @pyqtSlot(bool)
     def on_AutoInterpScaleChecker_clicked(self):
@@ -2040,8 +2130,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_HwaccelSelector_currentTextChanged(self):
         logger.debug("Switch To HWACCEL Mode: %s" % self.HwaccelSelector.currentText())
         check = self.HwaccelSelector.currentText() == "NVENC"
-        self.HwaccelPresetLabel.setVisible(check)
-        self.HwaccelPresetSelector.setVisible(check)
+        if not self.is_free:
+            self.HwaccelPresetLabel.setVisible(check)
+            self.HwaccelPresetSelector.setVisible(check)
         encoders = EncodePresetAssemply.encoder[self.HwaccelSelector.currentText()]
         try:
             self.EncoderSelector.disconnect()
@@ -2140,6 +2231,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.rife_thread = RIFE_thread
         _msg1 = _translate('', '仅拆帧操作启动')
         self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
 
     @pyqtSlot(bool)
     def on_StartRenderButton_clicked(self):
@@ -2158,6 +2250,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.rife_thread = RIFE_thread
         _msg1 = _translate('', '仅渲染操作启动')
         self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
 
     @pyqtSlot(bool)
     def on_KillProcButton_clicked(self):
@@ -2166,21 +2259,30 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         if self.rife_thread is not None:
+            self.function_show_pending_dialog("Terminating...", _translate("", "强制结束补帧进程")+"...")
             self.rife_thread.kill_proc_exec()
+            self.function_finish_pending_dialog("", True)
+            self.on_PauseProcess_clicked(reset=True)
+            self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
 
     @pyqtSlot(bool)
-    def on_PauseProcess_clicked(self):
+    def on_PauseProcess_clicked(self, _=False, reset=False):
         """
         :return:
         """
+        if reset:
+            self.PauseProcess.setText(_translate('', "暂停补帧！"))
+            return
         if self.rife_thread is not None:
             self.rife_thread.pause_proc_exec()
             if not self.pause:
                 self.pause = True
                 self.PauseProcess.setText(_translate('', "继续补帧！"))
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_PAUSED)
             else:
                 self.pause = False
                 self.PauseProcess.setText(_translate('', "暂停补帧！"))
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NORMAL)
 
     @pyqtSlot(bool)
     def on_ShowAdvance_clicked(self):
@@ -2242,17 +2344,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_load_current()
 
     def on_ExpertMode_changed(self):
-        expert_mode = appPref.value("expert", False, type=bool)
+        expert_mode = appPref.value("expert", True, type=bool)
         self.UseFixedScdet.setVisible(expert_mode)
         self.ScdetMaxDiffSelector.setVisible(expert_mode)
-        # self.QuickExtractChecker.setVisible(expert_mode)
         self.HDRModeField.setVisible(expert_mode)
         self.RenderSettingsLabel.setVisible(expert_mode)
         self.RenderSettingsGroup.setVisible(expert_mode)
         self.FP16Checker.setVisible(expert_mode)
         self.ReverseChecker.setVisible(expert_mode)
         self.KeepChunksChecker.setVisible(expert_mode)
-        # self.AutoInterpScaleChecker.setVisible(expert_mode)
         self.ScdetOutput.setVisible(expert_mode)
         self.ScdetUseMix.setVisible(expert_mode)
         self.DeinterlaceChecker.setVisible(expert_mode)
@@ -2280,6 +2380,20 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_send_msg("Invalid Operation", _translate('', "已有任务在执行"))
             return
         self.on_AllInOne_clicked()
+
+    @pyqtSlot(bool)
+    def on_actionStartRenderProcess_triggered(self):
+        if not self.StartRenderButton.isEnabled():
+            self.function_send_msg("Invalid Operation", _translate('', "已有任务在执行"))
+            return
+        self.on_StartRenderButton_clicked()
+
+    @pyqtSlot(bool)
+    def on_actionStartExtractProcess_triggered(self):
+        if not self.StartExtractButton.isEnabled():
+            self.function_send_msg("Invalid Operation", _translate('', "已有任务在执行"))
+            return
+        self.on_StartExtractButton_clicked()
 
     @pyqtSlot(bool)
     def on_actionStopProcess_triggered(self):
@@ -2334,7 +2448,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def closeEvent(self, event):
         global appData
-        if not self.STEAM.steam_valid:
+        if not self.Validation.CheckValidateStart():
             event.ignore()
             return
         reply = self.function_send_msg("Quit", _translate('', "是否保存当前设置？"), 3)
