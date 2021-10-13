@@ -17,22 +17,7 @@ class RSACipher(object):
     public_pem = None
 
     def __init__(self):
-        self.private_pem = b"" \
-                           b"-----BEGIN RSA PRIVATE KEY-----\n" \
-                           b"MIICWwIBAAKBgQCWWXMIp0clTrB4m9Lt64+Yv6MDxZuS+cRw/IhDFM87ueYcbTqZ\n" \
-                           b"U1iOyWd5sk3BDbS5CsVQ45omm3bWWw1/fs7G6iafWXwEH4jCqmNjkZOmPXvswY0U\n" \
-                           b"G750m+1uko35vuWj4V0tN0OIrp9A7ONPzrVi/yQtoVtruHoZHrqDF4ASGwIDAQAB\n" \
-                           b"AoGABo3ltuXb8yNoDAn2+wo+21DXYW2254Rd7PMFWa9JjXgAMRMN7+szPB5JlYOR\n" \
-                           b"Yi4fx8VRbsJNUQuL9bJId1tm1jH4XHawJh5SbGIv344UCDYwz4bPOAscagM9j5oA\n" \
-                           b"nFqt3GkOzTVTrOwqzC6fNoqaTTRXyM8BgjbiOGiCG+9pXIkCQQC+4w+7oIjlybgh\n" \
-                           b"6QIYGQt3zbsT56K8ae84EqsKTGm4u7KVkbCjPRx/SneM0TJhSSSVbjCbvRl25C+3\n" \
-                           b"3hTCVpQNAkEAyaKAvOUtDFubR33mAP92SIBAljFUIbsbaz2Fp5lA4Jmr3CDyCcaa\n" \
-                           b"E5Qx/udy1kYt3jKdV9jQNHbh5jt2K9PsxwJATMfWVzked5do+jLYRcslIr5c5ofA\n" \
-                           b"nJrbvyk7JTxRNh5BmgntC+wT31ubtMecxSb/kR+ua6ZnbLwiOYoZvYXHrQJAEQql\n" \
-                           b"/NEVzJyVdCZk4SK2OYx1aPxEUxGAUMEDYdXnENSMHO+/5Sme7haxXwzqvMdzqvr2\n" \
-                           b"J22Qs05060ONSkkAEwJADGBeXhf5cwxtktbZGC1+TvtQJwlcTDLIjecziDhCD98i\n" \
-                           b"/Z88zsJxYoxy0ZZSIItEw+S2GtWGVj6TIQNmZlLZ/A==\n" \
-                           b"-----END RSA PRIVATE KEY-----"
+        self.private_pem = b""
         self.public_pem = b""
 
     def get_public_key(self):
