@@ -117,12 +117,10 @@ class DefaultConfigParser(ConfigParser):
 
 
 class Tools:
-    resize_param = (480, 270)
+    resize_param = (300, 300)
     crop_param = (0, 0, 0, 0)
 
     def __init__(self):
-        self.resize_param = (480, 270)
-        self.crop_param = (0, 0, 0, 0)
         pass
 
     @staticmethod
@@ -368,8 +366,11 @@ class Tools:
         pid_dict = {}
         pids = psutil.pids()
         for pid in pids:
-            p = psutil.Process(pid)
-            pid_dict[pid] = p.name()
+            try:
+                p = psutil.Process(pid)
+                pid_dict[pid] = p.name()
+            except psutil.NoSuchProcess:
+                pass
             # print("pid-%d,pname-%s" %(pid,p.name()))
         return pid_dict
 
@@ -379,8 +380,154 @@ class Tools:
         for pid, pname in pids.items():
             if pname in ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
                          'SvtHevcEncApp.exe']:
-                os.kill(pid, signal.SIGABRT)
+                try:
+                    os.kill(pid, signal.SIGABRT)
+                except PermissionError:
+                    pass
                 print(f"Warning: Kill Process before exit: {pname}")
+
+    @staticmethod
+    def get_plural(i: int):
+        if i > 0:
+            if i % 2 != 0:
+                return i + 1
+        return i
+
+
+class ImgSeqIO:
+    def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
+                 output_ext=".png", exp=2, resize=(0, 0), is_esr=False, **kwargs):
+        # TODO 解耦成Input，Output，Tool三个类
+        if logger is None:
+            self.logger = Tools.get_logger(name="ImgIO", log_path=folder)
+        else:
+            self.logger = logger
+
+        if output_ext[0] != ".":
+            output_ext = "." + output_ext
+        self.output_ext = output_ext
+
+        if folder is None or os.path.isfile(folder):
+            self.logger.error(f"Invalid ImgSeq Folder: {folder}")
+            return
+        self.seq_folder = folder  # + "/tmp"  # weird situation, cannot write to target dir, father dir instead
+        if not os.path.exists(self.seq_folder):
+            os.makedirs(self.seq_folder, exist_ok=True)
+            start_frame = 0
+        elif start_frame == -1 and not is_read:
+            # write: start writing at the end of sequence
+            start_frame = self.get_write_start_frame()
+        elif start_frame != -1 and is_read:
+            start_frame = int(start_frame / (2 ** exp))
+
+        self.start_frame = start_frame
+        self.frame_cnt = 0
+        self.img_list = list()
+
+        self.write_queue = Queue(maxsize=1000)
+        self.thread_cnt = thread
+        self.thread_pool = list()
+
+        self.use_imdecode = False
+        self.resize = resize
+        self.resize_flag = all(self.resize)
+        self.is_esr = is_esr
+
+        self.exp = exp
+
+        if is_tool:
+            return
+        if is_read:
+            img_list = os.listdir(self.seq_folder)
+            img_list.sort()
+            for p in img_list:
+                fn, ext = os.path.splitext(p)
+                if ext.lower() in SupportFormat.img_inputs:
+                    if self.frame_cnt < start_frame:
+                        self.frame_cnt += 1  # update frame_cnt
+                        continue  # do not read frame until reach start_frame img
+                    self.img_list.append(os.path.join(self.seq_folder, p))
+            self.logger.debug(f"Load {len(self.img_list)} frames at {self.frame_cnt}")
+        else:
+            """Write Img"""
+            self.frame_cnt = start_frame
+            self.logger.debug(f"Start Writing {self.output_ext} at No. {self.frame_cnt}")
+            for t in range(self.thread_cnt):
+                _t = threading.Thread(target=self.write_buffer, name=f"[IMG.IO] Write Buffer No.{t + 1}")
+                self.thread_pool.append(_t)
+            for _t in self.thread_pool:
+                _t.start()
+
+    def get_write_start_frame(self):
+        """
+        Get Start Frame when start_frame is at its default value
+        :return:
+        """
+        img_list = list()
+        for f in os.listdir(self.seq_folder):
+            fn, ext = os.path.splitext(f)
+            if ext in SupportFormat.img_inputs:
+                img_list.append(fn)
+        if not len(img_list):
+            return 0
+        # img_list.sort()
+        # last_img = img_list[-1]  # biggest
+        return len(img_list)
+
+    def get_frames_cnt(self):
+        """
+        Get Frames Cnt with EXP
+        :return:
+        """
+        return len(self.img_list) * 2 ** self.exp
+
+    def read_frame(self, path):
+        img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), 1)[:, :, ::-1].copy()
+        if self.resize_flag:
+            img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_LANCZOS4)
+        return img
+
+    def write_frame(self, img, path):
+        if self.resize_flag:
+            img = cv2.resize(img, (self.resize[0], self.resize[1]))
+        cv2.imencode(self.output_ext, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))[1].tofile(path)
+        # good
+
+    def nextFrame(self):
+        for p in self.img_list:
+            img = self.read_frame(p)
+            for e in range(2 ** self.exp):
+                yield img
+
+    def write_buffer(self):
+        while True:
+            img_data = self.write_queue.get()
+            if img_data[1] is None:
+                self.logger.debug(f"{threading.current_thread().name}: get None, break")
+                break
+            self.write_frame(img_data[1], img_data[0])
+
+    def writeFrame(self, img):
+        img_path = os.path.join(self.seq_folder, f"{self.frame_cnt:0>8d}{self.output_ext}")
+        img_path = img_path.replace("\\", "/")
+        if img is None:
+            for t in range(self.thread_cnt):
+                self.write_queue.put((img_path, None))
+            return
+        self.write_queue.put((img_path, img))
+        self.frame_cnt += 1
+        return
+
+    def close(self):
+        for t in range(self.thread_cnt):
+            self.write_queue.put(("", None))
+        for _t in self.thread_pool:
+            while _t.is_alive():
+                time.sleep(0.2)
+        # if os.path.exists(self.seq_folder):
+        #     shutil.rmtree(self.seq_folder)
+        return
+
 
 class ImageIO:
     def __init__(self, logger, folder, start_frame=0, exp=2, **kwargs):
@@ -432,13 +579,13 @@ class ImageIO:
 
 
 class ImageRead(ImageIO):
-    def __init__(self, logger, folder, start_frame=0, exp=2, resize=(0, 0), is_esr=False, **kwargs):
+    def __init__(self, logger, folder, start_frame=0, exp=2, resize=(0, 0), **kwargs):
         super().__init__(logger, folder, start_frame, exp)
         self.resize = resize
         self.resize_flag = all(self.resize)
 
         if self.start_frame != -1:
-            self.start_frame = int(self.start_frame / (2 ** self.exp))
+            self.start_frame = int(self.start_frame / 2 ** self.exp)
 
         img_list = os.listdir(self.folder)
         img_list.sort()
@@ -475,7 +622,8 @@ class ImageRead(ImageIO):
 
 
 class ImageWrite(ImageIO):
-    def __init__(self, logger, folder, start_frame=0, exp=2, resize=(0, 0), output_ext='.png', thread_cnt=4, is_tool=False, **kwargs):
+    def __init__(self, logger, folder, start_frame=0, exp=2, resize=(0, 0), output_ext='.png', thread_cnt=4,
+                 is_tool=False, **kwargs):
         super().__init__(logger, folder, start_frame, exp)
         self.resize = resize
         self.resize_flag = all(self.resize)
@@ -494,7 +642,6 @@ class ImageWrite(ImageIO):
             for _t in self.thread_pool:
                 _t.start()
 
-
     def get_write_start_frame(self):
         """
         Get Start Frame when start_frame is at its default value
@@ -509,7 +656,6 @@ class ImageWrite(ImageIO):
             return 0
         return len(img_list)
 
-
     def write_buffer(self):
         while True:
             img_data = self.write_queue.get()
@@ -517,6 +663,11 @@ class ImageWrite(ImageIO):
                 self.logger.debug(f"{threading.current_thread().name}: get None, break")
                 break
             self.write_frame(img_data[1], img_data[0])
+
+    def write_frame(self, img, path):
+        if self.resize_flag:
+            img = cv2.resize(img, (self.resize[0], self.resize[1]))
+        cv2.imencode(self.output_ext, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))[1].tofile(path)
 
     def writeFrame(self, img):
         img_path = os.path.join(self.folder, f"{self.frame_cnt:0>8d}{self.output_ext}")
@@ -598,13 +749,22 @@ class ArgumentManager:
     is_release = True
     traceback_limit = 0 if is_release else None
     gui_version = "3.7.0"
-    version_tag = f"{gui_version}.beta.1 " \
+    version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "6.11.0"
+    ols_version = "7.0.0"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
+    - Optimize startup time by disable STEAM module import in retail mode
+    - Optimize SR efficiency by building independent pipe and isolated process class with user-customed transfer resolution
+    - Auto Fix Output format to png in extract-only mode
+    - Optimize Workflow resume mechanism to be faster and more accurate
+    - Add back half-precision mode for RealESR
+    - Change Output abbreviations to smarter ones.
+    - Fix Stagnant Progress Bar by isolating thread class
+    - Fix inaccurate speed display of the whole process(including interpolation and super resolution)
+    - Fix Zombie OLS Process
     """
 
     path_len_limit = 230
@@ -649,12 +809,17 @@ class ArgumentManager:
         self.use_manual_buffer = args.get("use_manual_buffer", False)
         self.manual_buffer_size = args.get("manual_buffer_size", 1)
 
-        self.resize_width = args.get("resize_width", 0)
-        self.resize_height = args.get("resize_height", 0)
-        self.resize_param = [self.resize_width, self.resize_height]  # crop parameter, 裁切参数
-        self.resize_exp = args.get("resize_exp", 1)
-        self.crop_width = args.get("crop_width", 0)
-        self.crop_height = args.get("crop_height", 0)
+        self.resize_width = Tools.get_plural(args.get("resize_width", 0))
+        self.resize_height = Tools.get_plural(args.get("resize_height", 0))
+        self.resize_param = [self.resize_width, self.resize_height]  # resize parameter, 输出分辨率参数
+        self.resize_exp = args.get("resize_exp", 1)  # TODO Remove this
+
+        self.transfer_width = Tools.get_plural(args.get("transfer_width", 0))
+        self.transfer_height = Tools.get_plural(args.get("transfer_height", 0))
+        self.transfer_param = [self.transfer_width, self.transfer_height]  # crop parameter, 裁切参数
+
+        self.crop_width = Tools.get_plural(args.get("crop_width", 0))
+        self.crop_height = Tools.get_plural(args.get("crop_height", 0))
         self.crop_param = [self.crop_width, self.crop_height]  # crop parameter, 裁切参数
 
         self.use_sr = args.get("use_sr", False)
@@ -662,6 +827,7 @@ class ArgumentManager:
         self.use_sr_model = args.get("use_sr_model", "")
         self.use_sr_mode = args.get("use_sr_mode", "")
         self.sr_tilesize = args.get("sr_tilesize", 200)
+        self.use_realesr_fp16 = args.get("use_realesr_fp16", False)
 
         self.render_gap = args.get("render_gap", 1000)
         self.use_crf = args.get("use_crf", True)
@@ -722,6 +888,7 @@ class ArgumentManager:
         self.render_only = args.get("render_only", False)
         self.version = args.get("version", "0.0.0 beta")
 
+
 class VideoFrameInterpolation:
     def __init__(self, __args):
         self.initiated = False
@@ -739,11 +906,14 @@ class VideoFrameInterpolation:
     def initiate_algorithm(self):
         raise NotImplementedError()
 
-    def generate_n_interp(self, img0, img1, n, scale, debug=False):
-        raise NotImplementedError()
+    def generate_n_interp(self, img0, img1, n, scale, debug=False) -> list:
+        interp_list = list()
+        for i in range(n):
+            interp_list.append(img0)
+        return interp_list
 
-    def get_auto_scale(self, img1, img2):
-        raise NotImplementedError()
+    def get_auto_scale(self, img1, img2) -> float:
+        return 1.0
 
     def __make_n_inference(self, img1, img2, scale, n):
         raise NotImplementedError("Abstract")
@@ -785,7 +955,7 @@ class Hdr10PlusProcesser:
                 self.hdr10plus_metadata_4interp.append(_m)
         return
 
-    def get_hdr10plus_metadata_at_point(self, start_frame: 0):
+    def get_hdr10plus_metadata_path_at_point(self, start_frame: 0):
         """
 
         :return: path of metadata json to use immediately
@@ -804,30 +974,26 @@ class Hdr10PlusProcesser:
 
 
 class DoviProcesser:
-    def __init__(self, concat_input: str, logger: logging, project_dir: str, args: ArgumentManager,
-                 interpolation_exp: int, **kwargs):
+    def __init__(self, concat_input: str, original_input: str, project_dir: str, interp_times: int, logger: logging,
+                 **kwargs):
         """
 
         :param concat_input:
-        :param logger:
+        :param original_input:
         :param project_dir:
-        :param args:
+        :param interp_times:
+        :param logger:
         :param kwargs:
         """
         self.concat_input = concat_input
-        self.logger = logger
+        self.input = original_input
         self.project_dir = project_dir
-        self.ARGS = args
-        self.interp_exp = interpolation_exp
-        self.ffmpeg = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffmpeg.exe"))
-        self.ffprobe = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "ffprobe.exe"))
-        self.dovi_tool = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "dovi_tool.exe"))
-        self.dovi_muxer = Tools.fillQuotation(os.path.join(self.ARGS.app_dir, "dovi_muxer.exe"))
-        if self.ARGS.ffmpeg == 'ffmpeg':
-            self.ffmpeg = "ffmpeg"
-            self.ffprobe = "ffprobe"
-            self.dovi_tool = "dovi_tool"
-            self.dovi_muxer = "dovi_muxer"
+        self.interp_times = interp_times
+        self.logger = logger
+        self.ffmpeg = "ffmpeg"
+        self.ffprobe = "ffprobe"
+        self.dovi_tool = "dovi_tool"
+        self.dovi_muxer = "dovi_muxer"
         self.video_info, self.audio_info = {}, {}
         self.dovi_profile = 8
         self.get_input_info()
@@ -846,7 +1012,7 @@ class DoviProcesser:
     def get_input_info(self):
         check_command = (f'{self.ffprobe} -v error '
                          f'-show_streams -print_format json '
-                         f'{Tools.fillQuotation(self.ARGS.input)}')
+                         f'{Tools.fillQuotation(self.input)}')
         result = check_output(shlex.split(check_command))
         try:
             stream_info = json.loads(result)['streams']  # select first video stream as input
@@ -887,7 +1053,7 @@ class DoviProcesser:
                 audio_ext = audio_map[self.audio_info['codec_name']]
             self.dv_audio_stream = Tools.fillQuotation(os.path.join(self.project_dir, f"dv_audio.{audio_ext}"))
             command_line = (
-                f"{self.ffmpeg} -i {Tools.fillQuotation(self.ARGS.input)} -c:a copy -vn -f {self.audio_info['codec_name']} {self.dv_audio_stream} -y")
+                f"{self.ffmpeg} -i {Tools.fillQuotation(self.input)} -c:a copy -vn -f {self.audio_info['codec_name']} {self.dv_audio_stream} -y")
             check_output(command_line)
         self.logger.info(f"DV Processing [1] - Video and Audio track Extracted, start RPU Extracting")
 
@@ -895,7 +1061,7 @@ class DoviProcesser:
 
     def extract_rpu(self):
         command_line = (
-            f"{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.ARGS.input)} -c:v copy "
+            f"{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.input)} -c:v copy "
             f'-vbsf {self.video_info["codec_name"]}_mp4toannexb -f {self.video_info["codec_name"]} - | {self.dovi_tool} extract-rpu --rpu-out {self.dv_before_rpu} -')
         check_output(command_line, shell=True)
         self.logger.info(f"DV Processing [2] - Dolby Vision RPU layer extracted, start RPU Modifying")
@@ -920,7 +1086,7 @@ class DoviProcesser:
 
         duplicate_list = []
         for frame in range(dovi_len):
-            duplicate_list.append({'source': frame, 'offset': frame, 'length': self.interp_exp - 1})
+            duplicate_list.append({'source': frame, 'offset': frame, 'length': self.interp_times - 1})
         edit_dict = {'duplicate': duplicate_list}
         with open(self.rpu_edit_json, 'w') as w:
             json.dump(edit_dict, w)
@@ -928,7 +1094,7 @@ class DoviProcesser:
             f"{self.dovi_tool} editor -i {self.dv_before_rpu} -j {Tools.fillQuotation(self.rpu_edit_json)} -o {self.dv_after_rpu}")
         check_output(command_line)
         self.logger.info(
-            f"DV Processing [3] - RPU layer modified with duplication {self.interp_exp - 1} at length {dovi_len}, start RPU Injecting")
+            f"DV Processing [3] - RPU layer modified with duplication {self.interp_times - 1} at length {dovi_len}, start RPU Injecting")
 
         pass
 
@@ -951,6 +1117,7 @@ class DoviProcesser:
             f"DV Processing [5] - interpolated stream muxed to destination: {Tools.get_filename(self.dv_concat_output_path)}")
         self.logger.info(f"DV Processing FINISHED")
         return True
+
 
 class VideoInfo:
     def __init__(self, input_file: str, logger, project_dir: str, interp_exp=0, **kwargs):
@@ -980,7 +1147,8 @@ class VideoInfo:
         self.frames_size = (0, 0)  # width, height, float
         self.frames_cnt = 0  # int
         self.duration = 0
-        self.video_info = dict()
+        self.video_info = {'color_range': 'tv', 'color_transfer': 'bt709',
+                           'color_space': 'bt709', 'color_primaries': 'bt709'}
         self.audio_info = dict()
         self.hdr10plus_metadata_path = None
         self.update_info()
@@ -1079,7 +1247,7 @@ class VideoInfo:
                 self.frames_cnt = video_input.get(cv2.CAP_PROP_FRAME_COUNT)
             if not self.duration:
                 self.duration = self.frames_cnt / self.fps
-            if self.frames_size == (0,0):
+            if self.frames_size == (0, 0):
                 self.frames_size = (
                     round(video_input.get(cv2.CAP_PROP_FRAME_WIDTH)), round(video_input.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         except Exception:
@@ -1096,7 +1264,8 @@ class VideoInfo:
             self.frames_cnt = len(seq_list) * 2 ** self.interp_exp
             img = cv2.imdecode(np.fromfile(os.path.join(self.input_file, seq_list[0]), dtype=np.uint8), 1)[:, :,
                   ::-1].copy()
-            self.frames_size = (0, 0)  # for img input, do not question their size for non-monotonous resolution input
+            h, w, _ = img.shape
+            self.frames_size = (w, h)  # for img input, do not question their size for non-monotonous resolution input
             return
         self.update_frames_info_ffprobe()
         self.update_frames_info_cv2()
@@ -1423,7 +1592,7 @@ class TransitionDetection_ST:
             if self.utils.check_pure_img(img1):
                 self.black_scene_queue.append(0)
             return False
-        elif np.mean(self.black_scene_queue) == 0:
+        elif len(self.black_scene_queue) and np.mean(self.black_scene_queue) == 0:
             """检测到00000001"""
             self.black_scene_queue.clear()
             self.scdet_cnt += 1
@@ -1697,7 +1866,7 @@ class OverTimeReminderBearer:
         while True:
             t = random.randrange(100000, 999999)
             if t not in self.reminders:
-                reminder = OvertimeReminder(*args, **kwargs)
+                reminder = OvertimeReminder(reminder_id=t, *args, **kwargs)
                 self.reminders[t] = reminder
                 return t
 
@@ -1713,7 +1882,7 @@ class OverTimeReminderBearer:
 
 class OvertimeReminder(threading.Thread):
     def __init__(self, interval: int, logger=None, msg_1="Function Type", msg_2="Function Warning", callback=None,
-                 *args, **kwargs):
+                 reminder_id=0, *args, **kwargs):
         super().__init__()
         self.logger = logger
         if self.logger is None:
@@ -1725,6 +1894,9 @@ class OvertimeReminder(threading.Thread):
         self.args = args
         self.kwargs = kwargs
         self.terminated = False
+        if reminder_id == 0:
+            reminder_id = random.randrange(100000, 999999)
+        self.name = f'Reminder-{reminder_id}'
         self.start()
 
     def run(self):
@@ -1763,14 +1935,6 @@ def overtime_reminder_deco(interval: int, logger=None, msg_1="Function Type", ms
 
 class SteamUtils:
 
-    def CheckModuleMd5(self):
-        """
-        Check Integrity of Steam DLLs
-        :return:
-        """
-        steam_api_path = os.path.join(appDir, "steam_api64.dll")
-        steam_py_path = os.path.join(appDir, "steamworks", "SteamworksPy64.dll")
-
     def CheckSteamAuth(self):
         if self.is_steam:
             return 0
@@ -1797,6 +1961,7 @@ class SteamUtils:
         Whether use steam for validation
         :param is_steam:
         """
+        # TODO Refractor into license and steam mode
         original_cwd = os.getcwd()
         self.is_steam = is_steam
         if logger is None:
@@ -1928,7 +2093,4 @@ if __name__ == "__main__":
     #                int(72 / 24),
     #                )
     # dm.run()
-    print(Tools.check_non_ascii(".fdassda f。"))
     pass
-
-

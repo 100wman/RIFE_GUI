@@ -29,8 +29,8 @@ class SvfiWaifu(Waifu2x):
         image = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         image = self.process(image)
         image = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
-        if all(self.resize_param):
-            image = cv2.resize(img, self.resize_param, interpolation=cv2.INTER_LANCZOS4)
+        # if all(self.resize_param):
+        #     image = cv2.resize(img, self.resize_param, interpolation=cv2.INTER_LANCZOS4)
         return image
 
 
@@ -50,6 +50,6 @@ class SvfiRealSR(RealSR):
         image = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         image = self.process(image)
         image = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
-        if all(self.resize_param):
-            image = cv2.resize(img, self.resize_param, interpolation=cv2.INTER_LANCZOS4)
+        # if all(self.resize_param):
+        #     image = cv2.resize(img, self.resize_param, interpolation=cv2.INTER_LANCZOS4)
         return image

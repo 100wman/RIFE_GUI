@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize_param(400, 540)
+        Dialog.resize(400, 540)
         Dialog.setMinimumSize(QtCore.QSize(120, 300))
         Dialog.setMaximumSize(QtCore.QSize(600, 23333))
         self.gridLayout = QtWidgets.QGridLayout(Dialog)

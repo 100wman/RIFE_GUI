@@ -342,7 +342,7 @@ class UiRun(QThread):
 
                             if "error" in flush_lines.lower():
                                 """Imediately Upload"""
-                                logger.error(f"[In ONE LINE SHOT]: f{flush_lines}")
+                                logger.error(f"[In ONE LINE SHOT]: {flush_lines}")
                                 self.update_status(False, sp_status=f"{flush_lines}")
                                 self.main_error = flush_lines
                                 flush_lines = ""
@@ -350,6 +350,8 @@ class UiRun(QThread):
                                 interval_time = time.time()
                                 self.update_status(False, sp_status=f"{flush_lines}")
                                 flush_lines = ""
+                            elif 'Program Failed' in flush_lines:
+                                self.kill_proc_exec()
 
                     self.update_status(False, sp_status=f"{flush_lines}")  # emit last possible infos
 
@@ -407,7 +409,9 @@ class UiRun(QThread):
             logger.info("Resume Process Command Fired")
 
     def get_main_error(self):
-        return self.main_error
+        main_error = self.main_error
+        self.main_error = ""
+        return main_error
 
     pass
 
@@ -691,6 +695,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.CropWidthpSettings.setValue(appData.value("crop_width", 0, type=int))
         self.ResizeHeightSettings.setValue(appData.value("resize_height", 0, type=int))
         self.ResizeWidthSettings.setValue(appData.value("resize_width", 0, type=int))
+        self.TransferWidthSettings.setValue(appData.value("transfer_width", 0, type=int))
+        self.TransferHeightSettings.setValue(appData.value("transfer_height", 0, type=int))
         self.ResizeTemplate.setCurrentIndex(appData.value("resize_settings_index", 0, type=int))
 
         """Render Configuration"""
@@ -736,6 +742,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         """AI Super Resolution Configuration"""
         self.UseAiSR.setChecked(appData.value("use_sr", False, type=bool))
         self.SrTileSizeSelector.setValue(appData.value("sr_tilesize", 100, type=int))
+        self.RealESRFp16Checker.setChecked(appData.value("use_realesr_fp16", False, type=bool))
         self.AiSrSelector.setCurrentText(appData.value("use_sr_algo", "realESR"))
         last_sr_model = appData.value("use_sr_model", "")
         if len(last_sr_model):
@@ -840,17 +847,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         height, width = self.ResizeHeightSettings.value(), self.ResizeWidthSettings.value()
         appData.setValue("resize_width", width)
         appData.setValue("resize_height", height)
-        if all((width, height)):
-            appData.setValue("resize", f"{width}x{height}")
-        else:
-            appData.setValue("resize", f"")
         width, height = self.CropWidthpSettings.value(), self.CropHeightSettings.value()
         appData.setValue("crop_width", width)
         appData.setValue("crop_height", height)
-        if any((width, height)):
-            appData.setValue("crop", f"{width}:{height}")
-        else:
-            appData.setValue("crop", f"")
+        width, height = self.TransferWidthSettings.value(), self.TransferHeightSettings.value()
+        appData.setValue("transfer_width", width)
+        appData.setValue("transfer_height", height)
 
         """Scene Detection"""
         appData.setValue("is_no_scdet", not self.ScedetChecker.isChecked())
@@ -877,6 +879,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_sr_model", self.AiSrModuleSelector.currentText())
         appData.setValue("use_sr_mode", self.AiSrMode.currentIndex())
         appData.setValue("sr_tilesize", self.SrTileSizeSelector.value())
+        appData.setValue("use_realesr_fp16", self.RealESRFp16Checker.isChecked())
         appData.setValue("resize_exp", self.resize_exp)
 
         """RIFE Settings"""
@@ -1031,7 +1034,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if self.ImgOutputChecker.isChecked():
             """Img Output"""
-            img_io = ImgSeqIO(logger=logger, folder=project_dir, is_tool=True, output_ext=self.ExtSelector.currentText())
+            img_io = ImgSeqIO(logger=logger, folder=project_dir, is_tool=True,
+                              output_ext=self.ExtSelector.currentText())
             last_img = img_io.get_write_start_frame()  # output_dir
             if last_img:
                 reply = self.function_send_msg(f"Resume Workflow?", _translate('', "检测到未完成的图片序列补帧任务，载入进度？"), 3)
@@ -1503,6 +1507,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             cursor.select(QTextCursor.LineUnderCursor)
             cursor.removeSelectedText()
             cursor.deletePreviousChar()
+            cursor.movePosition(QTextCursor.Start)
             self.OptionCheck.setTextCursor(cursor)
 
         def error_handle():
@@ -1579,6 +1584,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 remove_last_line()
             new_text += data["subprocess"]
 
+        if self.chores_thread is not None and len(self.chores_thread.get_main_error()):
+            main_error = self.chores_thread.get_main_error()
+            new_text += f"\nLAST ERROR MSG in OLS:\n{main_error}"
+
         for line in new_text.splitlines():
             line = html.escape(line)
 
@@ -1606,11 +1615,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if data["finished"]:
             """Error Handle"""
-
-            if self.chores_thread is not None and len(self.chores_thread.get_main_error()):
-                main_error = self.chores_thread.get_main_error()
-                self.OptionCheck.append(f"LAST ERROR MSG in OLS:\n{main_error}")
-
             returncode = data["returncode"]
             complete_msg = f"For {data['cnt']} Tasks:\n"
             if returncode == 0 or "Program Finished" in self.OptionCheck.toPlainText() or (
@@ -1918,6 +1922,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         bool_result = 'realESR' in self.AiSrSelector.currentText()
         self.TileSizeLabel.setVisible(bool_result)
         self.SrTileSizeSelector.setVisible(bool_result)
+        self.RealESRFp16Checker.setVisible(bool_result)
+        current_model = self.AiSrSelector.currentText()
+        self.AiSrModuleExpDisplay.setText('2x')  # realsr and waifu2x's model does not contain sr_exp info
+        if '4x' in current_model:
+            self.AiSrModuleExpDisplay.setText('4x')
 
     @pyqtSlot(str)
     def on_ResizeTemplate_currentTextChanged(self):
@@ -1960,6 +1969,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.resize_exp = ratio
         self.ResizeWidthSettings.setValue(width)
         self.ResizeHeightSettings.setValue(height)
+        if self.UseAiSR.isChecked() and self.AiSrModuleExpDisplay.text() != "Unknown":
+            sr_exp = int(self.AiSrModuleExpDisplay.text()[:-1])
+            self.TransferWidthSettings.setValue(width // sr_exp)
+            self.TransferHeightSettings.setValue(height // sr_exp)
 
     @pyqtSlot(bool)
     def on_AutoInterpScaleChecker_clicked(self):
