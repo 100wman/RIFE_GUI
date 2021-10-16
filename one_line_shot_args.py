@@ -1,17 +1,33 @@
 # coding: utf-8
 import argparse
+import datetime
+import math
+import os
+import re
+import shlex
 import sys
+import threading
+import time
+import traceback
+from queue import Queue
 
+import cv2
+import numpy as np
+import psutil
 import tqdm
 
-from Utils.utils import *
+from Utils.utils import STEAMWORKS, SteamUtils, ArgumentManager, appDir, DefaultConfigParser, Tools, VideoInfo, \
+    SupportFormat, OverTimeReminderBearer, ImageRead, ImageWrite, TransitionDetection_ST, \
+    VideoFrameInterpolation, Hdr10PlusProcesser, DoviProcesser, EULAWriter, utils_overtime_reminder_bearer, \
+    SuperResolution, overtime_reminder_deco
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
 from steamworks.exceptions import *
 
-try:
-    _steamworks = STEAMWORKS(ArgumentManager.app_id)
-except:
-    pass
+if ArgumentManager.is_steam:
+    try:
+        _steamworks = STEAMWORKS(ArgumentManager.app_id)
+    except:
+        pass
 
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 # TODO Fix up SVT-HEVC
@@ -20,7 +36,7 @@ print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.t
 os.chdir(appDir)
 sys.path.append(appDir)
 
-"""输入命令行参数"""
+"""Parse Args"""
 parser = argparse.ArgumentParser(prog="#### SVFI CLI tool by Jeanna ####",
                                  description='Interpolation for long video/imgs footage')
 basic_parser = parser.add_argument_group(title="Basic Settings, Necessary")
@@ -32,6 +48,7 @@ basic_parser.add_argument('--concat-only', dest='concat_only', action='store_tru
 basic_parser.add_argument('--extract-only', dest='extract_only', action='store_true', help='只执行拆帧操作')
 basic_parser.add_argument('--render-only', dest='render_only', action='store_true', help='只执行渲染操作')
 
+"""Clean Args"""
 args_read = parser.parse_args()
 global_config_parser = DefaultConfigParser(allow_no_value=True)  # 把SVFI GUI传来的参数格式化
 global_config_parser.read(args_read.config, encoding='utf-8')
@@ -47,11 +64,10 @@ class TaskArgumentManager(ArgumentManager):
     """
         For OLS's current input's arguments validation
     """
+
     def __init__(self, _args: dict):
         super().__init__(_args)
-        """获得补帧输出路径"""
         global logger
-        self.hdr_mode = 0
         self.interp_times = 0
         self.max_frame_cnt = 10 ** 10
         self.all_frames_cnt = 0
@@ -59,36 +75,74 @@ class TaskArgumentManager(ArgumentManager):
         self.dup_skip_limit = 0
         self.input_ext = ".mp4"
         self.output_ext = ".mp4"
-        self.task_info = {"chunk_cnt": 0, "render": 0, "now_frame": 0}  # 有关任务的实时信息
+        self.task_info = {"chunk_cnt": 0, "render": 0,
+                          "rife_now_frame": 0,
+                          "recent_scene": 0, "scene_cnt": 0,
+                          "decode_process_time": 0,
+                          "rife_task_acquire_time": 0,
+                          "rife_process_time": 0,
+                          "rife_queue_len": 0,
+                          "sr_now_frame": 0,
+                          "sr_task_acquire_time": 0,
+                          "sr_process_time": 0,
+                          "sr_queue_len": 0, }  # 有关任务的实时信息
 
-        self._io_path_validation()
-        self._initiate_logger()
-        self._set_ffmpeg_path()
+        self.__validate_io_path()
+        self.__initiate_logger()
+        self.__set_ffmpeg_path()
         self.video_info_instance = VideoInfo(input_file=self.input, logger=logger, project_dir=self.project_dir,
                                              interp_exp=self.rife_exp)
-        self._update_hdr_mode()
-        self._update_io_fps()
-        self._update_frames_cnt()
-        self._update_frame_size()
-        self._update_task_queue_size_by_memory()
-        self._update_io_ext()
+        self.__update_hdr_mode()
+        self.__update_io_fps()
+        self.__update_frames_cnt()
+        self.__update_frame_size()
+        self.__update_task_queue_size_by_memory()
+        self.__update_io_ext()
 
         """Check Initiation Info"""
         logger.info(
             f"Check Interpolation Source: "
-            f"FPS: {self.input_fps} -> {self.target_fps}, FRAMES_CNT: {self.all_frames_cnt}, EXP: {self.rife_exp}, "
+            f"FPS: {self.input_fps} -> {self.target_fps}, FRAMES_CNT: {self.all_frames_cnt}, "
+            f"INTERP_TIMES: {self.interp_times}, "
             f"HDR: {self.hdr_mode}, FRAME_SIZE: {self.frame_size}, QUEUE_LEN: {self.frames_queue_len}, "
             f"INPUT_EXT: {self.input_ext}, OUTPUT_EXT: {self.output_ext}")
 
-    def _update_io_ext(self):
+        self.main_error = list()
+
+    def __update_io_ext(self):
         """update extension"""
         self.input_ext = os.path.splitext(self.input)[1] if os.path.isfile(self.input) else ""
         self.input_ext = self.input_ext.lower()
-        self.output_ext = "." + self.output_ext
+        if not self.output_ext.startswith('.'):
+            self.output_ext = "." + self.output_ext
         if "ProRes" in self.render_encoder and not self.is_img_output:
             self.output_ext = ".mov"
+        if self.is_img_output and self.output_ext not in SupportFormat.img_outputs:
+            self.output_ext = ".png"
 
-    def _update_task_queue_size_by_memory(self):
+    def __update_io_fps(self):
+        """
+        Update io fps and interp times
+        :return:
+        """
+        """Set input and target(output) fps"""
+        if not self.is_img_input:  # 输入不是文件夹，使用检测到的帧率
+            self.input_fps = self.video_info_instance.fps
+        elif not self.input_fps:  # 输入是文件夹，使用用户的输入帧率; 用户有毒，未发现有效的输入帧率
+            raise OSError("Not Find FPS, Input File is not valid")
+        if not self.target_fps:  # 未找到用户的输出帧率
+            self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
+        if self.is_img_input:  # 图片序列输入，不保留音频（也无音频可保留
+            self.is_save_audio = False
+
+        """Set interpolation exp related to hdr mode"""
+        self.interp_times = round(self.target_fps / self.input_fps)
+        if self.hdr_mode == 3 or (
+                self.hdr_mode == 2 and self.video_info_instance.getInputHdr10PlusMetadata() is not None):
+            """DoVi or Valid HDR10 Metadata Detected, change target fps"""
+            self.target_fps = self.interp_times * self.input_fps
+
+    def __update_task_queue_size_by_memory(self):
         """Guess Memory and Fix Resolution"""
         if self.use_manual_buffer:
             # 手动指定内存占用量
@@ -101,58 +155,31 @@ class TaskArgumentManager(ArgumentManager):
         if not self.use_manual_buffer:
             self.frames_queue_len = int(max(10.0, self.frames_queue_len))
         self.dup_skip_limit = int(0.5 * self.input_fps) + 1  # 当前跳过的帧计数超过这个值，将结束当前判断循环
+        logger.info(f"Update QLen to {self.frames_queue_len}, dup_skip_limit to {self.dup_skip_limit}")
 
-    def _update_frame_size(self):
+    def __update_frame_size(self):
         """规整化输出输入分辨率"""
-        if self.resize_width != 0 and self.resize_height != 0:
-            self.frame_size = (round(self.resize_width),
-                               round(self.resize_height))
-        else:
-            self.frame_size = (round(self.video_info_instance.frames_size[0]),
-                               round(self.video_info_instance.frames_size[1]))
-        if not all(self.resize_param):
-            self.resize_param = self.resize_exp * self.resize_param
-        elif all(self.frame_size):
-            self.resize_exp = int(math.ceil(self.resize_param[0] * self.resize_param[1] /
-                                            self.frame_size[0] * self.frame_size[1]))
-            # TODO check logic here
-            pass
+        self.frame_size = (round(self.video_info_instance.frames_size[0]),
+                           round(self.video_info_instance.frames_size[1]))
 
-    def _update_frames_cnt(self):
+    def __update_frames_cnt(self):
         """Update All Frames Count"""
         self.all_frames_cnt = abs(int(self.video_info_instance.duration * self.target_fps))
         if self.all_frames_cnt > self.max_frame_cnt:
             raise OSError(f"SVFI can't afford input exceeding {self.max_frame_cnt} frames")
 
-    def _update_io_fps(self):
-        """Set input and target(output) fps"""
-        if not self.is_img_input:  # 输入不是文件夹，使用检测到的帧率
-            self.input_fps = self.video_info_instance.fps
-        elif not self.input_fps:  # 输入是文件夹，使用用户的输入帧率; 用户有毒，未发现有效的输入帧率
-            raise OSError("Not Find FPS, Input File is not valid")
-        if not self.target_fps:  # 未找到用户的输出帧率
-            self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
-        if self.is_img_input:  # 图片序列输入，不保留音频（也无音频可保留
-            self.is_save_audio = False
-        """Set interpolation exp related to hdr mode"""
-        self.interp_times = int(math.ceil(self.target_fps / self.input_fps))
-        if self.hdr_mode == 3 or (
-                self.hdr_mode == 2 and self.video_info_instance.getInputHdr10PlusMetadata() is not None):
-            """DoVi or Valid HDR10 Metadata Detected, change target fps"""
-            self.target_fps = self.interp_times * self.input_fps
-
-    def _update_hdr_mode(self):
+    def __update_hdr_mode(self):
         if self.hdr_mode == 0:  # Auto
             logger.info(f"Auto HDR Mode, Set HDR mode to {self.video_info_instance.hdr_mode}")
             self.hdr_mode = self.video_info_instance.hdr_mode
             # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
             # hdr_check_status indicates the final process mode for (hdr) input
 
-    def _set_ffmpeg_path(self):
+    def __set_ffmpeg_path(self):
         """Set FFmpeg"""
         self.ffmpeg = "ffmpeg"
 
-    def _io_path_validation(self):
+    def __validate_io_path(self):
         if not len(self.input):
             raise OSError("Input Path is empty")
         if not len(self.output_dir):
@@ -166,54 +193,233 @@ class TaskArgumentManager(ArgumentManager):
         os.makedirs(self.project_dir, exist_ok=True)
         sys.path.append(self.project_dir)
 
+        """Extract Only Mode"""
+        if self.extract_only and self.output_ext not in SupportFormat.img_outputs:
+            # TODO Extract only mode Be removed soon
+            self.is_img_output = True
+            self.output_ext = ".png"
+            logger.warning("Auto change output extension to png")
+
         """Check Img IO status"""
         if self.is_img_output:
-            self.output = os.path.join(self.output, self.project_name)
-            os.makedirs(self.output, exist_ok=True)
+            self.output_dir = os.path.join(self.output_dir, self.project_name)
+            os.makedirs(self.output_dir, exist_ok=True)
         if not os.path.isfile(self.input):
             self.is_img_input = True
 
-    def _initiate_logger(self):
+    def __initiate_logger(self):
         """Set Global Logger"""
         global logger
         logger = Tools.get_logger("CLI", self.project_dir, debug=self.debug)
         logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
                     self.input)
 
+    def update_task_info(self, update_dict: dict):
+        self.task_info.update(update_dict)
 
-class ReadFlow(threading.Thread):
+    def get_main_error(self):
+        if not len(self.main_error):
+            return None
+        else:
+            return self.main_error[-1]
+
+    def save_main_error(self, e: Exception):
+        self.main_error.append(e)
+
+
+class SteamFlow(SteamUtils):
+    def __init__(self, _args: TaskArgumentManager):
+        self.ARGS = _args
+        super().__init__(self.ARGS.is_steam, logger)
+        self.kill = False
+        pass
+
+    def steam_update_achv(self, output_path):
+        """
+        Update Steam Achievement
+        :return:
+        """
+        if not self.ARGS.is_steam or self.kill:
+            """If encountered serious error in the process, end steam update"""
+            return
+        if self.ARGS.concat_only or self.ARGS.render_only or self.ARGS.extract_only:
+            return
+        """Get Stat"""
+        STAT_INT_FINISHED_CNT = self.GetStat("STAT_INT_FINISHED_CNT", int)
+        STAT_FLOAT_FINISHED_MINUTE = self.GetStat("STAT_FLOAT_FINISHED_MIN", float)
+
+        """Update Stat"""
+        STAT_INT_FINISHED_CNT += 1
+        reply = self.SetStat("STAT_INT_FINISHED_CNT", STAT_INT_FINISHED_CNT)
+        if self.ARGS.all_frames_cnt >= 0:
+            """Update Mission Process Time only in interpolation"""
+            STAT_FLOAT_FINISHED_MINUTE += self.ARGS.all_frames_cnt / self.ARGS.target_fps / 60
+            reply = self.SetStat("STAT_FLOAT_FINISHED_MIN", round(STAT_FLOAT_FINISHED_MINUTE, 2))
+
+        """Get ACHV"""
+        ACHV_Task_Frozen = self.GetAchv("ACHV_Task_Frozen")
+        ACHV_Task_Cruella = self.GetAchv("ACHV_Task_Cruella")
+        ACHV_Task_Suzumiya = self.GetAchv("ACHV_Task_Suzumiya")
+        ACHV_Task_1000M = self.GetAchv("ACHV_Task_1000M")
+        ACHV_Task_10 = self.GetAchv("ACHV_Task_10")
+        ACHV_Task_50 = self.GetAchv("ACHV_Task_50")
+
+        """Update ACHV"""
+        if 'Frozen' in output_path and not ACHV_Task_Frozen:
+            reply = self.SetAchv("ACHV_Task_Frozen")
+        if 'Cruella' in output_path and not ACHV_Task_Cruella:
+            reply = self.SetAchv("ACHV_Task_Cruella")
+        if any([i in output_path for i in ['Suzumiya', 'Haruhi', '涼宮', '涼宮ハルヒの憂鬱', '涼宮ハルヒの消失', '凉宫春日']]) \
+                and not ACHV_Task_Suzumiya:
+            reply = self.SetAchv("ACHV_Task_Suzumiya")
+        if STAT_INT_FINISHED_CNT > 10 and not ACHV_Task_10:
+            reply = self.SetAchv("ACHV_Task_10")
+        if STAT_INT_FINISHED_CNT > 50 and not ACHV_Task_50:
+            reply = self.SetAchv("ACHV_Task_50")
+        if STAT_FLOAT_FINISHED_MINUTE > 1000 and not ACHV_Task_1000M:
+            reply = self.SetAchv("ACHV_Task_1000M")
+        self.Store()
+
+
+class IOFlow(threading.Thread):
+    def __init__(self, __args: TaskArgumentManager):
+        super().__init__()
+        self.ARGS = __args
+        self.initiation_event = threading.Event()
+        self.initiation_event.clear()
+        self.reminder_bearer = OverTimeReminderBearer()
+        self._kill = False
+        self.task_done = False
+
+    def _release_initiation(self):
+        self.initiation_event.set()
+
+    def acquire_initiation_clock(self):
+        if not self.is_alive():
+            self.initiation_event.set()
+        self.initiation_event.wait()
+
+    def _get_color_info_dict(self):
+        color_tag_map = {'-color_range': 'color_range',
+                         '-color_primaries': 'color_primaries',
+                         '-colorspace': 'color_space', '-color_trc': 'color_transfer'}
+        output_dict = {}
+        for ct in color_tag_map:
+            output_dict.update({ct: self.ARGS.video_info_instance.video_info[color_tag_map[ct]]})
+        return output_dict
+
+    def check_chunk(self):
+        """
+        Get Chunk Start
+        :param: del_chunk: delete all chunks existed
+        :return: chunk, start_frame
+        """
+        if self.ARGS.is_img_output:
+            """IMG OUTPUT"""
+            img_writer = ImageWrite(logger, folder=self.ARGS.output_dir, start_frame=self.ARGS.interp_start,
+                                    output_ext=self.ARGS.output_ext, is_tool=True)
+            last_img = img_writer.get_write_start_frame()
+            if self.ARGS.interp_start not in [-1, ]:
+                return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)  # Manually Prioritized
+            if last_img == 0:
+                return 1, 0
+
+        if self.ARGS.interp_start != -1 or self.ARGS.output_chunk_cnt != -1:
+            return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
+
+        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(self.ARGS.project_dir)
+        if not len(chunk_paths):
+            return 1, 0
+        return chunk_cnt + 1, last_frame + 1
+
+    def kill(self):
+        self._kill = True
+        self.reminder_bearer.terminate_all()
+
+    def _task_done(self):
+        self.task_done = True
+
+    def is_task_done(self):
+        """
+        Only available for specific task
+        :return:
+        """
+        return self.task_done
+
+
+class ReadFlow(IOFlow):
 
     def __init__(self, _args: TaskArgumentManager, _output_queue: Queue):
-        super().__init__()
-        # TODO OLS generate_frame_reader
-        # TODO OLS Check Chunk
-        # TODO reader lock
-        # TODO Queue Status Broker
-        # TODO Crop
-        self.ARGS = _args
+        super().__init__(_args)
+        self.name = 'Reader'
         self._output_queue = _output_queue
-
-        self.scene_detection = TransitionDetection_ST(self.ARGS.project_dir, int(0.5 * self.ARGS.input_fps),
+        self.scene_detection = TransitionDetection_ST(self.ARGS.project_dir, int(0.3 * self.ARGS.input_fps),
                                                       scdet_threshold=self.ARGS.scdet_threshold,
                                                       no_scdet=self.ARGS.is_no_scdet,
                                                       use_fixed_scdet=self.ARGS.use_scdet_fixed,
                                                       fixed_max_scdet=self.ARGS.scdet_fixed_max,
                                                       scdet_output=self.ARGS.is_scdet_output)
-        self.reminder_bearer = OverTimeReminderBearer()
-        self.kill = False
-        self.initiation_lock = threading.Lock()
-        self.initiation_lock.locked()
-        pass
+        self.vfi_core = VideoFrameInterpolation(self.ARGS)
 
-    def _generate_frame_reader(self, start_frame=0, frame_check=False):
+    def __crop(self, img):
+        """
+        Crop using self.crop parameters
+        :param img:
+        :return:
+        """
+        if img is None or not all(self.ARGS.crop_param):
+            return img
+
+        h, w, _ = img.shape
+        cw, ch = self.ARGS.crop_param
+        if cw > w or ch > h:
+            """奇怪的黑边参数，不予以处理"""
+            return img
+        return img[ch:h - ch, cw:w - cw]
+
+    def __input_check(self, dedup=False):
+        """
+        perform input availability check and return generator of frames
+        :return: chunk_cnt, start_frame, videogen, videogen_check
+        """
+        _debug = False
+        chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
+        logger.info("Resuming Video Frames...")
+
+        """Get Frames to interpolate"""
+        reminder_id = self.reminder_bearer.generate_reminder(300, logger, "Decode Input",
+                                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
+        videogen = self.__generate_frame_reader(start_frame).nextFrame()
+        videogen_check = None
+        if dedup:
+            videogen_check = self.__generate_frame_reader(start_frame, frame_check=True).nextFrame()
+        videogen_available_check = self.__generate_frame_reader(start_frame, frame_check=True).nextFrame()
+
+        check_img1 = self.__crop(Tools.gen_next(videogen_available_check))
+        self.reminder_bearer.terminate_reminder(reminder_id)
+        videogen_available_check.close()
+        if check_img1 is None:
+            main_error = OSError(
+                f"Input file is not available: {self.ARGS.input}, is img input: {self.ARGS.is_img_input},"
+                f"Please Check Your Input Settings"
+                f"(Start Chunk, Start Frame, Start Point, Start Frame)")
+            self.ARGS.save_main_error(main_error)
+            raise main_error
+        return chunk_cnt, start_frame, videogen, videogen_check
+
+    def __generate_frame_reader(self, start_frame=0, frame_check=False):
         """
         输入帧迭代器
         :return:
         """
         """If input is sequence of frames"""
         if self.ARGS.is_img_input:
+            resize_param = self.ARGS.resize_param
+            if self.ARGS.use_sr:
+                resize_param = self.ARGS.transfer_param
+
             img_reader = ImageRead(logger, folder=self.ARGS.input, start_frame=self.ARGS.interp_start,
-                               exp=self.ARGS.rife_exp, resize=self.ARGS.resize_param,)
+                                   exp=self.ARGS.rife_exp, resize=resize_param, )
             self.ARGS.all_frames_cnt = img_reader.get_frames_cnt()
             logger.info(f"Img Input, update frames count to {self.ARGS.all_frames_cnt}")
             return img_reader
@@ -264,35 +470,35 @@ class ReadFlow(threading.Thread):
         output_dict = {
             "-vframes": str(10 ** 10), }  # use read frames cnt to avoid ffprobe, fuck
 
-        self.color_data_tag = [('color_range', 'tv'),
-                               ('color_space', 'bt709'),
-                               ('color_transfer', 'bt709'),
-                               ('color_primaries', 'bt709')]
-        color_tag_map = {'-color_range':'color_range',
-                         '-color_primaries': 'color_primaries',
-                         '-colorspace':'color_space', '-color_trc': 'color_transfer'}
-        for ct in color_tag_map:
-            output_dict.update({ct: self.ARGS.video_info_instance.video_info[color_tag_map[ct]]})
+        output_dict.update(self._get_color_info_dict())
 
-        if frame_check:
-            """用以一拍二一拍N除重模式的预处理"""
-            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                "-s": "300x300"})
-        elif self.ARGS.resize_height and self.ARGS.resize_width and not self.ARGS.use_sr:
-            w,h = self.ARGS.frame_size
-            if h != self.ARGS.resize_height or w != self.ARGS.resize_width:
-                output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                    "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
         vf_args = f"copy"
-        if self.ARGS.use_deinterlace:
-            vf_args += f",yadif=parity=auto"
         if start_frame not in [-1, 0]:
             # not start from the beginning
             if self.ARGS.risk_resume_mode:
                 """Quick Locate"""
                 input_dict.update({"-ss": f"{start_frame / self.ARGS.target_fps:.3f}"})
             else:
-                output_dict.update({"-ss": f"{start_frame / self.ARGS.target_fps:.3f}"})
+                vf_args += f",trim=start={start_frame / self.ARGS.target_fps:.3f}"
+
+        if self.ARGS.use_deinterlace:
+            vf_args += f",yadif=parity=auto"
+
+        if frame_check:
+            """用以一拍二一拍N除重模式的预处理"""
+            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
+                                "-s": f"300x300"})
+        else:
+            if not self.ARGS.use_sr:
+                """直接用最终输出分辨率"""
+                if self.ARGS.frame_size != self.ARGS.resize_param and all(self.ARGS.resize_param):
+                    output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
+                                        "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
+            else:
+                """超分"""
+                if self.ARGS.frame_size != self.ARGS.transfer_param and all(self.ARGS.transfer_param):
+                    output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
+                                        "-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
         """Quick Extraction"""
         if not self.ARGS.is_quick_extract:
@@ -305,85 +511,7 @@ class ReadFlow(threading.Thread):
         logger.debug(f"reader: {input_dict} {output_dict}")
         return FFmpegReader(filename=self.ARGS.input, inputdict=input_dict, outputdict=output_dict)
 
-    def _crop(self, img):
-        """
-                Crop using self.crop parameters
-                :param img:
-                :return:
-                """
-        if img is None or not all(self.ARGS.crop_param):
-            return img
-
-        h, w, _ = img.shape
-        cw, ch = self.ARGS.crop_param
-        if cw > w or ch > h:
-            """奇怪的黑边参数，不予以处理"""
-            return img
-        return img[ch:h - ch, cw:w - cw]
-
-    def delExistedChunks(self):
-        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(self.ARGS.project_dir)
-        for f in chunk_paths:
-            os.remove(os.path.join(self.ARGS.project_dir, f))
-
-    def check_chunk(self):
-        """
-                Get Chunk Start
-                :param: del_chunk: delete all chunks existed
-                :return: chunk, start_frame
-                """
-        if self.ARGS.is_img_output:
-            """IMG OUTPUT"""
-            img_writer = ImageWrite(logger, folder=self.ARGS.output, start_frame=self.ARGS.interp_start,
-                                output_ext=self.ARGS.output_ext, is_tool=True)
-            last_img = img_writer.get_write_start_frame()
-            if self.ARGS.interp_start not in [-1, ]:
-                return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)  # Manually Prioritized
-            if last_img == 0:
-                return 1, 0
-
-        if self.ARGS.interp_start != -1 or self.ARGS.output_chunk_cnt != -1:
-            return int(self.ARGS.output_chunk_cnt), int(self.ARGS.interp_start)
-
-        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(self.ARGS.project_dir)
-        if not len(chunk_paths):
-            return 1, 0
-        return chunk_cnt + 1, last_frame + 1
-        pass
-
-    def getInitiatedLock(self):
-        return self.initiation_lock
-
-    def rife_run_input_check(self, dedup=False):
-        """
-        perform input availability check and return generator of frames
-        :return: chunk_cnt, start_frame, videogen, videogen_check
-        """
-        _debug = False
-        chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-        logger.info("Resuming Video Frames...")
-
-        """Get Frames to interpolate"""
-        reminder_id = self.reminder_bearer.generate_reminder(300, logger, "Decode Input",
-                                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
-        videogen = self._generate_frame_reader(start_frame).nextFrame()
-        videogen_check = None
-        if dedup:
-            videogen_check = self._generate_frame_reader(start_frame, frame_check=True).nextFrame()
-        videogen_available_check = self._generate_frame_reader(start_frame, frame_check=True).nextFrame()
-
-        check_img1 = self._crop(Tools.gen_next(videogen_available_check))
-        self.reminder_bearer.terminate_reminder(reminder_id)
-        videogen_available_check.close()
-        if check_img1 is None:
-            self.main_error = OSError(
-                f"Input file is not available: {self.ARGS.input}, is img input: {self.ARGS.is_img_input},"
-                f"Please Check Your Input Settings"
-                f"(Start Chunk, Start Frame, Start Point, Start Frame)")
-            raise self.main_error
-        return chunk_cnt, start_frame, videogen, videogen_check
-
-    def rife_run_rest(self, run_time: float):
+    def __run_rest(self, run_time: float):
         rest_exp = 3600
         if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
                 time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
@@ -487,10 +615,9 @@ class ReadFlow(threading.Thread):
             return prediction
 
         use_flow = True
-        check_queue_size = max(self.frames_queue_len, 200)  # 预处理长度，非重复帧
+        check_queue_size = max(self.ARGS.frames_queue_len, 200)  # 预处理长度，非重复帧
         check_frame_list = list()  # 采样图片帧数序列,key ~ LabData
         scene_frame_list = list()  # 转场图片帧数序列,key,和check_frame_list同步
-        # input_frame_data = dict()  # 输入图片数据
         check_frame_data = dict()  # 用于判断的采样图片数据
         if init:
             logger.info("Initiating Duplicated Frames Removal Process...This might take some time")
@@ -506,16 +633,9 @@ class ReadFlow(threading.Thread):
             check_frame = Tools.gen_next(videogen_check)
             if check_frame is None:
                 break
-            # check_frame_data[check_frame_cnt] = check_frame
             if len(check_frame_list):  # len>1
-                # 3.5.16 Change to last type of diff
-                # if self.ARGS.use_dedup_sobel:
-                #     diff_result = diff_canny(check_frame_list[-1], check_frame_cnt)
-                # else:
                 diff_result = Tools.get_norm_img_diff(check_frame_data[check_frame_list[-1]], check_frame)
                 if diff_result < 0.001:
-                    # do not use pure scene check to avoid too much duplication result
-                    # duplicate frames
                     continue
             if init:
                 pbar.update(1)
@@ -531,12 +651,12 @@ class ReadFlow(threading.Thread):
         if init:
             pbar.close()
             pbar = tqdm.tqdm(total=len(check_frame_list), unit="frames")
+
         """Scene Batch Detection"""
         for i in range(len(check_frame_list) - 1):
             if init:
                 pbar.update(1)
-                pbar.set_description(
-                    f"Process at Scene Detect Frame {i}")
+                pbar.set_description(f"Process at Scene Detect Frame {i}")
             i1 = check_frame_data[check_frame_list[i]]
             i2 = check_frame_data[check_frame_list[i + 1]]
             result = self.scene_detection.check_scene(i1, i2)
@@ -602,41 +722,41 @@ class ReadFlow(threading.Thread):
         """
 
         logger.info("Activate Remove Duplicate Frames Mode")
-        chunk_cnt, now_frame_key, videogen, videogen_check = self.rife_run_input_check(dedup=True)
+        chunk_cnt, now_frame_key, videogen, videogen_check = self.__input_check(dedup=True)
         logger.info("Loaded Input Frames")
         is_end = False
 
-        self.initiation_lock.release()
         """Start Process"""
         run_time = time.time()
         first_run = True
         while True:
-            if is_end or self.main_error:
+            if is_end:
                 break
 
-            if self.kill:
+            if self._kill:
                 logger.critical("Reader Thread Killed")
                 break
 
-            run_time = self.rife_run_rest(run_time)
-
+            run_time = self.__run_rest(run_time)
+            decode_time = time.time()
             check_frame_list, scene_frame_list, input_frame_data = self.remove_duplicate_frames(videogen_check,
                                                                                                 init=first_run)
             input_frame_data = dict(input_frame_data)
             first_run = False
+            self._release_initiation()
             if not len(check_frame_list):
                 while True:
-                    img1 = self._crop(Tools.gen_next(videogen))
+                    img1 = self.__crop(Tools.gen_next(videogen))
                     if img1 is None:
                         is_end = True
-                        self.feed_to_rife(now_frame_key, img1, img1, n=0,
-                                          is_end=is_end)
+                        self.__feed_to_rife(now_frame_key, img1, img1, n=0,
+                                            is_end=is_end)
                         break
-                    self.feed_to_rife(now_frame_key, img1, img1, n=0)
+                    self.__feed_to_rife(now_frame_key, img1, img1, n=0)
                 break
 
             else:
-                img0 = self._crop(Tools.gen_next(videogen))
+                img0 = self.__crop(Tools.gen_next(videogen))
                 img1 = img0.copy()
                 last_frame_key = check_frame_list[0]
                 now_a_key = last_frame_key
@@ -647,12 +767,12 @@ class ReadFlow(threading.Thread):
                     while True:
                         last_possible_scene = img1
                         if now_a_key != now_b_key:
-                            img1 = self._crop(Tools.gen_next(videogen))
+                            img1 = self.__crop(Tools.gen_next(videogen))
                             now_a_key += 1
                         else:
                             break
                     now_frame_key = now_b_key
-                    self.ARGS.task_info.update({"now_frame": now_frame_key})
+                    self.ARGS.update_task_info({"read_now_frame": now_frame_key})
                     if now_frame_key in scene_frame_list:
                         self.scene_detection.update_scene_status(now_frame_key, "scene")
                         potential_key = now_frame_key - 1
@@ -672,30 +792,34 @@ class ReadFlow(threading.Thread):
                         # cv2.destroyAllWindows()
 
                         if frame_cnt < 1:
-                            self.feed_to_rife(now_frame_key, img0, img0, n=0,
-                                              is_end=is_end)
+                            self.__feed_to_rife(now_frame_key, img0, img0, n=0,
+                                                is_end=is_end)
                         elif self.ARGS.is_scdet_mix:
-                            self.feed_to_rife(now_frame_key, img0, img1, n=now_frame_key - last_frame_key - 1,
-                                              add_scene=True,
-                                              is_end=is_end)
+                            self.__feed_to_rife(now_frame_key, img0, img1, n=now_frame_key - last_frame_key - 1,
+                                                add_scene=True,
+                                                is_end=is_end)
                         else:
-                            self.feed_to_rife(now_frame_key, img0, before_img, n=now_frame_key - last_frame_key - 2,
-                                              add_scene=True,
-                                              is_end=is_end)
+                            self.__feed_to_rife(now_frame_key, img0, before_img, n=now_frame_key - last_frame_key - 2,
+                                                add_scene=True,
+                                                is_end=is_end)
                     else:
                         self.scene_detection.update_scene_status(now_frame_key, "normal")
-                        self.feed_to_rife(now_b_key, img0, img1, n=now_frame_key - last_frame_key - 1,
-                                          is_end=is_end)
+                        self.__feed_to_rife(now_b_key, img0, img1, n=now_frame_key - last_frame_key - 1,
+                                            is_end=is_end)
+                    self.update_decode_process_time(time.time() - decode_time)
                     last_frame_key = now_frame_key
                     img0 = img1
-                self.feed_to_rife(now_frame_key, img1, img1, n=0, is_end=is_end)
-                self.ARGS.task_info.update({"now_frame": check_frame_list[-1]})
+                    self.update_scene_status()
+                self.__feed_to_rife(now_frame_key, img1, img1, n=0, is_end=is_end)
+                self.ARGS.update_task_info({"read_now_frame": check_frame_list[-1]})
 
         pass
         self._output_queue.put(None)
         videogen.close()
         videogen_check.close()
-        """Wait for Rife and Render Thread to finish"""
+
+    def update_decode_process_time(self, decode_time):
+        self.ARGS.update_task_info({'decode_process_time': decode_time})
 
     # @profile
     def rife_run_any_fps(self):
@@ -705,8 +829,8 @@ class ReadFlow(threading.Thread):
         """
 
         logger.info("Activate Any FPS Mode")
-        chunk_cnt, now_frame, videogen, videogen_check = self.rife_run_input_check(dedup=True)
-        img1 = self._crop(Tools.gen_next(videogen))
+        chunk_cnt, now_frame, videogen, videogen_check = self.__input_check(dedup=True)
+        img1 = self.__crop(Tools.gen_next(videogen))
         logger.info("Loaded Input Frames")
         is_end = False
 
@@ -715,36 +839,40 @@ class ReadFlow(threading.Thread):
             self.ARGS.remove_dup_threshold = self.ARGS.remove_dup_threshold if self.ARGS.remove_dup_threshold > 0.01 else 0.01
         else:  # 0， 不去除重复帧
             self.ARGS.remove_dup_threshold = 0.001
-        self.initiation_lock.release()
+
         """Start Process"""
         run_time = time.time()
+        self._release_initiation()
+
         while True:
-            if is_end or self.main_error:
+            if is_end:
                 break
 
-            if self.kill:
+            if self._kill:
                 logger.critical("Reader Thread Killed")
                 break
 
-            run_time = self.rife_run_rest(run_time)
-
+            run_time = self.__run_rest(run_time)
+            decode_time = time.time()
             img0 = img1
-            img1 = self._crop(Tools.gen_next(videogen))
+            img1 = self.__crop(Tools.gen_next(videogen))
 
             now_frame += 1
 
             if img1 is None:
                 is_end = True
-                self.feed_to_rife(now_frame, img0, img0, is_end=is_end)
+                self.__feed_to_rife(now_frame, img0, img0, is_end=is_end)
+                self.update_decode_process_time(time.time() - decode_time)
                 break
 
             diff = Tools.get_norm_img_diff(img0, img1)
             skip = 0  # 用于记录跳过的帧数
 
             """Find Scene"""
-            if self.scene_detection.check_scene(img0, img1):
-                self.feed_to_rife(now_frame, img0, img1, n=0,
-                                  is_end=is_end)  # add img0 only, for there's no gap between img0 and img1
+            if self.scene_detection.check_scene(img0, img1, use_diff=diff):
+                self.__feed_to_rife(now_frame, img0, img1, n=0,
+                                    is_end=is_end)  # add img0 only, for there's no gap between img0 and img1
+                self.update_decode_process_time(time.time() - decode_time)
                 self.scene_detection.update_scene_status(now_frame, "scene")
                 continue
             else:
@@ -755,7 +883,7 @@ class ReadFlow(threading.Thread):
                         skip += 1
                         self.scene_detection.update_scene_status(now_frame, "dup")
                         last_frame = img1.copy()
-                        img1 = self._crop(Tools.gen_next(videogen))
+                        img1 = self.__crop(Tools.gen_next(videogen))
 
                         if img1 is None:
                             img1 = last_frame
@@ -764,7 +892,7 @@ class ReadFlow(threading.Thread):
 
                         diff = Tools.get_norm_img_diff(img0, img1)
 
-                        is_scene = self.scene_detection.check_scene(img0, img1)  # update scene stack
+                        is_scene = self.scene_detection.check_scene(img0, img1, use_diff=diff)  # update scene stack
                         if is_scene:
                             break
                         if skip == self.ARGS.dup_skip_limit * self.ARGS.target_fps // self.ARGS.input_fps:
@@ -774,32 +902,39 @@ class ReadFlow(threading.Thread):
                     # 除去重复帧后可能im0，im1依然为转场，因为转场或大幅度运动的前一帧可以为重复帧
                     if is_scene:
                         if self.ARGS.is_scdet_mix:
-                            self.feed_to_rife(now_frame, img0, img1, n=skip, add_scene=True,
-                                              is_end=is_end)
+                            self.__feed_to_rife(now_frame, img0, img1, n=skip, add_scene=True,
+                                                is_end=is_end)
                         else:
-                            self.feed_to_rife(now_frame, img0, before_img, n=skip - 1, add_scene=True,
-                                              is_end=is_end)
+                            self.__feed_to_rife(now_frame, img0, before_img, n=skip - 1, add_scene=True,
+                                                is_end=is_end)
                             """
                             0 (1 2 3) 4[scene] => 0 (1 2) 3 4[scene] 括号内为RIFE应该生成的帧
                             """
                         self.scene_detection.update_scene_status(now_frame, "scene")
+                        self.update_decode_process_time(time.time() - decode_time)
 
                     elif skip != 0:  # skip >= 1
                         assert skip >= 1
                         """Not Scene"""
-                        self.feed_to_rife(now_frame, img0, img1, n=skip, is_end=is_end)
+                        self.__feed_to_rife(now_frame, img0, img1, n=skip, is_end=is_end)
                         self.scene_detection.update_scene_status(now_frame, "normal")
-                    now_frame += skip + 1
+                        self.update_decode_process_time(time.time() - decode_time)
+                    now_frame += skip
                 else:
                     """normal frames"""
-                    self.feed_to_rife(now_frame, img0, img1, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
+                    self.__feed_to_rife(now_frame, img0, img1, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
                     self.scene_detection.update_scene_status(now_frame, "normal")
-                self.ARGS.task_info.update({"now_frame": now_frame})
+                    self.update_decode_process_time(time.time() - decode_time)
+
+                self.ARGS.update_task_info({"read_now_frame": now_frame})
+                self.update_scene_status()
             pass
 
         self._output_queue.put(None)  # bad way to end
+        videogen.close()
+        videogen_check.close()
 
-    def feed_to_rife(self, now_frame: int, img0, img1, n=0, exp=0, is_end=False, add_scene=False, ):
+    def __feed_to_rife(self, now_frame: int, img0, img1, n=0, exp=0, is_end=False, add_scene=False, ):
         """
         创建任务，输出到补帧任务队列消费者
         :param now_frame:当前帧数
@@ -811,69 +946,78 @@ class ReadFlow(threading.Thread):
         :param is_end:是否是任务结束
         :return:
         """
-
-        def psnr(i1, i2):
-            i1 = np.float64(i1)
-            i2 = np.float64(i2)
-            mse = np.mean((i1 - i2) ** 2)
-            if mse == 0:
-                return 100
-            pixel_max = 255.0
-            return 20 * math.log10(pixel_max / math.sqrt(mse))
-
         scale = self.ARGS.rife_scale
         if self.ARGS.use_rife_auto_scale:
             """使用动态光流"""
             if img0 is None or img1 is None:
                 scale = 1.0
             else:
-                # x = psnr(cv2.resize(img0, (256, 256)), cv2.resize(img1, (256, 256)))
-                # y25 = 0.0000136703 * (x ** 3) - 0.000407396 * (x ** 2) - 0.0129 * x + 0.62621
-                # y50 = 0.00000970763 * (x ** 3) - 0.0000908092 * (x ** 2) - 0.02095 * x - 0.69068
-                # y100 = 0.0000134965 * (x ** 3) - 0.000246688 * (x ** 2) - 0.01987 * x - 0.70953
-                # m = min(y25, y50, y100)
-                # scale = {y25: 0.25, y50: 0.5, y100: 1.0}[m]
-                # TODO transfer vfi core and sr_module here
                 scale = self.vfi_core.get_auto_scale(img0, img1)
 
-        if self.ARGS.use_sr and self.ARGS.use_sr_mode == 0 and img0 is not None and img1 is not None:
-            """先超后补"""
-            img0, img1 = self.sr_module.svfi_process(img0), self.sr_module.svfi_process(img1)
-
         self._output_queue.put(
-            {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "exp": exp, "scale": scale,
+            {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "scale": scale,
              "is_end": is_end, "add_scene": add_scene})
 
+    def update_vfi_core(self, vfi_core: VideoFrameInterpolation):
+        self.vfi_core = vfi_core
 
-class RenderFlow(threading.Thread):
+    def update_scene_status(self):
+        scene_status = self.scene_detection.get_scene_status()
+        update_dict = {'recent_scene': scene_status['recent_scene'], 'scene_cnt': scene_status['scene']}
+        self.ARGS.update_task_info(update_dict)
+
+    def run(self):
+        try:
+            if self.ARGS.remove_dup_mode in [0, 1]:
+                self.rife_run_any_fps()
+            else:  # 1, 2 => 去重一拍二或一拍三
+                self.rife_run()
+            self._task_done()
+        except Exception as e:
+            logger.critical("Read Thread Panicked")
+            logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self.ARGS.save_main_error(e)
+            return
+
+
+class RenderFlow(IOFlow):
     def __init__(self, _args: TaskArgumentManager, _reader_queue: Queue):
-        super().__init__()
-        # TODO OLS generate_frame_renderer
-        # TODO OLS Check Chunk
-        # TODO render lock
-        # TODO Queue Status Broker
-        # TODO Concat(All)
-        # TODO Get output path
-        self.ffmpeg = "ffmpeg"
-        self.kill = False
-        self.hdr10_metadata_processer = Hdr10PlusProcesser(logger, self.ARGS.project_dir, self.ARGS.render_gap,
-                                                           self.ARGS.interp_times,
-                                                           self.ARGS.video_info_instance.getInputHdr10PlusMetadata())
-        self.ARGS = _args
-        self.initiation_lock = threading.Lock()
-        self.initiation_lock.locked()
-        self.reminder_bearer = OverTimeReminderBearer()
+        super().__init__(_args)
+        self.name = 'Render'
+        self.__ffmpeg = "ffmpeg"
+        self.__hdr10_metadata_processer = Hdr10PlusProcesser(logger, self.ARGS.project_dir, self.ARGS.render_gap,
+                                                             self.ARGS.interp_times,
+                                                             self.ARGS.video_info_instance.getInputHdr10PlusMetadata())
+        self._input_queue = _reader_queue
+        self.is_audio_failed_concat = False
+        self.steam_flow = None
 
-        self._input_queue=_reader_queue
+    def __modify_hdr_params(self):
+        if self.ARGS.is_img_input or self.ARGS.hdr_mode == 1:  # img input or ordinary hdr
+            return
 
-    def _generate_frame_writer(self, start_frame, output_path):
+        if self.ARGS.hdr_mode == 2:
+            """HDR10"""
+            self.ARGS.render_hwaccel_mode = "CPU"
+            if "H265" in self.ARGS.render_encoder:
+                self.ARGS.render_encoder = "H265, 10bit"
+            elif "H264" in self.ARGS.render_encoder:
+                self.ARGS.render_encoder = "H264, 10bit"
+            self.ARGS.render_encoder_preset = "medium"
+        elif self.ARGS.hdr_mode == 4:
+            """HLG"""
+            self.ARGS.render_encoder = "H265, 10bit"
+            self.ARGS.render_hwaccel_mode = "CPU"
+            self.ARGS.render_encoder_preset = "medium"
+
+    def __generate_frame_writer(self, start_frame: int, output_path: str):
         """
-                渲染帧
-                :param start_frame: for IMG IO, select start_frame to generate IO instance
-                :param output_path:
-                :return:
-                """
-        hdr10plus_metadata = self.hdr10_metadata_processer.get_hdr10plus_metadata_at_point(start_frame)
+        渲染帧
+        :param start_frame: for IMG IO, select start_frame to generate IO instance
+        :param output_path:
+        :return:
+        """
+        hdr10plus_metadata_path = self.__hdr10_metadata_processer.get_hdr10plus_metadata_path_at_point(start_frame)
         params_libx265s = {
             "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
                     "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
@@ -900,7 +1044,7 @@ class RenderFlow(threading.Thread):
                       'deblock=-1:sao=0:'
                       'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                       'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                      f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata}"'
+                      f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata_path}"'
         }
 
         params_libx264s = {
@@ -921,33 +1065,15 @@ class RenderFlow(threading.Thread):
                      "cll='1000,100'"
         }
 
-        def HDR_auto_modify_params():
-            if self.ARGS.is_img_input or self.ARGS.hdr_mode == 1:  # img input or ordinary hdr
-                return
-
-            if self.ARGS.hdr_mode == 2:
-                """HDR10"""
-                self.ARGS.render_hwaccel_mode = "CPU"
-                if "H265" in self.ARGS.render_encoder:
-                    self.ARGS.render_encoder = "H265, 10bit"
-                elif "H264" in self.ARGS.render_encoder:
-                    self.ARGS.render_encoder = "H264, 10bit"
-                self.ARGS.render_encoder_preset = "medium"
-            elif self.ARGS.hdr_mode == 4:
-                """HLG"""
-                self.ARGS.render_encoder = "H265, 10bit"
-                self.ARGS.render_hwaccel_mode = "CPU"
-                self.ARGS.render_encoder_preset = "medium"
-
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
-            img_io = ImageWrite(logger, folder=self.ARGS.output, start_frame=start_frame, exp=self.ARGS.rife_exp,
+            img_io = ImageWrite(logger, folder=self.ARGS.output_dir, start_frame=start_frame, exp=self.ARGS.rife_exp,
                                 resize=self.ARGS.resize_param, output_ext=self.ARGS.output_ext, )
             return img_io
 
         """HDR Check"""
-        if self.ARGS.hdr_mode == 0:  # Auto
-            HDR_auto_modify_params()
+        if self.ARGS.hdr_mode != 0:
+            self.__modify_hdr_params()
 
         """Output Video"""
         input_dict = {"-vsync": "cfr"}
@@ -955,21 +1081,13 @@ class RenderFlow(threading.Thread):
         output_dict = {"-r": f"{self.ARGS.target_fps}", "-preset": self.ARGS.render_encoder_preset,
                        "-metadata": f'title="Powered By SVFI {self.ARGS.version}"'}
 
-        self.color_data_tag = [('color_range', 'tv'),
-                               ('color_space', 'bt709'),
-                               ('color_transfer', 'bt709'),
-                               ('color_primaries', 'bt709')]
-        color_tag_map = {'-color_range': 'color_range',
-                         '-color_primaries': 'color_primaries',
-                         '-colorspace': 'color_space', '-color_trc': 'color_transfer'}
-        for ct in color_tag_map:
-            output_dict.update({ct: self.ARGS.video_info_instance.video_info[color_tag_map[ct]]})
+        output_dict.update(self._get_color_info_dict())
 
         if not self.ARGS.is_img_input:
             input_dict.update({"-r": f"{self.ARGS.target_fps}"})
         else:
             """Img Input"""
-            input_dict.update({"-r": f"{self.ARGS.input_fps * 2 ** self.ARGS.rife_exp}"})
+            input_dict.update({"-r": f"{self.ARGS.input_fps * self.ARGS.interp_times}"})
 
         """Slow motion design"""
         if self.ARGS.is_render_slow_motion:
@@ -982,7 +1100,7 @@ class RenderFlow(threading.Thread):
         vf_args = "copy"  # debug
         output_dict.update({"-vf": vf_args})
 
-        if self.ARGS.use_sr and self.ARGS.resize_height and self.ARGS.resize_width:
+        if self.ARGS.use_sr and all(self.ARGS.resize_param):
             output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
                                 "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
 
@@ -1017,7 +1135,7 @@ class RenderFlow(threading.Thread):
                 if self.ARGS.hdr_mode == 2:
                     """HDR10"""
                     output_dict.update({"-x265-params": params_libx265s["hdr10"]})
-                    if os.path.exists(hdr10plus_metadata):
+                    if os.path.exists(hdr10plus_metadata_path):
                         output_dict.update({"-x265-params": params_libx265s["hdr10+"]})
             else:
                 """ProRes"""
@@ -1035,7 +1153,8 @@ class RenderFlow(threading.Thread):
                 output_dict.update({"-pix_fmt": "yuv420p10le"})
                 pass
             if "H264" in self.ARGS.render_encoder:
-                output_dict.update({f"-g": f"{int(self.ARGS.target_fps * 3)}", "-c:v": "h264_nvenc", "-rc:v": "vbr_hq", })
+                output_dict.update(
+                    {f"-g": f"{int(self.ARGS.target_fps * 3)}", "-c:v": "h264_nvenc", "-rc:v": "vbr_hq", })
             elif "H265" in self.ARGS.render_encoder:
                 output_dict.update({"-c:v": "hevc_nvenc", "-rc:v": "vbr_hq",
                                     f"-g": f"{int(self.ARGS.target_fps * 3)}", })
@@ -1098,8 +1217,8 @@ class RenderFlow(threading.Thread):
                                      "--tier": "main", "-b": "5",
                                      "--max-cll": "1000,100",
                                      "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"})
-                if os.path.exists(hdr10plus_metadata):
-                    _output_dict.update({"--dhdr10-info": hdr10plus_metadata})
+                if os.path.exists(hdr10plus_metadata_path):
+                    _output_dict.update({"--dhdr10-info": hdr10plus_metadata_path})
             else:
                 if self.ARGS.render_encoder_preset != "loseless":
                     _output_dict.update({"--preset": self.ARGS.render_encoder_preset})
@@ -1166,7 +1285,7 @@ class RenderFlow(threading.Thread):
                 _output_dict = {
                     "encc": "vp9", "-tune": "0", "-b": ""
                 }
-            # TODO Color Info
+            # TODO SVT Color Info
             # if '-color_range' in output_dict:
             #     _output_dict.update({"--colorrange": output_dict["-color_range"]})
             # if '-colorspace' in output_dict:
@@ -1190,7 +1309,7 @@ class RenderFlow(threading.Thread):
             elif "VP9" in self.ARGS.render_encoder_preset:
                 _output_dict.update({"-enc-mode": preset_mapper[self.ARGS.render_encoder_preset]})
 
-            # TODO max cll, master display
+            # TODO SVT max cll, master display
             # if self.ARGS.hdr_mode == 2:
             #     _output_dict.update({"-c": "hevc",
             #                          "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
@@ -1215,7 +1334,8 @@ class RenderFlow(threading.Thread):
                                     f"-rc-lookahead": "120", })
             elif "H265" in self.ARGS.render_encoder:
                 output_dict.update({"-c:v": "hevc_qsv",
-                                    f"-g": f"{int(self.ARGS.target_fps * 3)}", "-i_qfactor": "0.75", "-b_qfactor": "1.1",
+                                    f"-g": f"{int(self.ARGS.target_fps * 3)}", "-i_qfactor": "0.75",
+                                    "-b_qfactor": "1.1",
                                     f"-look_ahead": "120", })
 
         if "ProRes" not in self.ARGS.render_encoder and self.ARGS.render_encoder_preset != "loseless":
@@ -1266,167 +1386,57 @@ class RenderFlow(threading.Thread):
                     ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
         logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
-        # output_path = Tools.fillQuotation(output_path)
         if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
             return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
         elif self.ARGS.render_hwaccel_mode in ["SVT"]:
             return SVTWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
         return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
 
-        pass
+    def __rename_chunk(self, chunk_from_path: str, chunk_cnt: int, start_frame: int, end_frame: int):
+        """Maintain Chunk json"""
+        if self.ARGS.is_img_output or self._kill:
+            return
+        chunk_desc_path = "chunk-{:0>3d}-{:0>8d}-{:0>8d}{}".format(chunk_cnt, start_frame, end_frame,
+                                                                   self.ARGS.output_ext)
+        chunk_desc_path = os.path.join(self.ARGS.project_dir, chunk_desc_path)
+        if os.path.exists(chunk_desc_path):
+            os.remove(chunk_desc_path)
+        if os.path.exists(chunk_from_path):
+            os.rename(chunk_from_path, chunk_desc_path)
+        else:
+            logger.warning(f"Rename Chunk Not find {chunk_from_path}")
 
-    def run(self):
-        """
-                Render thread
-                :param chunk_cnt:
-                :param start_frame: render start
-                :return:
-                """
+    def __check_audio_concat(self, chunk_tmp_path: str, fail_signal=0):
+        """Check Input file ext"""
+        # TODO Recursive Check and check lock
+        if not self.ARGS.is_save_audio or self.ARGS.get_main_error() is not None:
+            return
+        if self.ARGS.is_img_output:
+            return
+        output_ext = self.ARGS.output_ext
 
-        def rename_chunk():
-            """Maintain Chunk json"""
-            if self.ARGS.is_img_output or self.kill:
-                return
-            chunk_desc_path = "chunk-{:0>3d}-{:0>8d}-{:0>8d}{}".format(chunk_cnt, start_frame, now_frame,
-                                                                       self.ARGS.output_ext)
-            chunk_desc_path = os.path.join(self.ARGS.project_dir, chunk_desc_path)
-            if os.path.exists(chunk_desc_path):
-                os.remove(chunk_desc_path)
-            os.rename(chunk_tmp_path, chunk_desc_path)
-            chunk_path_list.append(chunk_desc_path)
-            chunk_info_path = os.path.join(self.ARGS.project_dir, "chunk.json")
+        concat_filepath = f"{os.path.join(self.ARGS.output_dir, 'concat_test')}" + output_ext
+        map_audio = f'-i "{self.ARGS.input}" -map 0:v:0 -map 1:a:0 -map 1:s? -c:a copy -c:s copy -shortest '
+        ffmpeg_command = f'{self.__ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
+                         f'{Tools.fillQuotation(concat_filepath)} -y'
 
-            with open(chunk_info_path, "w", encoding="utf-8") as w:
-                chunk_info = {
-                    "project_dir": self.ARGS.project_dir,
-                    "input": self.ARGS.input,
-                    "chunk_cnt": chunk_cnt,
-                    "chunk_list": chunk_path_list,
-                    "last_frame": now_frame,
-                    "target_fps": self.ARGS.target_fps,
-                }
-                json.dump(chunk_info, w)
-            """
-            key: project_dir, input filename, chunk cnt, chunk list, last frame
-            """
-            if is_end:
-                if os.path.exists(chunk_info_path):
-                    os.remove(chunk_info_path)
-
-        # @profile
-        def check_audio_concat():
-            """Check Input file ext"""
-            if not self.ARGS.is_save_audio or self.main_error is not None:
-                return
-            if self.ARGS.is_img_output:
-                return
-            output_ext = self.output_ext
-
-            concat_filepath = f"{os.path.join(self.ARGS.output, 'concat_test')}" + output_ext
-            map_audio = f'-i "{self.ARGS.input}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy -shortest '
-            ffmpeg_command = f'{self.ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
-                             f'{Tools.fillQuotation(concat_filepath)} -y'
-
-            logger.info("Start Audio Concat Test")
-            sp = Tools.popen(ffmpeg_command)
-            sp.wait()
-            if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-                if self.ARGS.input_ext in SupportFormat.vid_outputs:
-                    self.output_ext = self.ARGS.input_ext
-                    logger.warning(f"Concat Test found unavailable output extension {self.output_ext}, "
-                                   f"changed to {self.ARGS.input_ext}")
-                else:
-                    logger.error(f"Concat Test Error, {output_ext}, empty output")
-                    self.main_error = FileExistsError("Concat Test Error, empty output, Check Output Extension!!!")
-                    raise FileExistsError(
-                        "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
-                        "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+        logger.info("Start Audio Concat Test")
+        sp = Tools.popen(ffmpeg_command)
+        sp.wait()
+        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
+            if self.ARGS.input_ext in SupportFormat.vid_outputs:
+                self.ARGS.output_ext = self.ARGS.input_ext
+                logger.warning(f"Concat Test found unavailable output extension {self.ARGS.output_ext}, "
+                               f"changed to {self.ARGS.input_ext}")
             else:
-                logger.info("Audio Concat Test Success")
-                os.remove(concat_filepath)
-
-        concat_test_flag = True
-
-        chunk_frame_cnt = 1  # number of frames of current output chunk
-        chunk_path_list = list()
-        chunk_tmp_path = os.path.join(self.ARGS.project_dir, f"chunk-tmp{self.ARGS.output_ext}")
-        frame_writer = self._generate_frame_renderer(chunk_tmp_path, start_frame)  # get frame renderer
-
-        now_frame = start_frame
-        is_end = False
-        frame_written = False
-        while True:
-            if self.kill:
-                logger.warning("Render thread killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
-                frame_writer.close()
-                is_end = True
-                rename_chunk()
-                break
-
-            frame_data = self._input_queue.get()
-            if frame_data is None:
-                if frame_written:
-                    frame_writer.close()
-                is_end = True
-                rename_chunk()
-                break
-
-            now_frame = frame_data[0]
-            frame = frame_data[1]
-
-            if self.ARGS.use_fast_denoise:
-                frame = cv2.fastNlMeansDenoising(frame)
-            if self.ARGS.use_sr and (self.ARGS.use_sr_mode == 1 or self.ARGS.render_only):
-                """先补后超"""
-                frame = self.sr_module.svfi_process(frame)
-
-            reminder_id = self.reminder_bearer.generate_reminder(30, logger, "Encoder",
-                                                                 "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
-            if frame is not None:
-                frame_written = True
-                frame_writer.writeFrame(frame)
-            self.reminder_bearer.terminate_reminder(reminder_id)
-
-            chunk_frame_cnt += 1
-            self.ARGS.task_info.update({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
-
-            if not chunk_frame_cnt % self.ARGS.render_gap:
-                frame_writer.close()
-                if concat_test_flag:
-                    check_audio_concat()
-                    concat_test_flag = False
-                rename_chunk()
-                chunk_cnt += 1
-                start_frame = now_frame + 1
-                frame_writer = self._generate_frame_renderer(chunk_tmp_path, start_frame)
-        return
-
-    def concatChunk(self):
-        pass
-    def getInitiatedLock(self):
-        return self.initiation_lock
-
-    def feedFrames(self, frames_list, is_end=False):
-        """
-                维护输出帧数组的输入（往输出渲染线程喂帧
-                :param frames_list:
-                :param is_end: 是否是视频结尾
-                :return:
-                """
-        frames_list_len = len(frames_list)
-        # TODO where does this belong?
-        for frame_i in range(frames_list_len):
-            if frames_list[frame_i] is None:
-                self.frames_output.put(None)
-                logger.info("Put None to write_buffer in advance")
-                return
-            self.frames_output.put(frames_list[frame_i])  # 往输出队列（消费者）喂正常的帧
-            if frame_i == frames_list_len - 1:
-                if is_end:
-                    self.frames_output.put(None)
-                    logger.info("Put None to write_buffer")
-                    return
-        pass
+                logger.error(f"Concat Test Error, {output_ext}, empty output")
+                main_error = FileExistsError(
+                    "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
+                    "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+                self.ARGS.save_main_error(main_error)
+        else:
+            logger.info("Audio Concat Test Success")
+            os.remove(concat_filepath)
 
     def get_output_path(self):
         """
@@ -1438,7 +1448,7 @@ class RenderFlow(threading.Thread):
         if "ProRes" in self.ARGS.render_encoder:
             output_ext = ".mov"
 
-        output_filepath = f"{os.path.join(self.ARGS.output, Tools.get_filename(self.ARGS.input))}"
+        output_filepath = f"{os.path.join(self.ARGS.output_dir, Tools.get_filename(self.ARGS.input))}"
         if self.ARGS.render_only:
             output_filepath += "_SVFI_Render"  # 仅渲染
         output_filepath += f"_{int(self.ARGS.target_fps)}fps"  # 补帧
@@ -1453,7 +1463,7 @@ class RenderFlow(threading.Thread):
         if not self.ARGS.render_only:
             """RIFE"""
             if self.ARGS.use_rife_auto_scale:
-                output_filepath += f"_[SA]"
+                output_filepath += f"_[DS]"
             else:
                 output_filepath += f"_[S-{self.ARGS.rife_scale}]"  # 全局光流尺度
             if self.ARGS.use_ncnn:
@@ -1468,7 +1478,7 @@ class RenderFlow(threading.Thread):
             if self.ARGS.rife_tta_mode:
                 output_filepath += f"_[TTA-{self.ARGS.rife_tta_mode}-{self.ARGS.rife_tta_iter}]"
             if self.ARGS.remove_dup_mode:  # 去重模式
-                output_filepath += f"_[RD-{self.ARGS.remove_dup_mode}]"
+                output_filepath += f"_[FD-{self.ARGS.remove_dup_mode}]"
 
         if self.ARGS.use_sr:  # 使用超分
             sr_model = os.path.splitext(self.ARGS.use_sr_model)[0]
@@ -1515,25 +1525,25 @@ class RenderFlow(threading.Thread):
 
         if self.ARGS.is_save_audio and not self.ARGS.is_img_input:
             audio_path = self.ARGS.input
-            map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy '
+            map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a:0 -map 1:s? -c:a copy -c:s copy '
             if self.ARGS.input_start_point or self.ARGS.input_end_point:
-                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -c:a aac -ab 640k '
+                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a:0 -c:a aac -ab 640k '
                 if self.ARGS.input_end_point is not None:
                     map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
                 if self.ARGS.input_start_point is not None:
                     map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
-
             if self.ARGS.input_ext in ['.vob'] and self.ARGS.output_ext in ['.mkv']:
                 map_audio += "-map_chapters -1 "
 
         else:
             map_audio = ""
 
-        # TODO restore here
-        # color_info_str = ' '.join(Tools.dict2Args(self.ARGS.color_info))
-        color_info_str = ' '
+        color_dict = self._get_color_info_dict()
+        color_info_str = ""
+        for ck, cd in color_dict.items():
+            color_info_str += f" {ck} {cd}"
 
-        ffmpeg_command = f'{self.ffmpeg} -hide_banner -f concat -safe 0 -i "{concat_path}" {map_audio} -c:v copy ' \
+        ffmpeg_command = f'{self.__ffmpeg} -hide_banner -f concat -safe 0 -i "{concat_path}" {map_audio} -c:v copy ' \
                          f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" ' \
                          f'{color_info_str} ' \
                          f'-y'
@@ -1543,179 +1553,309 @@ class RenderFlow(threading.Thread):
         sp.wait()
         logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
         if self.ARGS.hdr_mode == 3:
-            logger.info("Start DOVI Conversion")
-            dovi_maker = DoviProcesser(concat_filepath, logger, self.ARGS.project_dir, self.ARGS,
-                                       self.ARGS.interp_times)
-            dovi_maker.run()
+            self.__run_dovi(concat_filepath)
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            logger.error(f"Concat Error, with output extension {output_ext}")
-            raise FileExistsError(
+            main_error = FileExistsError(
                 f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
                 "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
-        # TODO conflict or same module in Readflow (remove all chunks), should be at main flow
+            self.ARGS.save_main_error(main_error)
+            raise main_error
         if self.ARGS.is_output_only:
-            self.concat_check(del_chunk=True)
+            self.__del_existed_chunks()
 
-    def concat_check(self, concat_list, concat_filepath):
-        """
-        Check if concat output is valid
-        :param concat_filepath:
-        :param concat_list:
-        :return:
-        """
-        original_concat_size = 0
-        for f in concat_list:
-            original_concat_size += os.path.getsize(f)
-        output_concat_size = os.path.getsize(concat_filepath)
-        if output_concat_size < original_concat_size * 0.9:
-            return False
-        return True
+        if self.steam_flow is SteamFlow:
+            self.steam_flow.steam_update_achv(concat_filepath)
 
-class SuperResolutionFlow:
+    def check_concat_result(self):
+        concat_filepath, output_ext = self.get_output_path()
+        if os.path.exists(concat_filepath):
+            logger.warning("Mission Already Finished, "
+                           "Jump to Dolby Vision Check")
+            if self.ARGS.hdr_mode == 3:
+                """Dolby Vision"""
+                self.__run_dovi(concat_filepath)
+            else:
+                return True
+        return False
+
+    def __del_existed_chunks(self):
+        chunk_paths, chunk_cnt, last_frame = Tools.get_existed_chunks(self.ARGS.project_dir)
+        for f in chunk_paths:
+            os.remove(os.path.join(self.ARGS.project_dir, f))
+
+    def __run_dovi(self, concat_filepath: str):
+        logger.info("Start DOVI Conversion")
+        dovi_maker = DoviProcesser(concat_filepath, self.ARGS.input, self.ARGS.project_dir,
+                                   self.ARGS.interp_times, logger)
+        dovi_maker.run()
+
+    def run(self):
+        """
+                Render thread
+                :return:
+        """
+        concat_test_flag = True
+        chunk_cnt, start_frame = self.check_chunk()
+        chunk_frame_cnt = 1  # number of frames of current output chunk
+        chunk_tmp_path = os.path.join(self.ARGS.project_dir, f"chunk-tmp{self.ARGS.output_ext}")
+        frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )  # get frame renderer
+
+        now_frame = start_frame
+        is_end = False
+        frame_written = False
+        self._release_initiation()
+        try:
+            while True:
+                if self._kill:
+                    if frame_written:
+                        frame_writer.close()
+                    logger.warning("Render thread killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
+                    frame_writer.close()
+                    is_end = True
+                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
+                    break
+
+                frame_data = self._input_queue.get()
+                if frame_data is None:
+                    if frame_written:
+                        frame_writer.close()
+                    is_end = True
+                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
+                    break
+
+                now_frame = frame_data[0]
+                frame = frame_data[1]
+
+                if self.ARGS.use_fast_denoise:
+                    frame = cv2.fastNlMeansDenoising(frame)
+
+                reminder_id = self.reminder_bearer.generate_reminder(30, logger, "Encoder",
+                                                                     "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
+                if frame is not None:
+                    frame_written = True
+                    frame_writer.writeFrame(frame)
+                self.reminder_bearer.terminate_reminder(reminder_id)
+
+                chunk_frame_cnt += 1
+                self.ARGS.task_info.update({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
+
+                if not chunk_frame_cnt % self.ARGS.render_gap:
+                    frame_writer.close()
+                    if concat_test_flag:
+                        self.__check_audio_concat(chunk_tmp_path)
+                        concat_test_flag = False
+                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
+                    chunk_cnt += 1
+                    start_frame = now_frame + 1
+                    frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )
+            if not self.ARGS.is_no_concat and not self.ARGS.is_img_output and not self._kill:
+                self.concat_all()
+
+        except Exception as e:
+            logger.critical("Render Thread Panicked")
+            logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self.ARGS.save_main_error(e)
+            return
+
+        return
+
+    def update_steam_flow(self, steam_flow: SteamFlow):
+        self.steam_flow = steam_flow
+
+
+class SuperResolutionFlow(IOFlow):
     def __init__(self, _args: TaskArgumentManager, _reader_queue: Queue, _render_queue: Queue):
-        # TODO Feed and Process
-        self.ARGS = _args
-        self.initiation_lock = threading.Lock()
-        self.initiation_lock.locked()
+        super().__init__(_args)
+        self.name = 'SuperResolution'
         self._input_queue = _reader_queue
         self._output_queue = _render_queue
-
         self.sr_module = SuperResolution()  # 超分类
-        sr_scale = self.ARGS.resize_exp
-        resize_param = self.ARGS.resize_param
-        # TODO new SR mode(add one and react one)
-        if self.ARGS.use_sr and sr_scale > 1:
-            try:
-                if self.ARGS.use_sr_algo == "waifu2x":
-                    import Utils.SuperResolutionModule
-                    self.sr_module = Utils.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
-                                                                           scale=sr_scale,
-                                                                           num_threads=self.ARGS.ncnn_thread,
-                                                                           resize=resize_param)
-                elif self.ARGS.use_sr_algo == "realSR":
-                    import Utils.SuperResolutionModule
-                    self.sr_module = Utils.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
-                                                                            scale=sr_scale,
-                                                                            resize=resize_param)
-                elif self.ARGS.use_sr_algo == "realESR":
-                    import Utils.RealESRModule
-                    self.sr_module = Utils.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
-                                                                     gpu_id=self.ARGS.use_specific_gpu,  # TODO Assign another card here
-                                                                     scale=sr_scale, tile=self.ARGS.sr_tilesize,
-                                                                     half=self.ARGS.use_rife_fp16,
-                                                                     resize=resize_param)
-                logger.info(
-                    f"Load AI SR at {self.ARGS.use_sr_algo}, {self.ARGS.use_sr_model}, "
-                    f"scale = {sr_scale}, resize = {resize_param}")
-            except ImportError:
-                logger.error(
-                    f"Import SR Module failed\n"
-                    f"{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
-        else:
+        if not self.ARGS.use_sr:
+            return
+        sr_scale = self.ARGS.resize_exp  # TODO evict this later
+        resize_param = self.ARGS.frame_size
+        if all(self.ARGS.transfer_param):
+            resize_param = self.ARGS.transfer_param
+        if all(resize_param) and all(self.ARGS.resize_param):  # if frame_size == 0,0, sr_scale remains untouched
+            sr_scale = (self.ARGS.resize_param[0] * self.ARGS.resize_param[1]) / (resize_param[0] * resize_param[1])
+            sr_scale = int(math.ceil(math.sqrt(sr_scale)))
+        if sr_scale == 1 and self.ARGS.resize_exp:
+            sr_scale = self.ARGS.resize_exp
+        try:
+            if self.ARGS.use_sr_algo == "waifu2x":
+                import Utils.SuperResolutionModule
+                self.sr_module = Utils.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
+                                                                       scale=sr_scale,
+                                                                       num_threads=self.ARGS.ncnn_thread,
+                                                                       resize=resize_param)
+            elif self.ARGS.use_sr_algo == "realSR":
+                import Utils.SuperResolutionModule
+                self.sr_module = Utils.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
+                                                                        scale=sr_scale,
+                                                                        resize=resize_param)
+            elif self.ARGS.use_sr_algo == "realESR":
+                import Utils.RealESRModule
+                self.sr_module = Utils.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
+                                                                 gpu_id=self.ARGS.use_specific_gpu,
+                                                                 # TODO Assign another card here
+                                                                 scale=sr_scale, tile=self.ARGS.sr_tilesize,
+                                                                 half=self.ARGS.use_realesr_fp16,
+                                                                 resize=resize_param)
+            logger.info(
+                f"Load SuperResolutionModule at {self.ARGS.use_sr_algo}, "
+                f"Model at {self.ARGS.use_sr_model}, scale_times = {sr_scale}")
+        except ImportError:
+            logger.error(
+                f"Import SR Module failed\n"
+                f"{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
             self.ARGS.use_sr = False
-            logger.warning("Abort to load AI SR since Resolution Rate <= 1")
 
-        pass
-    def feedFrames(self, frame_pack):
-        pass
-    def renderFrames(self):
-        pass
-    def getInitiatedLock(self):
-        return self.initiation_lock
-
-
-class ProgressUpdateFlow(threading.Thread):
-    def __init__(self, _args: TaskArgumentManager):
-        super().__init__()
-        self.kill = False
     def run(self):
-        nonlocal previous_cnt
-        scene_status = self.scene_detection.get_scene_status()
-
-        render_status = self.task_info  # render status quo
-        """(chunk_cnt, start_frame, end_frame, frame_cnt)"""
-        # TODO while True
-        pbar.set_description(
-            f"Process at Chunk {render_status['chunk_cnt']:0>3d}")
-        pbar.set_postfix({"R": f"{render_status['render']}", "C": f"{now_frame}",
-                          "S": f"{scene_status['recent_scene']}",
-                          "SC": f"{self.scene_detection.scdet_cnt}", "TAT": f"{task_acquire_time:.2f}s",
-                          "PT": f"{process_time:.2f}s", "QL": f"{self.rife_task_queue.qsize()}"})
-        pbar.update(now_frame - previous_cnt)
-        previous_cnt = now_frame
-        pass
-
-
-class SteamFlow(SteamUtils):
-    def __init__(self, _args: TaskArgumentManager):
-        self.ARGS = _args
-        super().__init__(self.ARGS.is_steam, logger)
-        self.kill = False
-        pass
-    def steam_update_achv(self, output_path):
         """
-        Update Steam Achievement
+        SR thread
         :return:
         """
-        if not self.ARGS.is_steam or self.kill:
-            """If encountered serious error in the process, end steam update"""
+        self._release_initiation()
+        try:
+            while True:
+                if self._kill:
+                    logger.warning("Super Resolution thread killed, break")
+                    break
+                task_acquire_time = time.time()
+                task = self._input_queue.get()
+                task_acquire_time = time.time() - task_acquire_time
+                if task is None:
+                    break
+                if self.ARGS.use_sr:
+                    """
+                        task = {"now_frame", "img0", "img1", "n","scale", "is_end", "is_scene", "add_scene"}
+                    """
+                    now_frame = task["now_frame"]
+                    img0 = task["img0"]
+                    img1 = task["img1"]
+                    reminder_id = self.reminder_bearer.generate_reminder(60, logger,
+                                                                         "Super Resolution",
+                                                                         "Low Super Resolution speed detected, Please consider lower your output settings to enhance speed")
+                    sr_process_time = time.time()
+                    if img0 is not None:
+                        img0 = self.sr_module.svfi_process(img0)
+                    sr_process_time = time.time() - sr_process_time
+                    if img1 is not None:
+                        img1 = self.sr_module.svfi_process(img1)
+                    task['img0'] = img0
+                    task['img1'] = img1
+                    self.ARGS.update_task_info({'sr_now_frame': now_frame,
+                                                'sr_task_acquire_time': task_acquire_time,
+                                                'sr_process_time': sr_process_time,
+                                                'sr_queue_len': self._input_queue.qsize()})
+                    self.reminder_bearer.terminate_reminder(reminder_id)
+                self._output_queue.put(task)
+        except Exception as e:
+            logger.critical("Super Resolution Thread Panicked")
+            logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self._output_queue.put(None)
+            self.ARGS.save_main_error(e)
             return
-        """Get Stat"""
-        STAT_INT_FINISHED_CNT = self.GetStat("STAT_INT_FINISHED_CNT", int)
-        STAT_FLOAT_FINISHED_MINUTE = self.GetStat("STAT_FLOAT_FINISHED_MIN", float)
+        self._task_done()
+        return
 
-        """Update Stat"""
-        STAT_INT_FINISHED_CNT += 1
-        reply = self.SetStat("STAT_INT_FINISHED_CNT", STAT_INT_FINISHED_CNT)
-        if self.ARGS.all_frames_cnt >= 0 and not self.ARGS.render_only:
-            """Update Mission Process Time only in interpolation"""
-            STAT_FLOAT_FINISHED_MINUTE += self.ARGS.all_frames_cnt / self.ARGS.target_fps / 60
-            reply = self.SetStat("STAT_FLOAT_FINISHED_MIN", round(STAT_FLOAT_FINISHED_MINUTE, 2))
 
-        """Get ACHV"""
-        ACHV_Task_Frozen = self.GetAchv("ACHV_Task_Frozen")
-        ACHV_Task_Cruella = self.GetAchv("ACHV_Task_Cruella")
-        ACHV_Task_Suzumiya = self.GetAchv("ACHV_Task_Suzumiya")
-        ACHV_Task_1000M = self.GetAchv("ACHV_Task_1000M")
-        ACHV_Task_10 = self.GetAchv("ACHV_Task_10")
-        ACHV_Task_50 = self.GetAchv("ACHV_Task_50")
+class ProgressUpdateFlow(IOFlow):
+    def __init__(self, _args: TaskArgumentManager, _read_flow: ReadFlow):
+        super().__init__(_args)
+        self.name = 'Pbar'
+        self.start_frame = 0
+        self.read_flow = _read_flow
 
-        """Update ACHV"""
-        if 'Frozen' in output_path and not ACHV_Task_Frozen:
-            reply = self.SetAchv("ACHV_Task_Frozen")
-        if 'Cruella' in output_path and not ACHV_Task_Cruella:
-            reply = self.SetAchv("ACHV_Task_Cruella")
-        if any([i in output_path for i in ['Suzumiya', 'Haruhi', '涼宮', '涼宮ハルヒの憂鬱', '涼宮ハルヒの消失', '凉宫春日']]) \
-                and not ACHV_Task_Suzumiya:
-            reply = self.SetAchv("ACHV_Task_Suzumiya")
-        if STAT_INT_FINISHED_CNT > 10 and not ACHV_Task_10:
-            reply = self.SetAchv("ACHV_Task_10")
-        if STAT_INT_FINISHED_CNT > 50 and not ACHV_Task_50:
-            reply = self.SetAchv("ACHV_Task_50")
-        if STAT_FLOAT_FINISHED_MINUTE > 1000 and not ACHV_Task_1000M:
-            reply = self.SetAchv("ACHV_Task_1000M")
-        self.Store()
-        pass
+    def update_start_frame(self, start_frame: int):
+        self.start_frame = start_frame
+
+    def run(self):
+        """
+        Start Progress Update Bar
+        :return:
+        """
+        """(chunk_cnt, start_frame, end_frame, frame_cnt)"""
+        self.read_flow.acquire_initiation_clock()
+        pbar = tqdm.tqdm(total=self.ARGS.all_frames_cnt, unit="frames")
+        pbar.moveto(n=self.start_frame)
+        pbar.unpause()
+        previous_cnt = self.start_frame
+        self._release_initiation()
+        while True:
+            if self._kill:
+                break
+            task_status = self.ARGS.task_info  # render status quo
+            if self.ARGS.render_only or self.ARGS.extract_only:
+                now_frame = task_status['render']
+                pbar_description = f"Process at Frame {now_frame}"
+                postfix_dict = {"R": f"{task_status['render']}", "C": f"{now_frame}", }
+            else:
+                now_frame = task_status['rife_now_frame']
+                pbar_description = f"Process at Chunk {task_status['chunk_cnt']:0>3d}"
+                postfix_dict = {"R": f"{task_status['render']}",
+                                "C": f"{now_frame}",
+                                "S": f"{task_status['recent_scene']}",
+                                "SC": f"{task_status['scene_cnt']}",
+                                "RPT": f"{task_status['decode_process_time']:.2f}s",
+                                "TAT": f"{task_status['rife_task_acquire_time']:.2f}s",
+                                "PT": f"{task_status['rife_process_time']:.2f}s",
+                                "QL": f"{task_status['rife_queue_len']}"}
+            if self.ARGS.use_sr:
+                postfix_dict.update({'SR': f"{task_status['sr_now_frame']}",
+                                     'SRTAT': f"{task_status['sr_task_acquire_time']:.2f}s",
+                                     'SRPT': f"{task_status['sr_process_time']:.2f}s",
+                                     "SRL": f"{task_status['sr_queue_len']}", })
+
+            pbar.set_description(pbar_description)
+            pbar.set_postfix(postfix_dict)
+            pbar.update(now_frame - previous_cnt)
+            previous_cnt = now_frame
+            time.sleep(0.2)
+        pbar.update(abs(self.ARGS.all_frames_cnt - previous_cnt))
+        pbar.close()
+
 
 class InterpWorkFlow:
     # @profile
     def __init__(self, __args: TaskArgumentManager, **kwargs):
         global logger
         self.ARGS = __args
+        self.run_all_time = datetime.datetime.now()
 
         """EULA"""
         self.eula = EULAWriter()
         self.eula.boom()
 
+        """Set Queues"""
+        queue_len = self.ARGS.frames_queue_len
+        self.read_task_queue = Queue(maxsize=queue_len)
+        self.sr_task_queue = Queue(maxsize=queue_len)
+        self.rife_task_queue = Queue(maxsize=queue_len)
+        self.render_task_queue = Queue(maxsize=queue_len)
+
         """Set Flow"""
+        """self.steam_flow = SteamFlow(self.ARGS)
+        self.sr_flow = SuperResolutionFlow(self.ARGS, self.read_task_queue, self.rife_task_queue)
+        if not self.ARGS.use_sr:
+            self.read_flow = ReadFlow(self.ARGS, self.rife_task_queue)
+            self.sr_flow.kill()
+        else:
+            self.read_flow = ReadFlow(self.ARGS, self.read_task_queue)
+        self.render_flow = RenderFlow(self.ARGS, self.render_task_queue)
+        self.update_progress_flow = ProgressUpdateFlow(self.ARGS, self.read_flow)"""
         self.steam_flow = SteamFlow(self.ARGS)
-        self.sr_flow = SuperResolutionFlow(self.ARGS, )  # TODO Assign Queue
-        self.render_flow = RenderFlow(self.ARGS, )
-        self.read_flow = ReadFlow(self.ARGS)
-        self.update_progress_flow = ProgressUpdateFlow(self.ARGS)
+        self.read_flow = ReadFlow(self.ARGS, self.read_task_queue)
+        self.sr_flow = SuperResolutionFlow(self.ARGS, self.read_task_queue, self.rife_task_queue)
+        self.render_flow = RenderFlow(self.ARGS, self.render_task_queue)
+        self.update_progress_flow = ProgressUpdateFlow(self.ARGS, self.read_flow)
 
+        """Set VFI Core"""
+        self.vfi_core = VideoFrameInterpolation(self.ARGS)
 
-    # @profile
+        """Set 'Global' Reminder"""
+        self.reminder_bearer = OverTimeReminderBearer()
+
     def feed_to_render(self, frames_list: list, is_end=False):
         """
         维护输出帧数组的输入（往输出渲染线程喂帧
@@ -1723,22 +1863,19 @@ class InterpWorkFlow:
         :param is_end: 是否是视频结尾
         :return:
         """
-        frames_list_len = len(frames_list)
-
-        for frame_i in range(frames_list_len):
-            if frames_list[frame_i] is None:
-                self.frames_output.put(None)
-                logger.info("Put None to write_buffer in advance")
+        for frame_i, frame_data in enumerate(frames_list):
+            if frame_data is None:
+                self.render_task_queue.put(None)
+                logger.debug("Put None to render_task_queue in advance")
                 return
-            self.frames_output.put(frames_list[frame_i])  # 往输出队列（消费者）喂正常的帧
-            if frame_i == frames_list_len - 1:
+            self.render_task_queue.put(frame_data)  # 往输出队列（消费者）喂正常的帧
+            if frame_i == len(frames_list) - 1:
                 if is_end:
-                    self.frames_output.put(None)
-                    logger.info("Put None to write_buffer")
+                    self.render_task_queue.put(None)
+                    logger.debug("Put None to render_task_queue")
                     return
         pass
 
-    # @profile
     def nvidia_vram_test(self):
         """
         显存测试
@@ -1748,7 +1885,7 @@ class InterpWorkFlow:
             if self.ARGS.resize_width and self.ARGS.resize_height:
                 w, h = self.ARGS.resize_width, self.ARGS.resize_height
             else:
-                w, h = list(map(lambda x: round(x), self.video_info["size"]))
+                w, h = self.ARGS.video_info_instance.frames_size
 
             logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
@@ -1762,11 +1899,7 @@ class InterpWorkFlow:
                 limit=ArgumentManager.traceback_limit))
             raise e
 
-    # @profile
-    def run(self):
-        run_all_time = datetime.datetime.now()
-
-        """Check Steam Validation"""
+    def check_params_with_steam(self):
         if self.ARGS.is_steam:
             if not self.steam_flow.steam_valid:
                 error = str(self.steam_flow.steam_error).split('\n')[-1]
@@ -1776,10 +1909,11 @@ class InterpWorkFlow:
                 valid_response = self.steam_flow.CheckSteamAuth()
                 if valid_response != 0:
                     logger.error(f"Steam Validation Failed, code {valid_response}")
-                    return
+                    raise GenericSteamException(f"Steam Validation Failed, code {valid_response}")
+
             steam_dlc_check = self.steam_flow.CheckProDLC(0)
             if not steam_dlc_check:
-                _msg = "SVFI - Pro DLC Not Purchased,"
+                _msg = "SVFI - Professional DLC Not Purchased,"
                 if self.ARGS.extract_only or self.ARGS.render_only:
                     raise GenericSteamException(f"{_msg} Extract/Render ToolBox Unavailable")
                 if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
@@ -1791,270 +1925,194 @@ class InterpWorkFlow:
                 if self.ARGS.use_rife_multi_cards:
                     raise GenericSteamException(f"{_msg} Multi Video Cards Work flow Unavailable")
 
-        """Go through the process"""
-        if self.ARGS.concat_only:
-            # self.project_dir = self.input
-            # self.ARGS.is_img_input = False
-            self.render_flow.concat_all()
-        elif self.ARGS.extract_only:
-            self.extract_only()
-            pass
-        elif self.ARGS.render_only:
-            self.render_only()
-            pass
+    def check_interp_prerequisite(self):
+        if self.ARGS.render_only or self.ARGS.extract_only or self.ARGS.concat_only:
+            return
+        if self.ARGS.use_ncnn:
+            self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
+            from Utils import inference_rife_ncnn as inference
         else:
-            def update_progress():
-                nonlocal previous_cnt
-                scene_status = self.scene_detection.get_scene_status()
+            try:
+                # raise Exception("Load Torch Failed Test")
+                from Utils import inference_rife as inference
+            except Exception:
+                logger.warning("Import Torch Failed, use NCNN-RIFE instead")
+                logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+                self.ARGS.use_ncnn = True
+                self.ARGS.rife_model = "rife-v2"
+                self.ARGS.rife_model_name = "rife-v2"
+                from Utils import inference_rife_ncnn as inference
+        """Update RIFE Core"""
+        self.vfi_core = inference.RifeInterpolation(self.ARGS)
+        self.vfi_core.initiate_algorithm(self.ARGS)
 
-                render_status = self.task_info  # render status quo
-                """(chunk_cnt, start_frame, end_frame, frame_cnt)"""
+        if not self.ARGS.use_ncnn:
+            self.nvidia_vram_test()
+        self.read_flow.update_vfi_core(self.vfi_core)
 
-                pbar.set_description(
-                    f"Process at Chunk {render_status['chunk_cnt']:0>3d}")
-                pbar.set_postfix({"R": f"{render_status['render']}", "C": f"{now_frame}",
-                                  "S": f"{scene_status['recent_scene']}",
-                                  "SC": f"{self.scene_detection.scdet_cnt}", "TAT": f"{task_acquire_time:.2f}s",
-                                  "PT": f"{process_time:.2f}s", "QL": f"{self.rife_task_queue.qsize()}"})
-                pbar.update(now_frame - previous_cnt)
-                previous_cnt = now_frame
-                pass
+    def check_outside_error(self):
+        if self.ARGS.get_main_error() is not None:
+            logger.error("Error outside RIFE:")
+            self.feed_to_render([None], is_end=True)
+            raise self.ARGS.get_main_error()
 
-            """Concat Already / Mission Conflict Check & Dolby Vision Sort"""
-            concat_filepath, output_ext = self.get_output_path()
-            if os.path.exists(concat_filepath):
-                logger.warning("Mission Already Finished, "
-                               "Jump to Dolby Vision Check")
-                if self.ARGS.hdr_mode == 3:
-                    """Dolby Vision"""
-                    dovi_maker = DoviProcesser(concat_filepath, logger, self.project_dir, self.ARGS,
-                                               self.interp_exp)
-                    dovi_maker.run()
-            else:
-                """Load RIFE Model"""
-                if self.ARGS.use_ncnn:
-                    self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
-                    from Utils import inference_rife_ncnn as inference
-                else:
-                    try:
-                        # raise Exception("Load Torch Failed Test")
-                        from Utils import inference_rife as inference
-                    except Exception:
-                        logger.warning("Import Torch Failed, use NCNN-RIFE instead")
-                        logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
-                        self.ARGS.use_ncnn = True
-                        self.ARGS.rife_model = "rife-v2"
-                        self.ARGS.rife_model_name = "rife-v2"
-                        from Utils import inference_rife_ncnn as inference
-
-                """Update RIFE Core"""
-                self.vfi_core = inference.RifeInterpolation(self.ARGS)
-                self.vfi_core.initiate_algorithm(self.ARGS)
-
-                if not self.ARGS.use_ncnn:
-                    self.nvidia_vram_test()
-
-                """Get RIFE Task Thread"""
-                if self.ARGS.remove_dup_mode in [0, 1]:
-                    self.rife_thread = threading.Thread(target=self.rife_run_any_fps, name="[ARGS] RifeTaskThread", )
-                else:  # 1, 2 => 去重一拍二或一拍三
-                    self.rife_thread = threading.Thread(target=self.rife_run, name="[ARGS] RifeTaskThread", )
-                self.rife_thread.start()
-
-                """Get Renderer"""
-                chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-                self.render_thread = threading.Thread(target=self.render, name="[ARGS] RenderThread",
-                                                      args=(chunk_cnt, start_frame,))
-                self.render_thread.start()
-
-                previous_cnt = start_frame
-                now_frame = start_frame
-                PURE_SCENE_THRESHOLD = 30
-
-                self.rife_work_event.wait()  # 等待补帧线程启动（等待all frames cnt 更新、验证啥的）
-                if self.main_error:
-                    logger.error("Threads outside RUN encounters error,")
-                    self.feed_to_render([None], is_end=True)
-                    raise self.main_error
-
-                pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
-                pbar.update(n=start_frame)
-                pbar.unpause()
-                task_acquire_time = time.time()
-                process_time = time.time()
-                while True:
-                    # if not self.rife_thread.is_alive():
-                    #     raise AssertionError("RIFE Thread Dead Unexpectedly without putting none to buffer")
-                    task = self.rife_task_queue.get()
-                    task_acquire_time = time.time() - task_acquire_time
-                    if task is None:
-                        self.feed_to_render([None], is_end=True)
-                        break
-                    """
-                    task = {"now_frame", "img0", "img1", "n", "exp","scale", "is_end", "is_scene", "add_scene"}
-                    """
-                    # now_frame = task["now_frame"]
-                    img0 = task["img0"]
-                    img1 = task["img1"]
-                    n = task["n"]
-                    scale = task["scale"]
-                    is_end = task["is_end"]
-                    add_scene = task["add_scene"]
-
-                    debug = False
-                    """Test
-                    1. 正常4K，解码编码
-                    2. 一拍N卡顿
-                    """
-
-                    if img1 is None:
-                        self.feed_to_render([None], is_end=True)
-                        break
-
-                    frames_list = [img0]
-                    if self.ARGS.is_scdet_mix and add_scene:
-                        mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
-                        frames_list.extend(mix_list)
-                    else:
-                        reminder_id = self.reminder_bearer.generate_reminder(60, logger,
-                                                                             "Video Frame Interpolation",
-                                                                             "Low interpolate speed detected, Please consider lower your output settings to enhance speed")
-                        if n > 0:
-                            if n > PURE_SCENE_THRESHOLD and Tools.check_pure_img(img0):
-                                """It's Pure Img Sequence, Copy img0"""
-                                for i in range(n):
-                                    frames_list.append(img0)
-                            else:
-                                interp_list = self.vfi_core.generate_n_interp(img0, img1, n=n, scale=scale, debug=debug)
-                                frames_list.extend(interp_list)
-                        if add_scene:  # [AA BBB CC DDD] E
-                            frames_list.append(img1)
-                        self.reminder_bearer.terminate_reminder(reminder_id)
-                    feed_list = list()
-                    for i in frames_list:
-                        feed_list.append([now_frame, i])
-                        now_frame += 1
-                    if self.ARGS.use_evict_flicker or self.ARGS.use_rife_fp16:
-                        img_ori = frames_list[0].copy()
-                        frames_list[0] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale,
-                                                                         debug=debug)
-                        if add_scene:
-                            img_ori = frames_list[-1].copy()
-                            frames_list[-1] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale,
-                                                                              debug=debug)
-
-                    self.feed_to_render(feed_list, is_end=is_end)
-                    process_time = time.time() - process_time
-                    update_progress()
-                    process_time = time.time()
-                    task_acquire_time = time.time()
-                    if is_end:
-                        break
-
-                process_time = 0  # rife's work is done
-                task_acquire_time = 0  # task acquire is impossible
-                while (self.render_thread is not None and self.render_thread.is_alive()) or \
-                        (self.rife_thread is not None and self.rife_thread.is_alive()):
-                    """等待渲染线程结束"""
-                    update_progress()
-                    time.sleep(0.1)
-
-                pbar.update(abs(self.all_frames_cnt - now_frame))
-                pbar.close()
-
-                logger.info(f"Scedet Status Quo: {self.scene_detection.get_scene_status()}")
-
-                """Check Finished Safely"""
-                if self.main_error is not None:
-                    raise self.main_error
-
-                """Concat the chunks"""
-                if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
-                    self.concat_all()
-
-        # if os.path.exists(self.ARGS.config):
-        #     logger.info("Successfully Remove Config File")
-        #     os.remove(self.ARGS.config)
+    def task_finish(self):
+        if self.ARGS.get_main_error() is not None:
+            logger.error("Error after finish RIFE Task:")
+            self.feed_to_render([None], is_end=True)
+            raise self.ARGS.get_main_error()
         logger.info(f"Program finished at {datetime.datetime.now()}: "
-                    f"Duration: {datetime.datetime.now() - run_all_time}")
-        logger.info("Please Note That Merchandise Use of SVFI's Output is Strictly PROHIBITED, "
+                    f"Duration: {datetime.datetime.now() - self.run_all_time}")
+        logger.info("Please Note That Commercial Use of SVFI's Output is Strictly PROHIBITED, "
                     "Check EULA for more details")
         self.reminder_bearer.terminate_all()
         utils_overtime_reminder_bearer.terminate_all()
-    def extract_only(self):
-        if self.output_ext not in SupportFormat.img_outputs:
-            self.output_ext = ".png"
-            logger.warning("Auto change output extension to png")
-        chunk_cnt, start_frame = self.check_chunk()
-        videogen = self.generate_frame_reader(start_frame).nextFrame()
+        pass
 
-        img1 = self.crop_read_img(Tools.gen_next(videogen))
-        if img1 is None:
-            self.reminder_bearer.terminate_all()
-            raise OSError(f"Input file is not available: {self.input}, is img input: {self.ARGS.is_img_input},"
-                          f"Please Check Your Input Settings"
-                          f"(Start Chunk, Start Frame, Start Point, Start Frame)")
+    def task_failed(self):
+        self.read_flow.kill()
+        self.render_flow.kill()
+        self.sr_flow.kill()
+        self.update_progress_flow.kill()
+        self.reminder_bearer.terminate_all()
+        utils_overtime_reminder_bearer.terminate_all()
+        logger.info(f"\n\n\nProgram Failed at {datetime.datetime.now()}: "
+                    f"Duration: {datetime.datetime.now() - self.run_all_time}")
+        if self.ARGS.get_main_error() is not None:
+            raise self.ARGS.get_main_error()
 
-        renderer = ImgSeqIO(folder=self.project_dir, is_read=False,
-                            start_frame=-1, logger=logger,  # auto write to destination
-                            output_ext=self.ARGS.output_ext, )
-        pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
-        pbar.update(n=start_frame)
-        img_cnt = 0
-        while img1 is not None:
-            renderer.writeFrame(img1)
-            pbar.update(n=1)
-            img_cnt += 1
-            pbar.set_description(
-                f"Process at Extracting Img {img_cnt}")
-            img1 = self.crop_read_img(Tools.gen_next(videogen))
+    def run(self):
+        """
+        Main Thread of SVFI
+        :return:
+        """
 
-        renderer.close()
+        """Check Steam Validation"""
+        self.check_params_with_steam()
 
-    def render_only(self):
-        def update_progress():
-            nonlocal render_cnt
-            render_status = self.task_info  # render status quo
-            pbar.set_description(f"Process at Rendering Chunk {render_status['chunk_cnt']}")
-            pbar.update(render_status['render'] - render_cnt)
-            render_cnt = render_status['render']
-            pass
-
-        chunk_cnt, start_frame = self.check_chunk()
-        videogen = self.generate_frame_reader(start_frame).nextFrame()
-        self.render_thread = threading.Thread(target=self.render, name="[ARGS] RenderThread",
-                                              args=(chunk_cnt, start_frame,))
-        self.render_thread.start()
-
-        img1 = self.crop_read_img(Tools.gen_next(videogen))
-        if img1 is None:
-            raise OSError(f"Input file is not available: {self.input}, is img input: {self.ARGS.is_img_input},"
-                          f"Please Check Your Input Settings"
-                          f"(Start Chunk, Start Frame, Start Point, Start Frame)")
-
-        pbar = tqdm.tqdm(total=self.all_frames_cnt, unit="frames")
-        pbar.update(n=start_frame)
-        previous_cnt = start_frame
-        render_cnt = start_frame
-
-        while img1 is not None:
-            previous_cnt += 1
-            update_progress()
-            self.feed_to_render([[previous_cnt, img1]])
-            img1 = self.crop_read_img(Tools.gen_next(videogen))
-        self.feed_to_render([None], is_end=True)
-
-        while self.render_thread is not None and self.render_thread.is_alive():
-            """等待渲染线程结束"""
-            update_progress()
-            time.sleep(0.1)
-
-        if self.main_error is not None:
+        """Go through the process"""
+        if self.ARGS.concat_only:
+            self.render_flow.concat_all()
+            self.task_finish()
+            return
+        """Concat Already / Mission Conflict Check & Dolby Vision Sort"""
+        if self.render_flow.check_concat_result():
+            self.task_finish()
             return
 
-        """Concat the chunks"""
-        if not self.ARGS.is_no_concat and not self.ARGS.is_img_output:
-            self.concat_all()
+        """Load RIFE Model"""
+        self.check_interp_prerequisite()
+
+        """Get RIFE Task Thread"""
+        self.read_flow.start()
+        self.render_flow.start()
+        self.sr_flow.start()
+        self.update_progress_flow.start()
+
+        PURE_SCENE_THRESHOLD = 30
+
+        self.check_outside_error()
+        self.read_flow.acquire_initiation_clock()
+        self.render_flow.acquire_initiation_clock()
+        self.update_progress_flow.acquire_initiation_clock()
+
+        try:
+            while True:
+                task_acquire_time = time.time()
+                task = self.rife_task_queue.get(timeout=3600)
+                task_acquire_time = time.time() - task_acquire_time
+                process_time = time.time()
+                if task is None:
+                    self.feed_to_render([None], is_end=True)
+                    break
+                """
+                task = {"now_frame", "img0", "img1", "n","scale", "is_end", "is_scene", "add_scene"}
+                """
+                now_frame = task["now_frame"]
+                img0 = task["img0"]
+                img1 = task["img1"]
+                n = task["n"]
+                scale = task["scale"]
+                is_end = task["is_end"]
+                add_scene = task["add_scene"]
+
+                debug = False
+                """Test
+                1. 正常4K，解码编码
+                2. 一拍N卡顿
+                """
+
+                if img1 is None:
+                    self.feed_to_render([None], is_end=True)
+                    break
+
+                if all(self.ARGS.resize_param):
+                    img0 = cv2.resize(img0, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
+                                      interpolation=cv2.INTER_LANCZOS4)
+                    img1 = cv2.resize(img1, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
+                                      interpolation=cv2.INTER_LANCZOS4)
+
+                frames_list = [img0]
+                if self.ARGS.is_scdet_mix and add_scene:
+                    mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
+                    frames_list.extend(mix_list)
+                else:
+                    reminder_id = self.reminder_bearer.generate_reminder(60, logger,
+                                                                         "Video Frame Interpolation",
+                                                                         "Low interpolate speed detected, Please consider lower your output settings to enhance speed")
+                    if n > 0:
+                        if n > PURE_SCENE_THRESHOLD and Tools.check_pure_img(img0):
+                            """It's Pure Img Sequence, Copy img0"""
+                            for i in range(n):
+                                frames_list.append(img0)
+                        else:
+                            interp_list = self.vfi_core.generate_n_interp(img0, img1, n=n, scale=scale, debug=debug)
+                            frames_list.extend(interp_list)
+                    if add_scene:  # [AA BBB CC DDD] E
+                        frames_list.append(img1)
+                    self.reminder_bearer.terminate_reminder(reminder_id)
+
+                feed_list = list()
+                for i in frames_list:
+                    feed_list.append([now_frame, i])
+                if self.ARGS.use_evict_flicker or self.ARGS.use_rife_fp16:
+                    img_ori = frames_list[0].copy()
+                    frames_list[0] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale,
+                                                                     debug=debug)
+                    if add_scene:
+                        img_ori = frames_list[-1].copy()
+                        frames_list[-1] = self.vfi_core.generate_n_interp(img_ori, img_ori, n=1, scale=scale,
+                                                                          debug=debug)
+
+                process_time = time.time() - process_time
+                self.update_rife_progress(now_frame, task_acquire_time, process_time)
+                self.feed_to_render(feed_list, is_end=is_end)
+                if is_end:
+                    break
+        except Exception as e:
+            logger.critical("Main Thread Panicked")
+            logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self.ARGS.save_main_error(e)
+            self.task_failed()
+            return
+        if self.ARGS.get_main_error() is not None:
+            """Shit happened after receiving None as end signal"""
+            self.task_failed()
+            return
+        while self.render_flow.is_alive() or self.sr_flow.is_alive() or self.read_flow.is_alive():
+            """等待渲染线程结束"""
+            time.sleep(0.1)
+        self.update_progress_flow.kill()
+        self.task_finish()
+
+    def update_rife_progress(self, now_frame, task_acquire_time, process_time, ):
+        update_dict = {'rife_now_frame': now_frame,
+                       'rife_task_acquire_time': task_acquire_time,
+                       'rife_process_time': process_time,
+                       'rife_queue_len': self.rife_task_queue.qsize()}
+        self.ARGS.update_task_info(update_dict)
+        pass
+
 
 GLOBAL_ARGS = TaskArgumentManager(global_args)
 
@@ -2069,7 +2127,6 @@ else:
 """强制使用CPU"""
 if GLOBAL_ARGS.force_cpu:
     os.environ["CUDA_VISIBLE_DEVICES"] = f""
-
 
 global_workflow = InterpWorkFlow(GLOBAL_ARGS)
 global_workflow.run()

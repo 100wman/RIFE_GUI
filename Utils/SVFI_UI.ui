@@ -1328,9 +1328,9 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
-                        <width>405</width>
-                        <height>406</height>
+                        <y>-70</y>
+                        <width>388</width>
+                        <height>476</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1343,6 +1343,176 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_26">
+                          <item row="0" column="0">
+                           <widget class="QLabel" name="label_8">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x&lt;/span&gt;适用于2D动漫输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR&lt;/span&gt;适用于3D实拍&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;的GAN渲染效果更清晰，画面偏向细节保留，Net输出模糊，画面偏向涂抹与结构恢复&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：realESR非常慢（是TVE的1/10速度），但效果比TVE好，普适性极强&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>超分算法 (?)</string>
+                            </property>
+                            <property name="scaledContents">
+                             <bool>false</bool>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="1" column="0">
+                           <widget class="MyComboBox" name="AiSrSelector">
+                            <item>
+                             <property name="text">
+                              <string>waifu2x</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>RealSR</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>RealESRGAN</string>
+                             </property>
+                            </item>
+                           </widget>
+                          </item>
+                          <item row="2" column="0">
+                           <widget class="QLabel" name="label_9">
+                            <property name="acceptDrops">
+                             <bool>false</bool>
+                            </property>
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;cunet模型用于动漫超分&lt;/p&gt;&lt;p&gt;photo模型用于实拍&lt;/p&gt;&lt;p&gt;style anime用于老动漫&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;“-jpg”用于处理jpg输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;GAN清晰，偏向于脑补；Net模糊，偏向于涂抹&lt;/p&gt;&lt;p&gt;2x和4x模型无明显速度差异，但建议使用与输出分辨率最邻近的倍率模型&lt;br/&gt;如，输入为270p，输出为1080p，建议使用4x模型；输入为270p，输出为540p，建议使用2x模型&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>超分模型 (?)</string>
+                            </property>
+                            <property name="scaledContents">
+                             <bool>false</bool>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="3" column="0">
+                           <widget class="MyComboBox" name="AiSrModuleSelector"/>
+                          </item>
+                          <item row="4" column="0">
+                           <layout class="QHBoxLayout" name="horizontalLayout_24">
+                            <item>
+                             <widget class="QLabel" name="AiSrModuleExpReminder">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>超分模型倍数 (?):</string>
+                              </property>
+                              <property name="alignment">
+                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
+                             <widget class="QLabel" name="AiSrModuleExpDisplay">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>Unknown</string>
+                              </property>
+                              <property name="alignment">
+                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
+                             <spacer name="horizontalSpacer_2">
+                              <property name="orientation">
+                               <enum>Qt::Horizontal</enum>
+                              </property>
+                              <property name="sizeHint" stdset="0">
+                               <size>
+                                <width>40</width>
+                                <height>20</height>
+                               </size>
+                              </property>
+                             </spacer>
+                            </item>
+                           </layout>
+                          </item>
+                          <item row="5" column="0">
+                           <widget class="QLabel" name="AiSrTransferResolution">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>转移分辨率 (!)</string>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="6" column="0">
+                           <layout class="QHBoxLayout" name="horizontalLayout_21">
+                            <item>
+                             <widget class="QLabel" name="label_6">
+                              <property name="toolTip">
+                               <string>只能是双数</string>
+                              </property>
+                              <property name="text">
+                               <string>宽</string>
+                              </property>
+                              <property name="alignment">
+                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
+                             <widget class="MySpinBox" name="TransferWidthSettings">
+                              <property name="maximum">
+                               <number>100000</number>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
+                             <widget class="QLabel" name="label_10">
+                              <property name="toolTip">
+                               <string>只能是双数</string>
+                              </property>
+                              <property name="text">
+                               <string>高</string>
+                              </property>
+                              <property name="alignment">
+                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
+                             <widget class="MySpinBox" name="TransferHeightSettings">
+                              <property name="maximum">
+                               <number>100000</number>
+                              </property>
+                             </widget>
+                            </item>
+                           </layout>
+                          </item>
+                          <item row="7" column="0">
+                           <widget class="QLabel" name="SrModeLabel">
+                            <property name="text">
+                             <string>超分模式</string>
+                            </property>
+                            <property name="scaledContents">
+                             <bool>false</bool>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                           </widget>
+                          </item>
                           <item row="8" column="0">
                            <widget class="MyComboBox" name="AiSrMode">
                             <item>
@@ -1366,84 +1536,14 @@
                              <string>TileSize (?)</string>
                             </property>
                             <property name="alignment">
-                             <set>Qt::AlignCenter</set>
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                             </property>
-                           </widget>
-                          </item>
-                          <item row="2" column="0">
-                           <widget class="QLabel" name="label_8">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x&lt;/span&gt;适用于2D动漫输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR&lt;/span&gt;适用于3D实拍&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;的GAN渲染效果更清晰，画面偏向细节保留，Net输出模糊，画面偏向涂抹与结构恢复&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：realESR非常慢（是TVE的1/10速度），但效果比TVE好，普适性极强&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>超分算法 (?)</string>
-                            </property>
-                            <property name="scaledContents">
-                             <bool>false</bool>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignCenter</set>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="7" column="0">
-                           <widget class="QLabel" name="SrModeLabel">
-                            <property name="text">
-                             <string>超分模式</string>
-                            </property>
-                            <property name="scaledContents">
-                             <bool>false</bool>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignCenter</set>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="5" column="0">
-                           <widget class="QLabel" name="label_9">
-                            <property name="acceptDrops">
-                             <bool>false</bool>
-                            </property>
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;cunet模型用于动漫超分&lt;/p&gt;&lt;p&gt;photo模型用于实拍&lt;/p&gt;&lt;p&gt;style anime用于老动漫&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;“-jpg”用于处理jpg输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;GAN清晰，偏向于脑补；Net模糊，偏向于涂抹&lt;/p&gt;&lt;p&gt;2x和4x模型无明显速度差异，但建议使用与输出分辨率最邻近的倍率模型&lt;br/&gt;如，输入为270p，输出为1080p，建议使用4x模型；输入为270p，输出为540p，建议使用2x模型&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>超分模型 (?)</string>
-                            </property>
-                            <property name="scaledContents">
-                             <bool>false</bool>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignCenter</set>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="6" column="0">
-                           <widget class="MyComboBox" name="AiSrModuleSelector"/>
-                          </item>
-                          <item row="3" column="0">
-                           <widget class="MyComboBox" name="AiSrSelector">
-                            <item>
-                             <property name="text">
-                              <string>waifu2x</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>RealSR</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>RealESRGAN</string>
-                             </property>
-                            </item>
                            </widget>
                           </item>
                           <item row="10" column="0">
                            <widget class="MySpinBox" name="SrTileSizeSelector">
                             <property name="minimum">
-                             <number>20</number>
+                             <number>0</number>
                             </property>
                             <property name="maximum">
                              <number>100000</number>
@@ -1456,7 +1556,24 @@
                             </property>
                            </widget>
                           </item>
+                          <item row="11" column="0">
+                           <widget class="QCheckBox" name="RealESRFp16Checker">
+                            <property name="text">
+                             <string>RealESR半精度 (?)</string>
+                            </property>
+                           </widget>
+                          </item>
                          </layout>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QCheckBox" name="UseAiSR">
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用流行的超分算法对输入视频或图片序列进行补帧&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
+                         <property name="text">
+                          <string>使用AI超分 (?)</string>
+                         </property>
                         </widget>
                        </item>
                        <item row="3" column="0">
@@ -1483,19 +1600,6 @@
                          <layout class="QGridLayout" name="gridLayout_21">
                           <item row="1" column="0">
                            <layout class="QGridLayout" name="gridLayout_4">
-                            <item row="0" column="0">
-                             <widget class="QLabel" name="ResizeReminder">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>输出文件分辨率 (?)</string>
-                              </property>
-                              <property name="alignment">
-                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                              </property>
-                             </widget>
-                            </item>
                             <item row="5" column="0">
                              <widget class="QLabel" name="CropReminder">
                               <property name="toolTip">
@@ -1612,6 +1716,19 @@
                               </property>
                              </widget>
                             </item>
+                            <item row="0" column="0">
+                             <widget class="QLabel" name="ResizeReminder">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>输出文件分辨率 (?)</string>
+                              </property>
+                              <property name="alignment">
+                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              </property>
+                             </widget>
+                            </item>
                            </layout>
                           </item>
                           <item row="0" column="0">
@@ -1687,16 +1804,6 @@
                            </widget>
                           </item>
                          </layout>
-                        </widget>
-                       </item>
-                       <item row="1" column="0">
-                        <widget class="QCheckBox" name="UseAiSR">
-                         <property name="toolTip">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用流行的超分算法对输入视频或图片序列进行补帧&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                         <property name="text">
-                          <string>使用AI超分 (?)</string>
-                         </property>
                         </widget>
                        </item>
                       </layout>
