@@ -756,14 +756,7 @@ class ArgumentManager:
 
     f"""
     Update Log
-    - Fix Output Locked as mp4
-    - Fix Progress Frame cnt display under render-only mode
-    - Fix Reader Process Time in dedup mode
-    - Add Audio track 2pass when output format is incompatible with the audio, -> aac 640kbps
-    - Remove Chapters Embed under specific i/o point interpolation
-    - Optimize SR mode by reduce calculation by ignoring identical input frames
-    - Display Progress at the very beginning (before SR)
-    - Add VRAM Test for SR Module
+    - Fix Startup error of 3.7.1
     """
 
     path_len_limit = 230

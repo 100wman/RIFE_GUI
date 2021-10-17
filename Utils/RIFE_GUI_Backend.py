@@ -340,18 +340,19 @@ class UiRun(QThread):
                             """Replace Field"""
                             flush_lines += line.replace("[A", "")
 
-                            if "error" in flush_lines.lower():
+                            if "error" in flush_lines.lower() or 'Program Failed' in flush_lines \
+                                    or 'Thread Panicked' in flush_lines:
                                 """Imediately Upload"""
                                 logger.error(f"[In ONE LINE SHOT]: {flush_lines}")
                                 self.update_status(False, sp_status=f"{flush_lines}")
                                 self.main_error = flush_lines
                                 flush_lines = ""
+                                if 'Program Failed' in flush_lines or 'Thread Panicked' in flush_lines:
+                                    self.kill_proc_exec()
                             elif len(flush_lines) and time.time() - interval_time > 0.1:
                                 interval_time = time.time()
                                 self.update_status(False, sp_status=f"{flush_lines}")
                                 flush_lines = ""
-                            elif 'Program Failed' in flush_lines or 'Thread Panicked':  # TODO CHECK SAFETY!!!
-                                self.kill_proc_exec()
 
                     self.update_status(False, sp_status=f"{flush_lines}")  # emit last possible infos
 
