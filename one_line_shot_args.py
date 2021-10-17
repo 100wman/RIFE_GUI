@@ -1778,15 +1778,20 @@ class SuperResolutionFlow(IOFlow):
                                                                          "Super Resolution",
                                                                          "Low Super Resolution speed detected, Please consider lower your output settings to enhance speed")
                     sr_process_time = time.time()
+                    # if img0 is not None:
+                    #     ori_img0 = img0.copy()
+                    #     img0 = self.sr_module.svfi_process(img0)
+                    # sr_process_time = time.time() - sr_process_time
+                    # if img1 is not None:
+                    #     if ori_img0 is not None and np.all(img0 == img1):
+                    #         img1 = img0.copy()  # img0 already sr, make a copy
+                    #     else:
+                    #         img1 = self.sr_module.svfi_process(img1)
                     if img0 is not None:
-                        ori_img0 = img0.copy()
                         img0 = self.sr_module.svfi_process(img0)
                     sr_process_time = time.time() - sr_process_time
                     if img1 is not None:
-                        if ori_img0 is not None and np.all(img0 == img1):
-                            img1 = img0.copy()  # img0 already sr, make a copy
-                        else:
-                            img1 = self.sr_module.svfi_process(img1)
+                        img1 = self.sr_module.svfi_process(img1)
                     task['img0'] = img0
                     task['img1'] = img1
                     self.ARGS.update_task_info({'sr_now_frame': now_frame,

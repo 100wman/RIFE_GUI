@@ -748,15 +748,16 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.1"
+    gui_version = "3.7.2"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.0.1"
+    ols_version = "7.0.2"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix Startup error of 3.7.1
+    - Fix Transfer Resolution cannot be assigned manually
+    - Fix Back Img0 == Img1 Deprecated Comparison of numpy in Resolution module tempting to reduce calculation
     """
 
     path_len_limit = 230

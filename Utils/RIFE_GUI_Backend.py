@@ -1978,8 +1978,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ResizeHeightSettings.setValue(height)
         if self.UseAiSR.isChecked() and self.AiSrModuleExpDisplay.text() != "Unknown":
             sr_exp = int(self.AiSrModuleExpDisplay.text()[:-1])
-            self.TransferWidthSettings.setValue(width // sr_exp)
-            self.TransferHeightSettings.setValue(height // sr_exp)
+            if self.TransferWidthSettings.value() == 0 and self.TransferHeightSettings.value() == 0:
+                self.TransferWidthSettings.setValue(width // sr_exp)
+                self.TransferHeightSettings.setValue(height // sr_exp)
 
     @pyqtSlot(bool)
     def on_AutoInterpScaleChecker_clicked(self):
