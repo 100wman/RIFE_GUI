@@ -350,7 +350,7 @@ class UiRun(QThread):
                                 interval_time = time.time()
                                 self.update_status(False, sp_status=f"{flush_lines}")
                                 flush_lines = ""
-                            elif 'Program Failed' in flush_lines:
+                            elif 'Program Failed' in flush_lines or 'Thread Panicked':  # TODO CHECK SAFETY!!!
                                 self.kill_proc_exec()
 
                     self.update_status(False, sp_status=f"{flush_lines}")  # emit last possible infos
@@ -477,6 +477,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         """Link InputFileName Event"""
         self.function_enable_inputfilename_connection()
+        self.AiSrModelSelector.currentTextChanged.connect(self.on_AiSrModelSelector_currentTextChanged)
 
         """Dilapidation and Free Version Maintainer"""
         self.settings_free_hide()
@@ -746,7 +747,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AiSrSelector.setCurrentText(appData.value("use_sr_algo", "realESR"))
         last_sr_model = appData.value("use_sr_model", "")
         if len(last_sr_model):
-            self.AiSrModuleSelector.setCurrentText(last_sr_model)
+            self.AiSrModelSelector.setCurrentText(last_sr_model)
         else:
             self.on_UseAiSR_clicked()
         self.AiSrMode.setCurrentIndex(appData.value("use_sr_mode", 0, type=int))
@@ -876,7 +877,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         """Super Resolution Settings"""
         appData.setValue("use_sr", self.UseAiSR.isChecked())
         appData.setValue("use_sr_algo", self.AiSrSelector.currentText())
-        appData.setValue("use_sr_model", self.AiSrModuleSelector.currentText())
+        appData.setValue("use_sr_model", self.AiSrModelSelector.currentText())
         appData.setValue("use_sr_mode", self.AiSrMode.currentIndex())
         appData.setValue("sr_tilesize", self.SrTileSizeSelector.value())
         appData.setValue("use_realesr_fp16", self.RealESRFp16Checker.isChecked())
@@ -1215,9 +1216,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 # pth model only
                 model_list.append(m)
 
-        self.AiSrModuleSelector.clear()
+        self.AiSrModelSelector.clear()
         for model in model_list:
-            self.AiSrModuleSelector.addItem(f"{model}")
+            self.AiSrModelSelector.addItem(f"{model}")
 
     def settings_link_shortcut(self):
         self.homeActionButton.setShortcut("ctrl+1")
@@ -1923,10 +1924,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.TileSizeLabel.setVisible(bool_result)
         self.SrTileSizeSelector.setVisible(bool_result)
         self.RealESRFp16Checker.setVisible(bool_result)
-        current_model = self.AiSrSelector.currentText()
+        self.on_AiSrModelSelector_currentTextChanged()
+
+    @pyqtSlot(str)
+    def on_AiSrModelSelector_currentTextChanged(self):
+        current_model = self.AiSrModelSelector.currentText()
         self.AiSrModuleExpDisplay.setText('2x')  # realsr and waifu2x's model does not contain sr_exp info
-        if '4x' in current_model:
+        if 'x4' in current_model or '4x' in current_model:
             self.AiSrModuleExpDisplay.setText('4x')
+        self.on_ResizeTemplate_currentTextChanged()
 
     @pyqtSlot(str)
     def on_ResizeTemplate_currentTextChanged(self):

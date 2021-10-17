@@ -73,9 +73,8 @@ class TaskArgumentManager(ArgumentManager):
         self.all_frames_cnt = 0
         self.frames_queue_len = 0
         self.dup_skip_limit = 0
-        self.input_ext = ".mp4"
-        self.output_ext = ".mp4"
         self.task_info = {"chunk_cnt": 0, "render": 0,
+                          "read_now_frame": 0,
                           "rife_now_frame": 0,
                           "recent_scene": 0, "scene_cnt": 0,
                           "decode_process_time": 0,
@@ -729,6 +728,7 @@ class ReadFlow(IOFlow):
         """Start Process"""
         run_time = time.time()
         first_run = True
+        now_frame_cnt = now_frame_key
         while True:
             if is_end:
                 break
@@ -749,10 +749,10 @@ class ReadFlow(IOFlow):
                     img1 = self.__crop(Tools.gen_next(videogen))
                     if img1 is None:
                         is_end = True
-                        self.__feed_to_rife(now_frame_key, img1, img1, n=0,
+                        self.__feed_to_rife(now_frame_cnt, img1, img1, n=0,
                                             is_end=is_end)
                         break
-                    self.__feed_to_rife(now_frame_key, img1, img1, n=0)
+                    self.__feed_to_rife(now_frame_cnt, img1, img1, n=0)
                 break
 
             else:
@@ -772,9 +772,9 @@ class ReadFlow(IOFlow):
                         else:
                             break
                     now_frame_key = now_b_key
-                    self.ARGS.update_task_info({"read_now_frame": now_frame_key})
+                    self.ARGS.update_task_info({"read_now_frame": now_frame_cnt + now_frame_key})
                     if now_frame_key in scene_frame_list:
-                        self.scene_detection.update_scene_status(now_frame_key, "scene")
+                        self.scene_detection.update_scene_status(now_frame_cnt + now_frame_key, "scene")
                         potential_key = now_frame_key - 1
                         if potential_key > 0 and potential_key in input_frame_data:
                             before_img = last_possible_scene
@@ -792,26 +792,30 @@ class ReadFlow(IOFlow):
                         # cv2.destroyAllWindows()
 
                         if frame_cnt < 1:
-                            self.__feed_to_rife(now_frame_key, img0, img0, n=0,
+                            # pass
+                            self.__feed_to_rife(now_frame_cnt + now_frame_key, img0, img0, n=0,
                                                 is_end=is_end)
                         elif self.ARGS.is_scdet_mix:
-                            self.__feed_to_rife(now_frame_key, img0, img1, n=now_frame_key - last_frame_key - 1,
+                            self.__feed_to_rife(now_frame_cnt + now_frame_key, img0, img1,
+                                                n=now_frame_key - last_frame_key - 1,
                                                 add_scene=True,
                                                 is_end=is_end)
                         else:
-                            self.__feed_to_rife(now_frame_key, img0, before_img, n=now_frame_key - last_frame_key - 2,
+                            self.__feed_to_rife(now_frame_cnt + now_frame_key, img0, before_img,
+                                                n=now_frame_key - last_frame_key - 2,
                                                 add_scene=True,
                                                 is_end=is_end)
                     else:
-                        self.scene_detection.update_scene_status(now_frame_key, "normal")
-                        self.__feed_to_rife(now_b_key, img0, img1, n=now_frame_key - last_frame_key - 1,
+                        self.scene_detection.update_scene_status(now_frame_cnt + now_frame_key, "normal")
+                        self.__feed_to_rife(now_frame_cnt + now_b_key, img0, img1, n=now_frame_key - last_frame_key - 1,
                                             is_end=is_end)
-                    self.update_decode_process_time(time.time() - decode_time)
                     last_frame_key = now_frame_key
                     img0 = img1
                     self.update_scene_status()
-                self.__feed_to_rife(now_frame_key, img1, img1, n=0, is_end=is_end)
-                self.ARGS.update_task_info({"read_now_frame": check_frame_list[-1]})
+                self.__feed_to_rife(now_frame_cnt + now_frame_key, img1, img1, n=0, is_end=is_end)
+                self.ARGS.update_task_info({"read_now_frame": now_frame_cnt + check_frame_list[-1]})
+                now_frame_cnt += last_frame_key
+            self.update_decode_process_time(time.time() - decode_time)
 
         pass
         self._output_queue.put(None)
@@ -1408,14 +1412,12 @@ class RenderFlow(IOFlow):
 
     def __check_audio_concat(self, chunk_tmp_path: str, fail_signal=0):
         """Check Input file ext"""
-        # TODO Recursive Check and check lock
         if not self.ARGS.is_save_audio or self.ARGS.get_main_error() is not None:
             return
         if self.ARGS.is_img_output:
             return
-        output_ext = self.ARGS.output_ext
 
-        concat_filepath = f"{os.path.join(self.ARGS.output_dir, 'concat_test')}" + output_ext
+        concat_filepath = f"{os.path.join(self.ARGS.output_dir, 'concat_test')}" + self.ARGS.output_ext
         map_audio = f'-i "{self.ARGS.input}" -map 0:v:0 -map 1:a:0 -map 1:s? -c:a copy -c:s copy -shortest '
         ffmpeg_command = f'{self.__ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
                          f'{Tools.fillQuotation(concat_filepath)} -y'
@@ -1424,16 +1426,9 @@ class RenderFlow(IOFlow):
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            if self.ARGS.input_ext in SupportFormat.vid_outputs:
-                self.ARGS.output_ext = self.ARGS.input_ext
-                logger.warning(f"Concat Test found unavailable output extension {self.ARGS.output_ext}, "
-                               f"changed to {self.ARGS.input_ext}")
-            else:
-                logger.error(f"Concat Test Error, {output_ext}, empty output")
-                main_error = FileExistsError(
-                    "Concat Test Error, empty output detected, Please Check Your Output Extension!!!\n"
-                    "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
-                self.ARGS.save_main_error(main_error)
+            logger.warning(f"Audio Concat Test found unavailable audio codec for output extension "
+                           f"{self.ARGS.output_ext}, audio codec changed to aac 640kbps")
+            self.is_audio_failed_concat = True
         else:
             logger.info("Audio Concat Test Success")
             os.remove(concat_filepath)
@@ -1512,7 +1507,8 @@ class RenderFlow(IOFlow):
 
         if not len(concat_path):
             raise OSError(
-                f"Could not find any chunks, the chunks could have already been concatenated or removed, please check your output folder.")
+                f"Could not find any chunks, the chunks could have already been concatenated or removed, "
+                f"please check your output folder.")
 
         if os.path.exists(concat_path):
             os.remove(concat_path)
@@ -1525,16 +1521,20 @@ class RenderFlow(IOFlow):
 
         if self.ARGS.is_save_audio and not self.ARGS.is_img_input:
             audio_path = self.ARGS.input
-            map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a:0 -map 1:s? -c:a copy -c:s copy '
+            map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a copy -c:s copy '
             if self.ARGS.input_start_point or self.ARGS.input_end_point:
-                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a:0 -c:a aac -ab 640k '
+                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -c:a aac -ab 640k -map_chapters -1 '
                 if self.ARGS.input_end_point is not None:
                     map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
                 if self.ARGS.input_start_point is not None:
                     map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
-            if self.ARGS.input_ext in ['.vob'] and self.ARGS.output_ext in ['.mkv']:
-                map_audio += "-map_chapters -1 "
-
+            elif self.is_audio_failed_concat:
+                # not specific io point, and audio concat test failed, so audio is encoded into aac compulsorily,
+                # and subtitle is disabled
+                map_audio = f'-i "{audio_path}" -map 0:v:0 -c:a aac -ab 640k '
+            # Special Case Optimization
+            # if self.ARGS.input_ext in ['.vob'] and self.ARGS.output_ext in ['.mkv']:
+            #     map_audio += "-map_chapters -1 "
         else:
             map_audio = ""
 
@@ -1648,7 +1648,9 @@ class RenderFlow(IOFlow):
                     chunk_cnt += 1
                     start_frame = now_frame + 1
                     frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )
-            if not self.ARGS.is_no_concat and not self.ARGS.is_img_output and not self._kill:
+            if not self.ARGS.is_no_concat and not self.ARGS.is_img_output \
+                    and not self._kill and self.ARGS.get_main_error() is None:
+                # Do not concat when main error is detected
                 self.concat_all()
 
         except Exception as e:
@@ -1670,7 +1672,10 @@ class SuperResolutionFlow(IOFlow):
         self._input_queue = _reader_queue
         self._output_queue = _render_queue
         self.sr_module = SuperResolution()  # 超分类
+        self._vram_check_lock = threading.Event()
+        self._vram_check_lock.clear()
         if not self.ARGS.use_sr:
+            self._release_vram_check_lock()
             return
         sr_scale = self.ARGS.resize_exp  # TODO evict this later
         resize_param = self.ARGS.frame_size
@@ -1708,7 +1713,41 @@ class SuperResolutionFlow(IOFlow):
             logger.error(
                 f"Import SR Module failed\n"
                 f"{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
+            self._release_vram_check_lock()
             self.ARGS.use_sr = False
+
+    def _release_vram_check_lock(self):
+        self._vram_check_lock.set()
+
+    def acquire_vram_check_lock(self):
+        self._vram_check_lock.wait()
+
+    def vram_test(self):
+        """
+        VRAM Check for SR Module
+        :return:
+        """
+        if not self.ARGS.use_sr:
+            self._release_vram_check_lock()
+            return
+        try:
+            if all(self.ARGS.transfer_param):
+                w, h = self.ARGS.transfer_param
+            else:
+                w, h = self.ARGS.video_info_instance.frames_size
+
+            logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
+
+            test_img0 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
+            self.sr_module.svfi_process(test_img0)
+            logger.info(f"SR VRAM Test Success")
+            self._release_vram_check_lock()
+            del test_img0
+        except Exception as e:
+            logger.error("SR VRAM Check Failed, PLS Lower your transfer resolution or tilesize for RealESR\n" +
+                         traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self._release_vram_check_lock()
+            raise e
 
     def run(self):
         """
@@ -1717,6 +1756,7 @@ class SuperResolutionFlow(IOFlow):
         """
         self._release_initiation()
         try:
+            self.vram_test()
             while True:
                 if self._kill:
                     logger.warning("Super Resolution thread killed, break")
@@ -1733,15 +1773,20 @@ class SuperResolutionFlow(IOFlow):
                     now_frame = task["now_frame"]
                     img0 = task["img0"]
                     img1 = task["img1"]
+                    ori_img0 = None
                     reminder_id = self.reminder_bearer.generate_reminder(60, logger,
                                                                          "Super Resolution",
                                                                          "Low Super Resolution speed detected, Please consider lower your output settings to enhance speed")
                     sr_process_time = time.time()
                     if img0 is not None:
+                        ori_img0 = img0.copy()
                         img0 = self.sr_module.svfi_process(img0)
                     sr_process_time = time.time() - sr_process_time
                     if img1 is not None:
-                        img1 = self.sr_module.svfi_process(img1)
+                        if ori_img0 is not None and np.all(img0 == img1):
+                            img1 = img0.copy()  # img0 already sr, make a copy
+                        else:
+                            img1 = self.sr_module.svfi_process(img1)
                     task['img0'] = img0
                     task['img1'] = img1
                     self.ARGS.update_task_info({'sr_now_frame': now_frame,
@@ -1755,6 +1800,7 @@ class SuperResolutionFlow(IOFlow):
             logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self._output_queue.put(None)
             self.ARGS.save_main_error(e)
+            self._release_vram_check_lock()
             return
         self._task_done()
         return
@@ -1789,7 +1835,7 @@ class ProgressUpdateFlow(IOFlow):
             if self.ARGS.render_only or self.ARGS.extract_only:
                 now_frame = task_status['render']
                 pbar_description = f"Process at Frame {now_frame}"
-                postfix_dict = {"R": f"{task_status['render']}", "C": f"{now_frame}", }
+                postfix_dict = {"R": f"{task_status['render']}", "C": f"{task_status['read_now_frame']}", }
             else:
                 now_frame = task_status['rife_now_frame']
                 pbar_description = f"Process at Chunk {task_status['chunk_cnt']:0>3d}"
@@ -1876,11 +1922,14 @@ class InterpWorkFlow:
                     return
         pass
 
-    def nvidia_vram_test(self):
+    def vram_test(self):
         """
         显存测试
         :return:
         """
+        if self.ARGS.use_sr:
+            logger.info("Waiting for SR Module VRAM Check Lock")
+            self.sr_flow.acquire_vram_check_lock()
         try:
             if self.ARGS.resize_width and self.ARGS.resize_height:
                 w, h = self.ARGS.resize_width, self.ARGS.resize_height
@@ -1947,14 +1996,14 @@ class InterpWorkFlow:
         self.vfi_core.initiate_algorithm(self.ARGS)
 
         if not self.ARGS.use_ncnn:
-            self.nvidia_vram_test()
+            self.vram_test()
         self.read_flow.update_vfi_core(self.vfi_core)
 
     def check_outside_error(self):
         if self.ARGS.get_main_error() is not None:
             logger.error("Error outside RIFE:")
             self.feed_to_render([None], is_end=True)
-            raise self.ARGS.get_main_error()
+            self.task_failed()
 
     def task_finish(self):
         if self.ARGS.get_main_error() is not None:
@@ -2000,13 +2049,13 @@ class InterpWorkFlow:
             self.task_finish()
             return
 
+        """Get SR - Read Flow Task Thread"""
+        self.sr_flow.start()
+
         """Load RIFE Model"""
         self.check_interp_prerequisite()
-
-        """Get RIFE Task Thread"""
         self.read_flow.start()
         self.render_flow.start()
-        self.sr_flow.start()
         self.update_progress_flow.start()
 
         PURE_SCENE_THRESHOLD = 30
@@ -2018,6 +2067,15 @@ class InterpWorkFlow:
 
         try:
             while True:
+                # outside_dead = False
+                # while self.rife_task_queue.qsize() == 0:
+                #     time.sleep(0.1)
+                #     if self.ARGS.get_main_error():
+                #         """Sth out there dead"""
+                #         outside_dead = True
+                #         break
+                # if outside_dead:
+                #     break
                 task_acquire_time = time.time()
                 task = self.rife_task_queue.get(timeout=3600)
                 task_acquire_time = time.time() - task_acquire_time
@@ -2101,7 +2159,7 @@ class InterpWorkFlow:
             return
         while self.render_flow.is_alive() or self.sr_flow.is_alive() or self.read_flow.is_alive():
             """等待渲染线程结束"""
-            time.sleep(0.1)
+            time.sleep(1)
         self.update_progress_flow.kill()
         self.task_finish()
 

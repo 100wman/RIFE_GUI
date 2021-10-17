@@ -697,7 +697,7 @@ class SuperResolution:
     def __init__(
             self,
             gpuid=0,
-            model="models-cunet",
+            model="",
             tta_mode=False,
             num_threads=1,
             scale: float = 2,
@@ -748,23 +748,22 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.0"
+    gui_version = "3.7.1"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.0.0"
+    ols_version = "7.0.1"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Optimize startup time by disable STEAM module import in retail mode
-    - Optimize SR efficiency by building independent pipe and isolated process class with user-customed transfer resolution
-    - Auto Fix Output format to png in extract-only mode
-    - Optimize Workflow resume mechanism to be faster and more accurate
-    - Add back half-precision mode for RealESR
-    - Change Output abbreviations to smarter ones.
-    - Fix Stagnant Progress Bar by isolating thread class
-    - Fix inaccurate speed display of the whole process(including interpolation and super resolution)
-    - Fix Zombie OLS Process
+    - Fix Output Locked as mp4
+    - Fix Progress Frame cnt display under render-only mode
+    - Fix Reader Process Time in dedup mode
+    - Add Audio track 2pass when output format is incompatible with the audio, -> aac 640kbps
+    - Remove Chapters Embed under specific i/o point interpolation
+    - Optimize SR mode by reduce calculation by ignoring identical input frames
+    - Display Progress at the very beginning (before SR)
+    - Add VRAM Test for SR Module
     """
 
     path_len_limit = 230
@@ -779,6 +778,7 @@ class ArgumentManager:
         self.gui_inputs = args.get("gui_inputs", "")
         self.input_fps = args.get("input_fps", 0)
         self.target_fps = args.get("target_fps", 0)
+        self.input_ext = ".mp4"
         self.output_ext = args.get("output_ext", ".mp4")
         self.is_img_input = args.get("is_img_input", False)
         self.is_img_output = args.get("is_img_output", False)
@@ -913,7 +913,7 @@ class VideoFrameInterpolation:
         return interp_list
 
     def get_auto_scale(self, img1, img2) -> float:
-        return 1.0
+        return 0.5
 
     def __make_n_inference(self, img1, img2, scale, n):
         raise NotImplementedError("Abstract")
