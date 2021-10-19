@@ -1,5 +1,6 @@
 # coding: utf-8
 import datetime
+import enum
 import functools
 import glob
 import hashlib
@@ -27,6 +28,7 @@ import psutil
 from sklearn import linear_model
 
 from skvideo.utils import check_output
+import steamworks
 from steamworks import STEAMWORKS
 from steamworks.exceptions import *
 
@@ -748,16 +750,19 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.2"
+    gui_version = "3.7.3"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.0.2"
+    ols_version = "7.0.3"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix Transfer Resolution cannot be assigned manually
-    - Fix Back Img0 == Img1 Deprecated Comparison of numpy in Resolution module tempting to reduce calculation
+    - Add Deliberately Encode Audio Track mode = AAC 640kbps
+    - Add Using Default Encoder Presets Mode
+    - Add Splash at start
+    - Add state tip at time-consuming function in gui(load ui, gif making and VA muxing 
+    - Add Windows Task Bar Progress Indicator
     """
 
     path_len_limit = 230
@@ -835,6 +840,8 @@ class ArgumentManager:
         self.use_hwaccel_decode = args.get("use_hwaccel_decode", True)
         self.use_manual_encode_thread = args.get("use_manual_encode_thread", False)
         self.render_encode_thread = args.get("render_encode_thread", 16)
+        self.use_render_encoder_default_preset = args.get("use_render_encoder_default_preset", False)
+        self.is_encode_audio = args.get("is_encode_audio", False)
         self.is_quick_extract = args.get("is_quick_extract", True)
         self.hdr_mode = args.get("hdr_mode", 0)
         self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "")
@@ -1966,9 +1973,14 @@ class SteamUtils:
         self.steam_valid = True
         self.steam_error = ""
         if self.is_steam:
-            self.steamworks = STEAMWORKS(ArgumentManager.app_id)
-            self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-
+            self.steamworks = steamworks.STEAMWORKS(ArgumentManager.app_id)
+            try:
+                self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
+            except:
+                self.steam_valid = False
+                self.steam_error = GenericSteamException('Failed to Load Steam Status, Please Make Sure this game is purchased')
+                self.logger.error('Failed to initiate Steam API. Shutting down.')
+                return
             if self.steamworks.UserStats.RequestCurrentStats() == True:
                 self.logger.info('Steam Stats successfully retrieved!')
             else:
@@ -2007,6 +2019,12 @@ class SteamUtils:
             return False
         return self.steamworks.UserStats.StoreStats()
 
+class TASKBAR_STATE(enum.Enum):
+    TBPF_NOPROGRESS = 0x00000000
+    TBPF_INDETERMINATE = 0x00000001
+    TBPF_NORMAL = 0x00000002
+    TBPF_ERROR = 0x00000004
+    TBPF_PAUSED = 0x00000008
 
 class EULAWriter:
     eula_hi = """
