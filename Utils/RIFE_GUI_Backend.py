@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
+import enum
 import glob
 import html
 import json
@@ -17,14 +18,15 @@ import cv2
 import psutil
 import torch
 from PyQt5 import QtCore
-from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtCore import QCoreApplication, Qt
 from PyQt5.QtCore import QSettings, pyqtSignal, pyqtSlot, QThread, QTime, QVariant, QPoint, QSize
 from PyQt5.QtGui import QIcon, QTextCursor
-from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog
+from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog, QSplashScreen
 
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
-from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator
-from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamUtils, appDir
+from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator, StateTooltip
+from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamUtils, appDir, \
+    TASKBAR_STATE
 
 MAC = True
 try:
@@ -284,9 +286,9 @@ class UiRun(QThread):
                 logger.info("Add All tasks into queue")
                 self.task_list = list(range(self.task_cnt))
 
-            if self.task_cnt > 1:
-                """MultiTask"""
-                appData.setValue("batch", True)
+            # if self.task_cnt > 1:
+            #     """MultiTask"""
+            #     appData.setValue("batch", True)
 
             interval_time = time.time()
             try:
@@ -340,15 +342,16 @@ class UiRun(QThread):
                             """Replace Field"""
                             flush_lines += line.replace("[A", "")
 
-                            if "error" in flush_lines.lower() or 'Program Failed' in flush_lines \
-                                    or 'Thread Panicked' in flush_lines:
+                            panic_sign = ['Program Failed', 'Thread Panicked', 'VRAM Check Failed', 'Broken pipe',
+                                          'CUDA out of memory']
+                            if any([i.lower() in flush_lines.lower() for i in panic_sign]):
                                 """Imediately Upload"""
                                 logger.error(f"[In ONE LINE SHOT]: {flush_lines}")
                                 self.update_status(False, sp_status=f"{flush_lines}")
                                 self.main_error = flush_lines
                                 flush_lines = ""
-                                if 'Program Failed' in flush_lines or 'Thread Panicked' in flush_lines:
-                                    self.kill_proc_exec()
+                                # self.kill_proc_exec()
+
                             elif len(flush_lines) and time.time() - interval_time > 0.1:
                                 interval_time = time.time()
                                 self.update_status(False, sp_status=f"{flush_lines}")
@@ -421,7 +424,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     kill_proc = pyqtSignal(int)
     notfound = pyqtSignal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, splash_screen: QSplashScreen, taskbar,  parent=None):
         """
         SVFI 主界面类初始化方法
 
@@ -436,7 +439,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         添加新选项/变量 3/3 实现先于load_current_settings的特殊新配置
         :param parent:
         """
+        self.splash_screen = splash_screen
+        self.splash_screen_initiating("Initiating Display Platform...")
         super(UiBackend, self).__init__()
+        self.super_hwnd = self.winId()
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
         _app.installTranslator(translator)  # 重新翻译主界面
@@ -485,6 +491,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_dilapidation_hide()
         self.settings_load_settings_templates()
 
+        self.splash_screen_initiating("Validating Software...")
         self.STEAM = SteamUtils(self.is_steam, logger=logger)
         if self.is_steam:
             if not self.STEAM.steam_valid:
@@ -527,6 +534,26 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         os.chdir(appDir)
         self.function_check_read_tutorial()
+
+        """Pending Dialog"""
+        self.state_tooltip = None
+        self.task_bar_controller = taskbar
+
+    def update_QCandyUi_hwnd(self, hwnd):
+        """
+        This can only be called once
+        :param hwnd:
+        :return:
+        """
+        self.task_bar_controller.ActivateTab(hwnd)
+        self.super_hwnd = hwnd
+
+    def splash_screen_initiating(self, msg:str):
+        """
+        Update Initiation Information via splash screen widget
+        :return:
+        """
+        self.splash_screen.showMessage(msg, Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
 
     def settings_change_lang(self, lang: str):
         logger.debug(f"Translate To Lang = {lang}")
@@ -713,6 +740,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.EncodeThreadSelector.setValue(appData.value("render_encode_thread", 16, type=int))
         self.EncoderSelector.setCurrentText(appData.value("render_encoder", "H264,8bit"))
         self.PresetSelector.setCurrentText(appData.value("render_encoder_preset", "slow"))
+        self.DefaultEncodePresetChecker.setChecked(appData.value("use_render_encoder_default_preset", False, type=bool))
+        self.EncodeAudioChecker.setChecked(appData.value("is_encode_audio", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
         self.FFmpegCustomer.setText(appData.value("render_ffmpeg_customized", ""))
         self.ExtSelector.setCurrentText(appData.value("output_ext", "mp4"))
@@ -727,6 +756,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.slowmotion.setChecked(appData.value("is_render_slow_motion", False, type=bool))
         self.SlowmotionFPS.setText(appData.value("render_slow_motion_fps", "", type=str))
         self.GifLoopChecker.setChecked(appData.value("gif_loop", True, type=bool))
+        self.ToolBoxEncodeAudioChecker.setChecked(appData.value("encode_audio_checker", False, type=bool))
 
         """Scdet and RD Configuration"""
         self.ScedetChecker.setChecked(not appData.value("is_no_scdet", False, type=bool))
@@ -829,6 +859,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("render_hwaccel_preset", self.HwaccelPresetSelector.currentText())
         appData.setValue("use_hwaccel_decode", self.HwaccelDecode.isChecked())
         appData.setValue("use_manual_encode_thread", self.UseEncodeThread.isChecked())
+        appData.setValue("use_render_encoder_default_preset", self.DefaultEncodePresetChecker.isChecked())
+        appData.setValue("is_encode_audio", self.EncodeAudioChecker.isChecked())
         appData.setValue("render_encode_thread", self.EncodeThreadSelector.value())
         appData.setValue("is_quick_extract", self.QuickExtractChecker.isChecked())
         appData.setValue("hdr_mode", self.HDRModeSelector.currentIndex())
@@ -838,6 +870,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         """Special Render Effect"""
         appData.setValue("gif_loop", self.GifLoopChecker.isChecked())
+        appData.setValue("encode_audio_checker", self.ToolBoxEncodeAudioChecker.isChecked())
         appData.setValue("is_render_slow_motion", self.slowmotion.isChecked())
         appData.setValue("render_slow_motion_fps", self.SlowmotionFPS.text())
         if appData.value("is_render_slow_motion", False, type=bool):
@@ -1289,6 +1322,28 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 pass
         return widgetres
 
+    def function_update_task_bar_value(self, complete_cnt: int, total_cnt: int):
+        self.task_bar_controller.SetProgressValue(self.super_hwnd, complete_cnt, total_cnt)
+
+    def function_update_task_bar_state(self, state):
+        self.task_bar_controller.SetProgressState(self.super_hwnd, state.value)
+
+    def function_show_pending_dialog(self, title: str, content: str):
+        self.state_tooltip = StateTooltip(title, content, self)
+        # self.state_tooltip.move(self.pos().x(), self.pos().y())
+        self.state_tooltip.show()
+        QApplication.processEvents()
+        pass
+
+    def function_finish_pending_dialog(self, finish_content: str, close_immediately=False):
+        if self.state_tooltip is None:
+            return
+        if close_immediately:
+            self.state_tooltip.hide()
+        self.state_tooltip.setContent(finish_content)
+        self.state_tooltip.setState(True)
+        pass
+
     def function_send_msg(self, title, string, msg_type=1):
         """
         标准化输出界面提示信息
@@ -1360,15 +1415,21 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         ffmpeg_command = (f"{self.ffmpeg} -i {Tools.fillQuotation(input_a)} -i {Tools.fillQuotation(input_v)} "
                           f"-map 1:v:0 -map 0:a:0 -c:v copy -c:a copy "
                           f"-shortest {Tools.fillQuotation(output_v)} -y").replace("\\", "/")
+        if self.ToolBoxEncodeAudioChecker.isChecked():
+            ffmpeg_command = (f"{self.ffmpeg} -i {Tools.fillQuotation(input_a)} -i {Tools.fillQuotation(input_v)} "
+                              f"-map 1:v:0 -map 0:a:0 -c:v copy -c:a aac -ab 640k "
+                              f"-shortest {Tools.fillQuotation(output_v)} -y").replace("\\", "/")
         logger.info(f"[GUI] concat {ffmpeg_command}")
         self.chores_thread = UiRunThread(ffmpeg_command, data={"type": "音视频合并"})
         self.chores_thread.run_signal.connect(self.function_update_chores_finish)
         self.chores_thread.start()
+        self.function_show_pending_dialog("Muxing Video and Audio...", _translate("", "合并音视频中..."))
         self.ConcatButton.setEnabled(False)
 
     def function_update_chores_finish(self, data: dict):
         mission_type = data['data']['type']
         _msg1 = _translate('', '任务完成')
+        self.function_finish_pending_dialog("", True)
         self.function_send_msg("Chores Mission", f"{mission_type}{_msg1}", msg_type=2)
         self.ConcatButton.setEnabled(True)
         self.GifButton.setEnabled(True)
@@ -1405,6 +1466,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.chores_thread = UiRunThread(ffmpeg_command, data={"type": "GIF制作"})
         self.chores_thread.run_signal.connect(self.function_update_chores_finish)
         self.chores_thread.start()
+        self.function_show_pending_dialog("Gif Making...", _translate("", "压制Gif中..."))
         self.GifButton.setEnabled(False)
 
     def function_get_SuperResolution_paths(self, path_type=0, key_word=""):
@@ -1425,6 +1487,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         task_data = self.InputFileName.getItems()
         task_list = list()
         self.function_disable_inputfilename_connection()
+        self.function_show_pending_dialog("Saving Settings...", _translate("", "保存当前设置中..."))
 
         for t in task_data:
             if self.InputFileName.itemWidget(t).iniCheck.isChecked():
@@ -1432,6 +1495,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.InputFileName.setCurrentRow(row_)
                 self.on_InputFileName_currentItemChanged()
                 task_list.append(row_)
+                QApplication.processEvents()
         if load_all or (not len(task_list) and self.InputFileName.count() >= 1):
             """
             Activate All Tasks when load_all is assigned or 
@@ -1451,6 +1515,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             pass
 
         self.function_enable_inputfilename_connection()
+        self.function_finish_pending_dialog(_translate("", "设置保存完成"), close_immediately=True)
         return task_list
 
     def function_get_templates(self):
@@ -1500,8 +1565,16 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
 
+        def process_update_taskbar_progress(subprocess_line):
+            progress_data = re.findall("\|.*?(\d+)/(\d+)", subprocess_line)
+            if not len(progress_data):
+                return
+            complete_cnt, total_cnt = progress_data[0]
+            self.function_update_task_bar_value(int(complete_cnt), int(total_cnt))
+
         def generate_error_log():
             self.function_generate_log(0)
+            # TODO Combine OLS and GUI log
 
         def remove_last_line():
             cursor = self.OptionCheck.textCursor()
@@ -1562,6 +1635,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                                        f"{__msg1}\n{data.get('subprocess')}\n{__msg2}", )
                 self.current_failed = True
                 return
+            self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
 
         data = json.loads(json_data)
         self.progressBar.setMaximum(int(data["cnt"]))
@@ -1583,11 +1657,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 if tmp.strip() == lines[-1].strip():
                     lines[-1] = ""
                 data["subprocess"] = tmp + lines[-1]
+                process_update_taskbar_progress(data['subprocess'])
                 remove_last_line()
             new_text += data["subprocess"]
 
-        if self.chores_thread is not None and len(self.chores_thread.get_main_error()):
-            main_error = self.chores_thread.get_main_error()
+        if self.rife_thread is UiRun and len(self.rife_thread.get_main_error()):
+            main_error = self.rife_thread.get_main_error()
             new_text += f"\nLAST ERROR MSG in OLS:\n{main_error}"
 
         for line in new_text.splitlines():
@@ -1625,6 +1700,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 complete_msg += _translate('', '成功！')
                 os.startfile(self.OutputFolder.text())
                 self.InputFileName.refreshTasks()
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
             else:
                 # if not self.DebugChecker.isChecked():
                 _msg1 = _translate('', '失败, 返回码：')
@@ -1632,6 +1708,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 complete_msg += f"{_msg1}{returncode}\n{_msg2}"
                 error_handle()
                 generate_error_log()
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
             if not self.DebugChecker.isChecked():
                 self.function_send_msg(_translate('', "任务完成"), complete_msg, 2)
             self.ConcatAllButton.setEnabled(True)
@@ -1646,6 +1723,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_enable_inputfilename_connection()
 
         self.OptionCheck.moveCursor(QTextCursor.End)
+        self.OptionCheck.moveCursor(QTextCursor.Left)
 
     # @pyqtSlot(bool)
     def on_InputFileName_currentItemChanged(self):
@@ -1763,6 +1841,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.current_failed = False
         self.tabWidget.setCurrentIndex(1)  # redirect to info page
         self.steam_update_achv()
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
 
     @pyqtSlot(bool)
     def on_AutoSet_clicked(self):
@@ -1942,7 +2021,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         current_template = self.ResizeTemplate.currentText()
-
+        if "custom" in current_template.lower():
+            return
         width, height = 0, 0
         if "480p" in current_template:
             width, height = 480, 270
@@ -2168,6 +2248,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         """
         if self.rife_thread is not None:
             self.rife_thread.kill_proc_exec()
+            self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
 
     @pyqtSlot(bool)
     def on_PauseProcess_clicked(self):
@@ -2179,9 +2260,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if not self.pause:
                 self.pause = True
                 self.PauseProcess.setText(_translate('', "继续补帧！"))
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_PAUSED)
             else:
                 self.pause = False
                 self.PauseProcess.setText(_translate('', "暂停补帧！"))
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NORMAL)
 
     @pyqtSlot(bool)
     def on_ShowAdvance_clicked(self):
@@ -2243,7 +2326,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_load_current()
 
     def on_ExpertMode_changed(self):
-        expert_mode = appPref.value("expert", False, type=bool)
+        expert_mode = appPref.value("expert", True, type=bool)
         self.UseFixedScdet.setVisible(expert_mode)
         self.ScdetMaxDiffSelector.setVisible(expert_mode)
         # self.QuickExtractChecker.setVisible(expert_mode)

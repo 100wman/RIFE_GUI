@@ -1125,6 +1125,8 @@ class RenderFlow(IOFlow):
                 if self.ARGS.hdr_mode == 2:
                     """HDR10"""
                     output_dict.update({"-x264-params": params_libx264s["hdr10"]})
+                if self.ARGS.use_render_encoder_default_preset:
+                    output_dict.pop('-x264-params')
             elif "H265" in self.ARGS.render_encoder:
                 output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
                 if "8bit" in self.ARGS.render_encoder:
@@ -1141,6 +1143,8 @@ class RenderFlow(IOFlow):
                     output_dict.update({"-x265-params": params_libx265s["hdr10"]})
                     if os.path.exists(hdr10plus_metadata_path):
                         output_dict.update({"-x265-params": params_libx265s["hdr10+"]})
+                if self.ARGS.use_render_encoder_default_preset:
+                    output_dict.pop('-x265-params')
             else:
                 """ProRes"""
                 if "-preset" in output_dict:
@@ -1412,11 +1416,10 @@ class RenderFlow(IOFlow):
 
     def __check_audio_concat(self, chunk_tmp_path: str, fail_signal=0):
         """Check Input file ext"""
-        if not self.ARGS.is_save_audio or self.ARGS.get_main_error() is not None:
+        if not self.ARGS.is_save_audio or self.ARGS.is_encode_audio or self.ARGS.get_main_error() is not None:
             return
         if self.ARGS.is_img_output:
             return
-
         concat_filepath = f"{os.path.join(self.ARGS.output_dir, 'concat_test')}" + self.ARGS.output_ext
         map_audio = f'-i "{self.ARGS.input}" -map 0:v:0 -map 1:a:0 -map 1:s? -c:a copy -c:s copy -shortest '
         ffmpeg_command = f'{self.__ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
@@ -1528,10 +1531,10 @@ class RenderFlow(IOFlow):
                     map_audio = f'-to {self.ARGS.input_end_point} {map_audio}'
                 if self.ARGS.input_start_point is not None:
                     map_audio = f'-ss {self.ARGS.input_start_point} {map_audio}'
-            elif self.is_audio_failed_concat:
+            elif self.is_audio_failed_concat or self.ARGS.is_encode_audio:
                 # not specific io point, and audio concat test failed, so audio is encoded into aac compulsorily,
                 # and subtitle is disabled
-                map_audio = f'-i "{audio_path}" -map 0:v:0 -c:a aac -ab 640k '
+                map_audio = f'-i "{audio_path}" -map 0:v:0 -map 1:a? -map 1:s? -c:a aac -ab 640k '
             # Special Case Optimization
             # if self.ARGS.input_ext in ['.vob'] and self.ARGS.output_ext in ['.mkv']:
             #     map_audio += "-map_chapters -1 "
