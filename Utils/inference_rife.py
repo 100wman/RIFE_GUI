@@ -71,7 +71,9 @@ class RifeInterpolation(VideoFrameInterpolation):
             model.load_model(self.model_path, -1)
             self.model_version = 3
             print("INFO - Loaded v3.x HD model.")
-
+        first_card = torch.cuda.get_device_properties(0)
+        card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
+        print(f"INFO - RIFE Using {card_info}")
         self.model = model
         self.model.eval()
         self.model.device()

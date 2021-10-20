@@ -1,4 +1,5 @@
 # coding: utf-8
+import base64
 import datetime
 import enum
 import functools
@@ -8,6 +9,7 @@ import json
 import logging
 import math
 import os
+import pickle
 import random
 import re
 import shlex
@@ -25,11 +27,13 @@ from queue import Queue
 import cv2
 import numpy as np
 import psutil
+import wmi
+from Crypto.Cipher import PKCS1_v1_5 as Cipher_pkcs1_v1_5
+from Crypto.PublicKey import RSA
 from sklearn import linear_model
 
-from skvideo.utils import check_output
 import steamworks
-from steamworks import STEAMWORKS
+from skvideo.utils import check_output
 from steamworks.exceptions import *
 
 abspath = os.path.abspath(__file__)
@@ -396,141 +400,6 @@ class Tools:
         return i
 
 
-class ImgSeqIO:
-    def __init__(self, folder=None, is_read=True, thread=4, is_tool=False, start_frame=0, logger=None,
-                 output_ext=".png", exp=2, resize=(0, 0), is_esr=False, **kwargs):
-        # TODO 解耦成Input，Output，Tool三个类
-        if logger is None:
-            self.logger = Tools.get_logger(name="ImgIO", log_path=folder)
-        else:
-            self.logger = logger
-
-        if output_ext[0] != ".":
-            output_ext = "." + output_ext
-        self.output_ext = output_ext
-
-        if folder is None or os.path.isfile(folder):
-            self.logger.error(f"Invalid ImgSeq Folder: {folder}")
-            return
-        self.seq_folder = folder  # + "/tmp"  # weird situation, cannot write to target dir, father dir instead
-        if not os.path.exists(self.seq_folder):
-            os.makedirs(self.seq_folder, exist_ok=True)
-            start_frame = 0
-        elif start_frame == -1 and not is_read:
-            # write: start writing at the end of sequence
-            start_frame = self.get_write_start_frame()
-        elif start_frame != -1 and is_read:
-            start_frame = int(start_frame / (2 ** exp))
-
-        self.start_frame = start_frame
-        self.frame_cnt = 0
-        self.img_list = list()
-
-        self.write_queue = Queue(maxsize=1000)
-        self.thread_cnt = thread
-        self.thread_pool = list()
-
-        self.use_imdecode = False
-        self.resize = resize
-        self.resize_flag = all(self.resize)
-        self.is_esr = is_esr
-
-        self.exp = exp
-
-        if is_tool:
-            return
-        if is_read:
-            img_list = os.listdir(self.seq_folder)
-            img_list.sort()
-            for p in img_list:
-                fn, ext = os.path.splitext(p)
-                if ext.lower() in SupportFormat.img_inputs:
-                    if self.frame_cnt < start_frame:
-                        self.frame_cnt += 1  # update frame_cnt
-                        continue  # do not read frame until reach start_frame img
-                    self.img_list.append(os.path.join(self.seq_folder, p))
-            self.logger.debug(f"Load {len(self.img_list)} frames at {self.frame_cnt}")
-        else:
-            """Write Img"""
-            self.frame_cnt = start_frame
-            self.logger.debug(f"Start Writing {self.output_ext} at No. {self.frame_cnt}")
-            for t in range(self.thread_cnt):
-                _t = threading.Thread(target=self.write_buffer, name=f"[IMG.IO] Write Buffer No.{t + 1}")
-                self.thread_pool.append(_t)
-            for _t in self.thread_pool:
-                _t.start()
-
-    def get_write_start_frame(self):
-        """
-        Get Start Frame when start_frame is at its default value
-        :return:
-        """
-        img_list = list()
-        for f in os.listdir(self.seq_folder):
-            fn, ext = os.path.splitext(f)
-            if ext in SupportFormat.img_inputs:
-                img_list.append(fn)
-        if not len(img_list):
-            return 0
-        # img_list.sort()
-        # last_img = img_list[-1]  # biggest
-        return len(img_list)
-
-    def get_frames_cnt(self):
-        """
-        Get Frames Cnt with EXP
-        :return:
-        """
-        return len(self.img_list) * 2 ** self.exp
-
-    def read_frame(self, path):
-        img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), 1)[:, :, ::-1].copy()
-        if self.resize_flag:
-            img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_LANCZOS4)
-        return img
-
-    def write_frame(self, img, path):
-        if self.resize_flag:
-            img = cv2.resize(img, (self.resize[0], self.resize[1]))
-        cv2.imencode(self.output_ext, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))[1].tofile(path)
-        # good
-
-    def nextFrame(self):
-        for p in self.img_list:
-            img = self.read_frame(p)
-            for e in range(2 ** self.exp):
-                yield img
-
-    def write_buffer(self):
-        while True:
-            img_data = self.write_queue.get()
-            if img_data[1] is None:
-                self.logger.debug(f"{threading.current_thread().name}: get None, break")
-                break
-            self.write_frame(img_data[1], img_data[0])
-
-    def writeFrame(self, img):
-        img_path = os.path.join(self.seq_folder, f"{self.frame_cnt:0>8d}{self.output_ext}")
-        img_path = img_path.replace("\\", "/")
-        if img is None:
-            for t in range(self.thread_cnt):
-                self.write_queue.put((img_path, None))
-            return
-        self.write_queue.put((img_path, img))
-        self.frame_cnt += 1
-        return
-
-    def close(self):
-        for t in range(self.thread_cnt):
-            self.write_queue.put(("", None))
-        for _t in self.thread_pool:
-            while _t.is_alive():
-                time.sleep(0.2)
-        # if os.path.exists(self.seq_folder):
-        #     shutil.rmtree(self.seq_folder)
-        return
-
-
 class ImageIO:
     def __init__(self, logger, folder, start_frame=0, exp=2, **kwargs):
         """
@@ -639,7 +508,7 @@ class ImageWrite(ImageIO):
         if not is_tool:
             self.logger.debug(f"Start Writing {self.output_ext} at No. {self.frame_cnt}")
             for t in range(self.thread_cnt):
-                _t = threading.Thread(target=self.write_buffer, name=f"[IMG.IO] Write Buffer No.{t + 1}")
+                _t = threading.Thread(target=self.write_buffer, name=f"IMG.IO Write Buffer No.{t + 1}")
                 self.thread_pool.append(_t)
             for _t in self.thread_pool:
                 _t.start()
@@ -750,19 +619,18 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.3"
+    gui_version = "3.7.4"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.0.3"
+    ols_version = "7.1.0"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add Deliberately Encode Audio Track mode = AAC 640kbps
-    - Add Using Default Encoder Presets Mode
-    - Add Splash at start
-    - Add state tip at time-consuming function in gui(load ui, gif making and VA muxing 
-    - Add Windows Task Bar Progress Indicator
+    - Optimize Necessary Info display at start of mission
+    - Optimize Validation Module, use rsa for retail validation module
+    - Optimize Task Finish Sign to avoid zombie process
+    - Optimize Output Display
     """
 
     path_len_limit = 230
@@ -1867,11 +1735,12 @@ class OverTimeReminderBearer:
         while True:
             t = random.randrange(100000, 999999)
             if t not in self.reminders:
-                reminder = OvertimeReminder(reminder_id=t, *args, **kwargs)
-                self.reminders[t] = reminder
+                # reminder = OvertimeReminder(reminder_id=t, *args, **kwargs)
+                # self.reminders[t] = reminder
                 return t
 
     def terminate_reminder(self, reminder_id: int):
+        return
         if reminder_id not in self.reminders:
             raise threading.ThreadError(f"Do not exist reminder {reminder_id}")
         self.reminders[reminder_id].terminate()
@@ -1924,9 +1793,9 @@ def overtime_reminder_deco(interval: int, logger=None, msg_1="Function Type", ms
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            reminder_id = utils_overtime_reminder_bearer.generate_reminder(interval, logger, msg_1, msg_2)
+            # reminder_id = utils_overtime_reminder_bearer.generate_reminder(interval, logger, msg_1, msg_2)
             result = func(*args, **kwargs)
-            utils_overtime_reminder_bearer.terminate_reminder(reminder_id)
+            # utils_overtime_reminder_bearer.terminate_reminder(reminder_id)
             return result
 
         return wrapper
@@ -1934,15 +1803,208 @@ def overtime_reminder_deco(interval: int, logger=None, msg_1="Function Type", ms
     return decorator
 
 
-class SteamUtils:
+class RSACipher(object):
+    private_pem = None
+    public_pem = None
 
-    def CheckSteamAuth(self):
-        if self.is_steam:
+    def __init__(self):
+        self.private_pem = b"" \
+                           b"-----BEGIN RSA PRIVATE KEY-----\n" \
+                           b"MIICWwIBAAKBgQCWWXMIp0clTrB4m9Lt64+Yv6MDxZuS+cRw/IhDFM87ueYcbTqZ\n" \
+                           b"U1iOyWd5sk3BDbS5CsVQ45omm3bWWw1/fs7G6iafWXwEH4jCqmNjkZOmPXvswY0U\n" \
+                           b"G750m+1uko35vuWj4V0tN0OIrp9A7ONPzrVi/yQtoVtruHoZHrqDF4ASGwIDAQAB\n" \
+                           b"AoGABo3ltuXb8yNoDAn2+wo+21DXYW2254Rd7PMFWa9JjXgAMRMN7+szPB5JlYOR\n" \
+                           b"Yi4fx8VRbsJNUQuL9bJId1tm1jH4XHawJh5SbGIv344UCDYwz4bPOAscagM9j5oA\n" \
+                           b"nFqt3GkOzTVTrOwqzC6fNoqaTTRXyM8BgjbiOGiCG+9pXIkCQQC+4w+7oIjlybgh\n" \
+                           b"6QIYGQt3zbsT56K8ae84EqsKTGm4u7KVkbCjPRx/SneM0TJhSSSVbjCbvRl25C+3\n" \
+                           b"3hTCVpQNAkEAyaKAvOUtDFubR33mAP92SIBAljFUIbsbaz2Fp5lA4Jmr3CDyCcaa\n" \
+                           b"E5Qx/udy1kYt3jKdV9jQNHbh5jt2K9PsxwJATMfWVzked5do+jLYRcslIr5c5ofA\n" \
+                           b"nJrbvyk7JTxRNh5BmgntC+wT31ubtMecxSb/kR+ua6ZnbLwiOYoZvYXHrQJAEQql\n" \
+                           b"/NEVzJyVdCZk4SK2OYx1aPxEUxGAUMEDYdXnENSMHO+/5Sme7haxXwzqvMdzqvr2\n" \
+                           b"J22Qs05060ONSkkAEwJADGBeXhf5cwxtktbZGC1+TvtQJwlcTDLIjecziDhCD98i\n" \
+                           b"/Z88zsJxYoxy0ZZSIItEw+S2GtWGVj6TIQNmZlLZ/A==\n" \
+                           b"-----END RSA PRIVATE KEY-----"
+        self.public_pem = b""
+
+    def get_public_key(self):
+        return self.public_pem
+
+    def get_private_key(self):
+        return self.private_pem
+
+    def decrypt_with_private_key(self, _cipher_text):
+        try:
+            _rsa_key = RSA.importKey(self.private_pem)
+            _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
+            _text = _cipher.decrypt(base64.b64decode(_cipher_text), "ERROR")
+            return _text.decode(encoding="utf-8")
+        except:
+            return ""
+
+    def encrypt_with_public_key(self, _text):
+        _rsa_key = RSA.importKey(self.public_pem)
+        _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
+        _cipher_text = base64.b64encode(_cipher.encrypt(_text.encode(encoding="utf-8")))
+        return _cipher_text
+
+    # encrypt with private key & decrypt with public key is not allowed in Python
+    # although it is allowed in RSA
+    def encrypt_with_private_key(self, _text):
+        _rsa_key = RSA.importKey(self.private_pem)
+        _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
+        _cipher_text = base64.b64encode(_cipher.encrypt(_text.encode(encoding="utf-8")))
+        return _cipher_text
+
+    def decrypt_with_public_key(self, _cipher_text):
+        _rsa_key = RSA.importKey(self.public_pem)
+        _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
+        _text = _cipher.decrypt(base64.b64decode(_cipher_text), "ERROR")
+        return _text.decode(encoding="utf-8")
+
+
+class ValidationBase:
+    def __init__(self, logger):
+        self.logger = logger
+        self._is_validate_start = False
+        self._validate_error = None
+        pass
+
+    def CheckValidateStart(self):
+        return self._is_validate_start
+
+    def CheckProDLC(self, pro_dlc_id: int):
+        pass
+
+    def GetStat(self, key: str, key_type: type):
+        pass
+
+    def GetAchv(self, key: str):
+        pass
+
+    def SetStat(self, key: str, value):
+        pass
+
+    def SetAchv(self, key: str, clear=False):
+        pass
+
+    def Store(self):
+        pass
+
+    def GetValidateError(self):
+        return self._validate_error
+
+
+class RetailValidation(ValidationBase):
+    def __init__(self, logger):
+        """
+        Whether use steam for validation
+        """
+        super().__init__(logger)
+        original_cwd = os.getcwd()
+        self._rsa_worker = RSACipher()
+        self._bin_path = os.path.join(appDir, 'license.dat')
+        try:
+            self._is_validate_start = self._regist()  # This method has to be called in order for the wrapper to become functional!
+        except Exception as e:
+            self._is_validate_start = False
+            self._validate_error = e
+            self.logger.error('Failed to initiate Retail License. Shutting down.')
+            return
+        os.chdir(original_cwd)
+
+    def CheckValidateStart(self):
+        return self._is_validate_start
+
+    def _GetCVolumeSerialNumber(self):
+        c = wmi.WMI()
+        for physical_disk in c.Win32_DiskDrive():
+            return physical_disk.SerialNumber
+        else:
             return 0
+
+    def _GenerateRegisterBin(self):
+        bin_data = {'license_data': self._rsa_worker.encrypt_with_private_key(self._GetCVolumeSerialNumber())}
+        pickle.dump(bin_data, open(self._bin_path, 'wb'))
+
+    def _ReadRegisterBin(self):
+        if not os.path.exists(self._bin_path):
+            self._GenerateRegisterBin()
+            raise OSError("Could not find License File. The system had generated a .dat file at the root dir "
+                          "of this app for license, please send this to administrator "
+                          "and replace it with the one that was sent you")
+        bin_data = pickle.load(open(self._bin_path, 'rb'))
+        assert type(bin_data) is dict, "Type of License Data is not correct, " \
+                                       "please consult administrator for further support"
+        license_key = bin_data.get('license_key', "")
+        return license_key
+
+    def _regist(self):
+        license_key = self._ReadRegisterBin()
+        volume_serial = self._GetCVolumeSerialNumber()
+        key_decrypted = self._rsa_worker.decrypt_with_private_key(license_key)
+        if volume_serial != key_decrypted:
+            self._GenerateRegisterBin()
+            raise OSError("Wrong Register code, please check your license with your administrator")
+        elif volume_serial == key_decrypted:
+            return True
+
+    def CheckProDLC(self, pro_dlc_id: int):
+        """All DLC Purchased as default"""
+        return True
+
+    def GetStat(self, key: str, key_type: type):
+        return False
+
+    def GetAchv(self, key: str):
+        return False
+
+    def SetStat(self, key: str, value):
+        return
+
+    def SetAchv(self, key: str, clear=False):
+        return
+
+    def Store(self):
+        return False
+
+
+class SteamValidation(ValidationBase):
+    def __init__(self, logger):
+        """
+        Whether use steam for validation
+        """
+        super().__init__(logger)
+        original_cwd = os.getcwd()
+        self.steamworks = None
+        self.steamworks = steamworks.STEAMWORKS(ArgumentManager.app_id)
+        try:
+            self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
+        except:
+            self._is_validate_start = False
+            self._validate_error = GenericSteamException(
+                'Failed to Load Steam Status, Please Make Sure this game is purchased')
+            self.logger.error('Failed to initiate Steam API. Shutting down.')
+            return
+        self._is_validate_start = True
+        if self.steamworks.UserStats.RequestCurrentStats():
+            self.logger.info('Steam Stats successfully retrieved!')
+        else:
+            self._is_validate_start = False
+            self._validate_error = GenericSteamException('Failed to get Stats Error, Please Make Sure Steam is On')
+            self.logger.error('Failed to get Steam stats. Shutting down.')
+        os.chdir(original_cwd)
+
+    def _CheckPurchaseStatus(self):
         steam_64id = self.steamworks.Users.GetSteamID()
         valid_response = self.steamworks.Users.GetAuthSessionTicket()
-        self.logger.info(f'Steam User Logged on as {steam_64id}, auth: {valid_response}')
-        return valid_response
+        self.logger.debug(f'Steam User Logged on as {steam_64id}, auth: {valid_response}')
+        if valid_response != 0:  # Abnormal Purchase
+            self._is_validate_start = False
+            self._validate_error = GenericSteamException("Abnormal Start, Please Check Software's Purchase Status, "
+                                                         f"Response: {valid_response}")
+
+    def CheckValidateStart(self):
+        return self._is_validate_start
 
     def CheckProDLC(self, dlc_id: int) -> bool:
         """
@@ -1951,73 +2013,30 @@ class SteamUtils:
         0: Pro
         :return:
         """
-        if not self.is_steam:
-            return False
         purchase_pro = self.steamworks.Apps.IsDLCInstalled(ArgumentManager.pro_dlc_id[dlc_id])
         self.logger.info(f'Steam User Purchase Pro DLC Status: {purchase_pro}')
         return purchase_pro
 
-    def __init__(self, is_steam, logger=None):
-        """
-        Whether use steam for validation
-        :param is_steam:
-        """
-        # TODO Refractor into license and steam mode
-        original_cwd = os.getcwd()
-        self.is_steam = is_steam
-        if logger is None:
-            self.logger = Tools().get_logger(__file__, "")
-        else:
-            self.logger = logger
-        self.steamworks = None
-        self.steam_valid = True
-        self.steam_error = ""
-        if self.is_steam:
-            self.steamworks = steamworks.STEAMWORKS(ArgumentManager.app_id)
-            try:
-                self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-            except:
-                self.steam_valid = False
-                self.steam_error = GenericSteamException('Failed to Load Steam Status, Please Make Sure this game is purchased')
-                self.logger.error('Failed to initiate Steam API. Shutting down.')
-                return
-            if self.steamworks.UserStats.RequestCurrentStats() == True:
-                self.logger.info('Steam Stats successfully retrieved!')
-            else:
-                self.steam_valid = False
-                self.steam_error = GenericSteamException('Failed to get Stats Error, Please Make Sure Steam is On')
-                self.logger.error('Failed to get stats. Shutting down.')
-        os.chdir(original_cwd)
-
     def GetStat(self, key: str, key_type: type):
-        if not self.is_steam:
-            return
         if key_type is int:
             return self.steamworks.UserStats.GetStatInt(key)
         elif key_type is float:
             return self.steamworks.UserStats.GetStatFloat(key)
 
     def GetAchv(self, key: str):
-        if not self.is_steam:
-            return False
         return self.steamworks.UserStats.GetAchievement(key)
 
     def SetStat(self, key: str, value):
-        if not self.is_steam:
-            return False
         return self.steamworks.UserStats.SetStat(key, value)
 
     def SetAchv(self, key: str, clear=False):
-        if not self.is_steam:
-            return False
         if clear:
             return self.steamworks.UserStats.ClearAchievement(key)
         return self.steamworks.UserStats.SetAchievement(key)
 
     def Store(self):
-        if not self.is_steam:
-            return False
         return self.steamworks.UserStats.StoreStats()
+
 
 class TASKBAR_STATE(enum.Enum):
     TBPF_NOPROGRESS = 0x00000000
@@ -2025,6 +2044,7 @@ class TASKBAR_STATE(enum.Enum):
     TBPF_NORMAL = 0x00000002
     TBPF_ERROR = 0x00000004
     TBPF_PAUSED = 0x00000008
+
 
 class EULAWriter:
     eula_hi = """

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import datetime
-import enum
 import glob
 import html
 import json
@@ -25,8 +24,8 @@ from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFi
 
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator, StateTooltip
-from Utils.utils import Tools, EncodePresetAssemply, ImgSeqIO, SupportFormat, ArgumentManager, SteamUtils, appDir, \
-    TASKBAR_STATE
+from Utils.utils import Tools, EncodePresetAssemply, SupportFormat, ArgumentManager, SteamValidation, appDir, \
+    TASKBAR_STATE, RetailValidation, ImageWrite
 
 MAC = True
 try:
@@ -339,6 +338,12 @@ class UiRun(QThread):
                             line = self.current_proc.stdout.readline()
                             self.current_proc.stdout.flush()
 
+                            if '\\u' in line:
+                                try:
+                                    line = line.encode('utf-8').decode('unicode_escape')
+                                except UnicodeDecodeError:
+                                    pass
+
                             """Replace Field"""
                             flush_lines += line.replace("[A", "")
 
@@ -421,9 +426,6 @@ class UiRun(QThread):
 
 
 class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
-    kill_proc = pyqtSignal(int)
-    notfound = pyqtSignal(int)
-
     def __init__(self, splash_screen: QSplashScreen, taskbar,  parent=None):
         """
         SVFI 主界面类初始化方法
@@ -492,45 +494,23 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_load_settings_templates()
 
         self.splash_screen_initiating("Validating Software...")
-        self.STEAM = SteamUtils(self.is_steam, logger=logger)
         if self.is_steam:
-            if not self.STEAM.steam_valid:
-                warning_title = _translate('', "Steam认证出错！SVFI用不了啦！")
-                error = self.STEAM.steam_error
-                logger.error(f"Steam Validation failed\n{error}")
-                self.function_send_msg(warning_title, error)
-            else:
-                valid_response = self.STEAM.CheckSteamAuth()
-                # debug
-                # valid_response = 1
-                if valid_response != 0:
-                    self.STEAM.steam_valid = False
-                    warning_title = _translate('', "Steam认证失败！SVFI用不了啦！")
-                    warning_code_msg = _translate('', '错误代码：')
-                    warning_msg = f"{warning_code_msg}{valid_response}"
-                    _bpg_msg = _translate('', '白嫖怪爬呀！')
-                    if valid_response == 1:
-                        warning_msg = f"Ticket is not valid.\n{_bpg_msg}"
-                    elif valid_response == 2:
-                        warning_msg = "A ticket has already been submitted for this steamID"
-                    elif valid_response == 3:
-                        warning_msg = "Ticket is from an incompatible interface version"
-                    elif valid_response == 4:
-                        warning_msg = f"Ticket is not for this game\n{_bpg_msg}"
-                    elif valid_response == 5:
-                        _expired_msg = _translate('', '购买的凭证过期')
-                        warning_msg = f"Ticket has expired\n{_expired_msg}"
-                    self.function_send_msg(warning_title, warning_msg)
-                    return
-
-                if not self.is_free:
-                    valid_response = self.STEAM.CheckProDLC(0)
-                    if not valid_response:
-                        self.STEAM.steam_valid = False
-                        warning_title = _translate('', "未购买专业版！SVFI用不了啦！")
-                        warning_msg = _translate('', "请确保专业版DLC已安装")
-                        self.function_send_msg(warning_title, warning_msg)
-                        return
+            self.Validation = SteamValidation(logger=logger)
+        else:
+            self.Validation = RetailValidation(logger=logger)
+        if not self.Validation.CheckValidateStart():
+            warning_title = _translate('', "登录验证出错！SVFI用不了啦！")
+            error = self.Validation.GetValidateError()
+            logger.error(f"Validation failed\n{error}")
+            self.function_send_msg(warning_title, error)
+            return
+        if not self.is_free:
+            valid_response = self.Validation.CheckProDLC(0)
+            if not valid_response:
+                warning_title = _translate('', "未购买专业版！SVFI用不了啦！")
+                warning_msg = _translate('', "请确保专业版DLC已安装")
+                self.function_send_msg(warning_title, warning_msg)
+                return
 
         os.chdir(appDir)
         self.function_check_read_tutorial()
@@ -1069,9 +1049,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if self.ImgOutputChecker.isChecked():
             """Img Output"""
-            img_io = ImgSeqIO(logger=logger, folder=project_dir, is_tool=True,
-                              output_ext=self.ExtSelector.currentText())
-            last_img = img_io.get_write_start_frame()  # output_dir
+            img_writer = ImageWrite(logger, folder=project_dir, is_tool=True)
+            last_img = img_writer.get_write_start_frame()
             if last_img:
                 reply = self.function_send_msg(f"Resume Workflow?", _translate('', "检测到未完成的图片序列补帧任务，载入进度？"), 3)
                 if reply == QMessageBox.No:
@@ -1152,7 +1131,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SettingsTemplateSelector.clear()
         for tp in template_paths:
             template_name = re.findall('SVFI_Config_Template_(.*?)\.ini', tp)
-            if len(template_name) and "Presets" not in template_name:
+            if len(template_name) and "Presets" not in tp:
                 self.SettingsTemplateSelector.addItem(template_name[0])
 
     def settings_update_gpu_info(self, item_update=False):
@@ -1423,7 +1402,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.chores_thread = UiRunThread(ffmpeg_command, data={"type": "音视频合并"})
         self.chores_thread.run_signal.connect(self.function_update_chores_finish)
         self.chores_thread.start()
-        self.function_show_pending_dialog("Muxing Video and Audio...", _translate("", "合并音视频中..."))
+        self.function_show_pending_dialog("Muxing...", _translate("", "合并音视频中..."))
         self.ConcatButton.setEnabled(False)
 
     def function_update_chores_finish(self, data: dict):
@@ -1505,6 +1484,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             for it in range(self.InputFileName.count()):
                 self.InputFileName.setCurrentRow(it)
                 self.on_InputFileName_currentItemChanged()
+                QApplication.processEvents()
             task_list = list(range(self.InputFileName.count()))
         elif load_one:
             task_current_item = self.InputFileName.currentItem()
@@ -1550,14 +1530,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def steam_update_achv(self):
         if not self.is_steam:
             return
-        ACHV_Use_MX250 = self.STEAM.GetAchv("ACHV_Use_MX250")
-        ACHV_Use_RTX2060 = self.STEAM.GetAchv("ACHV_Use_RTX2060")
+        ACHV_Use_MX250 = self.Validation.GetAchv("ACHV_Use_MX250")
+        ACHV_Use_RTX2060 = self.Validation.GetAchv("ACHV_Use_RTX2060")
         current_GPU = self.DiscreteCardSelector.currentText()
         if all([i in current_GPU for i in ['MX', '250']]) and not ACHV_Use_MX250:
-            reply = self.STEAM.SetAchv("ACHV_Use_MX250")
+            reply = self.Validation.SetAchv("ACHV_Use_MX250")
         if all([i in current_GPU for i in ['RTX', '2060']]) and not ACHV_Use_RTX2060:
-            reply = self.STEAM.SetAchv("ACHV_Use_RTX2060")
-        self.STEAM.Store()
+            reply = self.Validation.SetAchv("ACHV_Use_RTX2060")
+        self.Validation.Store()
 
     def process_update_rife(self, json_data):
         """
@@ -1580,6 +1560,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             cursor = self.OptionCheck.textCursor()
             cursor.movePosition(QTextCursor.End)
             cursor.select(QTextCursor.LineUnderCursor)
+            text = cursor.selectedText()
+            if not any([i in text for i in dup_keys_list]):
+                return
             cursor.removeSelectedText()
             cursor.deletePreviousChar()
             cursor.movePosition(QTextCursor.Start)
@@ -1635,7 +1618,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                                        f"{__msg1}\n{data.get('subprocess')}\n{__msg2}", )
                 self.current_failed = True
                 return
-            self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
+            if 'torchvision' not in now_text:
+                self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
+
+        dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
+                         "AppID", "SteamInternal"]
 
         data = json.loads(json_data)
         self.progressBar.setMaximum(int(data["cnt"]))
@@ -1646,28 +1633,29 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             new_text += data["notice"] + "\n"
 
         if len(data.get("subprocess", "")):
-            dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
-                             "AppID", "SteamInternal"]
+
             if 'error' not in data['subprocess'] and any([i in data["subprocess"] for i in dup_keys_list]):
                 tmp = ""
-                lines = data["subprocess"].splitlines()
+                subprocess_data = data["subprocess"]
+                lines = subprocess_data.splitlines()
                 for line in lines:
-                    if not any([i in line for i in dup_keys_list]) and len(line.strip()):
-                        tmp += line + "\n"
-                if tmp.strip() == lines[-1].strip():
-                    lines[-1] = ""
+                    for _line in line.split(']', maxsplit=1):
+                        # special judge of progress bar data when data in the same line
+                        if not any([i in _line for i in dup_keys_list]) and len(_line.strip()):
+                            tmp += _line + "\n"
+                # if tmp.strip() == lines[-1].strip():
+                #     lines[-1] = ""
                 data["subprocess"] = tmp + lines[-1]
                 process_update_taskbar_progress(data['subprocess'])
                 remove_last_line()
             new_text += data["subprocess"]
 
-        if self.rife_thread is UiRun and len(self.rife_thread.get_main_error()):
+        if self.rife_thread is not None and len(self.rife_thread.get_main_error()):
             main_error = self.rife_thread.get_main_error()
             new_text += f"\nLAST ERROR MSG in OLS:\n{main_error}"
 
         for line in new_text.splitlines():
             line = html.escape(line)
-
             check_line = line.lower()
             if "process at" in check_line:
                 add_line = f'<p><span style=" font-weight:600;">{line}</span></p>'
@@ -2418,7 +2406,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def closeEvent(self, event):
         global appData
-        if not self.STEAM.steam_valid:
+        if not self.Validation.CheckValidateStart():
             event.ignore()
             return
         reply = self.function_send_msg("Quit", _translate('', "是否保存当前设置？"), 3)
