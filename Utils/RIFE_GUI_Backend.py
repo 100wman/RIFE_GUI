@@ -441,10 +441,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         添加新选项/变量 3/3 实现先于load_current_settings的特殊新配置
         :param parent:
         """
-        self.splash_screen = splash_screen
+        self._splash_screen = splash_screen
         self.splash_screen_initiating("Initiating Display Platform...")
         super(UiBackend, self).__init__()
-        self.super_hwnd = self.winId()
+        self._super_hwnd = self.winId()
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
         _app.installTranslator(translator)  # 重新翻译主界面
@@ -526,14 +526,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         self.task_bar_controller.ActivateTab(hwnd)
-        self.super_hwnd = hwnd
+        self._super_hwnd = hwnd
 
     def splash_screen_initiating(self, msg:str):
         """
         Update Initiation Information via splash screen widget
         :return:
         """
-        self.splash_screen.showMessage(msg, Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
+        self._splash_screen.showMessage(msg, Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
 
     def settings_change_lang(self, lang: str):
         logger.debug(f"Translate To Lang = {lang}")
@@ -555,6 +555,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AutoInterpScalePredictSizeSelector.setVisible(False)
         self.AiSrMode.setVisible(False)
         self.SrModeLabel.setVisible(False)
+        self.FastDenoiseChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -1302,10 +1303,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         return widgetres
 
     def function_update_task_bar_value(self, complete_cnt: int, total_cnt: int):
-        self.task_bar_controller.SetProgressValue(self.super_hwnd, complete_cnt, total_cnt)
+        self.task_bar_controller.SetProgressValue(self._super_hwnd, complete_cnt, total_cnt)
 
     def function_update_task_bar_state(self, state):
-        self.task_bar_controller.SetProgressState(self.super_hwnd, state.value)
+        self.task_bar_controller.SetProgressState(self._super_hwnd, state.value)
 
     def function_show_pending_dialog(self, title: str, content: str):
         self.state_tooltip = StateTooltip(title, content, self)

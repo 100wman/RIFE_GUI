@@ -541,6 +541,7 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
     QTabBar::tab:hover {{
         color: {light};
         background: {normal};
+        border-top-radius: 2px solid {disDark};
         border: 4px;
     }}
     

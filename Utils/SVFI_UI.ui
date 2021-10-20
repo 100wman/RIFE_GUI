@@ -126,7 +126,7 @@
                        </sizepolicy>
                       </property>
                       <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;强制使用检测到的A卡或核显进行补帧任务&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用检测到的A卡或核显进行补帧任务&lt;/p&gt;&lt;p&gt;使用NCNN架构&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="text">
                        <string>使用A卡或核显 (?)</string>
@@ -142,7 +142,7 @@
                        </sizepolicy>
                       </property>
                       <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对字幕轨兼容不太好；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;请尽量使用输入的文件格式&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果音频合并出现问题，请尝试更换输出文件格式&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mov&lt;/span&gt;兼容大多数音视频轨，但对不同格式的字幕轨（ass等）兼容欠佳；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mkv&lt;/span&gt;兼容大多数字幕轨，但不支持pcm音频输出（这种情况请改为mov）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;mp4&lt;/span&gt;支持流式传输，不支持truehd、dts等特种音频格式包装&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;请尽量使用输入的文件格式&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="text">
                        <string>输出文件格式 (!)</string>
@@ -177,7 +177,7 @@
                        </sizepolicy>
                       </property>
                       <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;输出图片序列，输出格式支持png、tiff等&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;命名格式:0&amp;gt;8d,如 00000008.png&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;输出图片序列，输出格式支持jpg、png、tiff等&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;命名格式:0&amp;gt;8d,如 00000008.png&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="text">
                        <string>输出图片序列 (?)</string>
@@ -258,7 +258,7 @@
                     <item>
                      <widget class="QRadioButton" name="InterpExpReminder">
                       <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1. 输入为视频，输出为视频或图片序列：实际输出帧率以&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;为准，与补帧倍率无关：&lt;/p&gt;&lt;p&gt;一个长度为1s的24fps输入视频在补帧倍率为x2，输出帧率为60的情况下，会输出&lt;span style=&quot; font-weight:600;&quot;&gt;60fps的视频或者60张图片&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;2. 输入为图片序列，输出为视频：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，再输入到软件进行补帧，并被压制为&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会输出60fps的视频，且&lt;span style=&quot; font-weight:600;&quot;&gt;大于48fps的部分为重复帧&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;3. 输入为图片序列，输出为图片序列：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，并按照补帧倍率输出：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会&lt;span style=&quot; font-weight:600;&quot;&gt;输出48张图片&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1. 输入为视频，输出为视频或图片序列：实际输出帧率以&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;为准，与补帧倍率无关：&lt;/p&gt;&lt;p&gt;一个长度为1s的24fps输入视频在补帧倍率为x2，输出帧率为60的情况下，会输出&lt;span style=&quot; font-weight:600;&quot;&gt;60fps的视频或者60张图片&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;2. 输入为图片序列，输出为视频：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，再输入到软件进行补帧，并被压制为&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率&lt;/span&gt;：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会输出60fps的视频，且&lt;span style=&quot; font-weight:600;&quot;&gt;大于48fps的部分为重复帧&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;3. 输入为图片序列，输出为图片序列：每张输入图片会&lt;span style=&quot; font-weight:600;&quot;&gt;按照补帧倍率重复N次&lt;/span&gt;，并按照补帧倍率输出：&lt;/p&gt;&lt;p&gt;一个24fps，有24张图片的图片序列在补帧倍率为x2，输出帧率为60的情况下，会&lt;span style=&quot; font-weight:600;&quot;&gt;输出48张图片&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="text">
                        <string>补帧倍率 (!)</string>
@@ -361,7 +361,7 @@
                     </sizepolicy>
                    </property>
                    <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;（支持批处理）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;（专业版支持批处理）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="text">
                     <string>输入视频文件 (?)</string>
@@ -523,8 +523,11 @@
                   </item>
                   <item row="0" column="0">
                    <widget class="QPushButton" name="SettingsPresetsApplyButton">
+                    <property name="toolTip">
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用SVFI自带的补帧预设&lt;/p&gt;&lt;p&gt;设置变动将反映在高级设置中&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
                     <property name="text">
-                     <string>应用预设</string>
+                     <string>应用预设 (?)</string>
                     </property>
                    </widget>
                   </item>
@@ -771,7 +774,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>6</number>
+                      <number>2</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -969,7 +972,7 @@
                                </size>
                               </property>
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;根据已经生成的视频块信息进行推算，可能存在重复补帧的情况，但不影响最终结果。&lt;/p&gt;&lt;p&gt;对于队列输入（输入数&amp;gt;1），请确保每个任务条目正确设置工作恢复参数（都点一下自动设置的按钮），否则软件将自动识别工作进度并进行补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;图片序列输入需要手动输入恢复进度参数&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;根据已经生成的视频块信息进行推算，可能存在重复补帧的情况，但不影响最终结果。&lt;/p&gt;&lt;p&gt;对于队列输入（输入数&amp;gt;1），请确保每个任务条目正确设置工作恢复参数（分别点击&lt;span style=&quot; font-weight:600;&quot;&gt;自动设置&lt;/span&gt;的按钮），否则软件将自动识别工作进度并进行补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;图片序列输入需要手动输入恢复进度参数&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>自动设置 (?)</string>
@@ -994,7 +997,7 @@
                                </size>
                               </property>
                               <property name="toolTip">
-                               <string>时：分：秒</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;时：分：秒&lt;/span&gt;&lt;/p&gt;&lt;p&gt;对输入进行指定时间范围内的补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;不支持工作进度恢复&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>起始补帧时刻：(?)</string>
@@ -1040,7 +1043,7 @@
                                <string>风险模式 (?)</string>
                               </property>
                               <property name="checked">
-                               <bool>true</bool>
+                               <bool>false</bool>
                               </property>
                              </widget>
                             </item>
@@ -1328,7 +1331,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-70</y>
+                        <y>0</y>
                         <width>365</width>
                         <height>476</height>
                        </rect>
@@ -1346,7 +1349,7 @@
                           <item row="0" column="0">
                            <widget class="QLabel" name="label_8">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x&lt;/span&gt;适用于2D动漫输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR&lt;/span&gt;适用于3D实拍&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;的GAN渲染效果更清晰，画面偏向细节保留，Net输出模糊，画面偏向涂抹与结构恢复&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：realESR非常慢（是TVE的1/10速度），但效果比TVE好，普适性极强&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x&lt;/span&gt;适用于2D动漫输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR&lt;/span&gt;适用于3D实拍&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;的GAN渲染效果更清晰，画面偏向细节保留，Net输出模糊，画面偏向涂抹与结构恢复&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：realESR非常慢（是TVE的1/10速度），但动漫超分效果比TVE好，效果普适性极强&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>超分算法 (?)</string>
@@ -1405,7 +1408,7 @@
                             <item>
                              <widget class="QLabel" name="AiSrModuleExpReminder">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;所选超分模型的固有超分倍数&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>超分模型倍数 (?):</string>
@@ -1446,7 +1449,7 @@
                           <item row="5" column="0">
                            <widget class="QLabel" name="AiSrTransferResolution">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;对输入进行超分前，将分辨率缩放到此分辨率再进行超分；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输出分辨率 = 缩放分辨率 x 超分模型倍数&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此空未指定，则默认为输入分辨率；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;若已手动指定输出分辨率，则在经过超分的基础上再次缩放为指定输出分辨率输出&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>转移分辨率 (!)</string>
@@ -1530,7 +1533,7 @@
                           <item row="9" column="0">
                            <widget class="QLabel" name="TileSizeLabel">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;算法时使用，酌情使用。&lt;/p&gt;&lt;p&gt;6G显存设值100~200左右。该数过大会产生显存不足错误。合适的值将提升超分速度。&lt;/p&gt;&lt;p&gt;设置0为不切割，若不爆显存则超分满速运行&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;算法时使用，酌情使用。&lt;/p&gt;&lt;p&gt;6G显存设值100~200左右。该数过大会产生显存不足错误。合适的值将提升超分速度。&lt;/p&gt;&lt;p&gt;（其为超分输入矩阵的边长，推荐选择输入分辨率宽的缩小偶数倍数，如1080p的1/2, 960）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;设置0为不切割输入直接喂入超分模型，若不爆显存则超分满速运行&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>TileSize (?)</string>
@@ -1558,8 +1561,11 @@
                           </item>
                           <item row="11" column="0">
                            <widget class="QCheckBox" name="RealESRFp16Checker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对RealESR超分算法开启半精度，有效提高超分速度，但可能带来画面精度3%的损失以及画面可能的纹理损失&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;建议开启&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
                             <property name="text">
-                             <string>RealESR半精度 (beta)</string>
+                             <string>RealESR半精度 (?)</string>
                             </property>
                            </widget>
                           </item>
@@ -1719,7 +1725,7 @@
                             <item row="0" column="0">
                              <widget class="QLabel" name="ResizeReminder">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为图片序列且开启AI超分情况的特别说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若要将SVFI用于&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率不同&lt;/span&gt;的图片序列超分，请将&lt;span style=&quot; font-weight:600;&quot;&gt;宽高分别设置为0&lt;/span&gt;，并在上面的预设框选择&amp;gt;100%的倍率。否则（统一分辨率）请填入要放缩至的分辨率&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此处的宽高皆不为0，SVFI将会把所有输入（先超分再）放缩至&lt;span style=&quot; font-weight:600;&quot;&gt;指定的非零分辨率&lt;/span&gt;输出。&lt;/p&gt;&lt;p&gt;具体地，对于一个1080p的视频使用x4模型超分至4K，SVFI将&lt;span style=&quot; font-weight:600;&quot;&gt;先把输入放缩至540p&lt;/span&gt;并使用x4模型超分至4K输出；&lt;/p&gt;&lt;p&gt;对于一个540p的视频使用x2模型超分至4K，SVFI将直接使用x4模型&lt;span style=&quot; font-weight:600;&quot;&gt;超分两次&lt;/span&gt;至4K输出，可以注意到处理时间明显较上者长&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;宽高必须为偶数！&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输入为图片序列时，SVFI将不会自动检测宽高（此时显示为0代表自动）&lt;/p&gt;&lt;p&gt;会在输出视频时将输出缩放为指定分辨率，未指定则输出输入源的分辨率&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>输出文件分辨率 (?)</string>
@@ -1801,9 +1807,9 @@
                      <widget class="QWidget" name="RenderSettings">
                       <property name="geometry">
                        <rect>
-                        <x>0</x>
-                        <y>-210</y>
-                        <width>372</width>
+                        <x>-13</x>
+                        <y>0</y>
+                        <width>378</width>
                         <height>599</height>
                        </rect>
                       </property>
@@ -1819,13 +1825,6 @@
                          <layout class="QGridLayout" name="gridLayout_27">
                           <item row="0" column="0">
                            <layout class="QGridLayout" name="gridLayout_12">
-                            <item row="12" column="0">
-                             <widget class="QCheckBox" name="KeepChunksChecker">
-                              <property name="text">
-                               <string>保留中间文件(chunks)</string>
-                              </property>
-                             </widget>
-                            </item>
                             <item row="14" column="0">
                              <widget class="QLabel" name="label_30">
                               <property name="sizePolicy">
@@ -2022,6 +2021,38 @@
                           <string/>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_32">
+                          <item row="2" column="1">
+                           <widget class="MyComboBox" name="HwaccelSelector">
+                            <property name="toolTip">
+                             <string/>
+                            </property>
+                            <item>
+                             <property name="text">
+                              <string>CPU</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>NVENC</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>QSV</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>NVENCC</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>QSVENCC</string>
+                             </property>
+                            </item>
+                           </widget>
+                          </item>
                           <item row="2" column="0">
                            <widget class="QLabel" name="label_25">
                             <property name="toolTip">
@@ -2029,35 +2060,6 @@
                             </property>
                             <property name="text">
                              <string>编码器：(?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="12" column="0">
-                           <widget class="QCheckBox" name="DeinterlaceChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用ffmpeg的YADIF滤镜对输入进行反交错&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;（仅支持视频输入）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>开启反交错 (!)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="0" column="0">
-                           <widget class="QRadioButton" name="UseCRF">
-                            <property name="sizePolicy">
-                             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                              <horstretch>0</horstretch>
-                              <verstretch>0</verstretch>
-                             </sizepolicy>
-                            </property>
-                            <property name="toolTip">
-                             <string>不懂就百度</string>
-                            </property>
-                            <property name="text">
-                             <string>渲染质量CRF：</string>
-                            </property>
-                            <property name="checked">
-                             <bool>true</bool>
                             </property>
                            </widget>
                           </item>
@@ -2106,96 +2108,6 @@
                             </layout>
                            </widget>
                           </item>
-                          <item row="1" column="0">
-                           <widget class="QRadioButton" name="UseTargetBitrate">
-                            <property name="sizePolicy">
-                             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                              <horstretch>0</horstretch>
-                              <verstretch>0</verstretch>
-                             </sizepolicy>
-                            </property>
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;目标码率，1pass下不代表实际码率&lt;/p&gt;&lt;p&gt;最终输出码率大概率低于目标码率，&lt;span style=&quot; font-weight:600;&quot;&gt;请勿恐慌&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果想输出高码率，请使用ProRes编码（剪辑专用）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>目标码率： (?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="3" column="0">
-                           <widget class="QLabel" name="EncoderReminder">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;HEVC&lt;/span&gt;：高效视频压制格式，用更低的码率获得更优的画面质量。对于配置较低的电脑，解码HEVC编码的视频可能会有困难。4K、HDR、用于收藏的蓝光原盘等内容只推荐使用此编码&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;H264&lt;/span&gt;：非常通用的压制编码，不推荐用于超高清内容（&amp;gt;4K）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;ProRes: &lt;/span&gt;剪辑中间格式专用，如果你希望码率越大越好，选这个就完事了&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;8bit，10bit的区别：&lt;/span&gt;自行百度，10bit可以有效除去画面色带&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;带透明通道的输出：&lt;/span&gt;使用ProRes的yuv444p10le编码&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>选择压制编码： (?)</string>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="5" column="0">
-                           <widget class="QLabel" name="HwaccelPresetLabel">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅在使用NVENC编码器时生效&lt;/span&gt;&lt;/p&gt;&lt;p&gt;右为编码器辈数（请自行查阅自己显卡的NVENC辈数）&lt;/p&gt;&lt;p&gt;辈数越高，压缩率越好&lt;/p&gt;&lt;p&gt;如果使用此项报Broken Pipe错误，请尝试降级（如7th改为6th）或关闭（调为None）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;恰当选择此项有望显著提高N卡硬编压制质量&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;选择方案请看附赠的NVIDIA NVENC Gen.pdf&lt;/span&gt;&lt;/p&gt;&lt;p&gt;GTX 1050+ 请选5th&lt;/p&gt;&lt;p&gt;GTX 1650+ 请选7th&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>N卡硬编预设：(?)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="12" column="1">
-                           <widget class="QCheckBox" name="FastDenoiseChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用cv2的快速降噪，减少画面噪点&lt;/p&gt;&lt;p&gt;会显著降低补帧效率&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>快速降噪 (!)</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="11" column="0">
-                           <widget class="QCheckBox" name="HwaccelDecode">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;减小CPU解码负担，输入为4K时推荐开启&lt;/p&gt;&lt;p&gt;如果无法补帧，请尝试关闭此选项&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>硬件解码 (!)</string>
-                            </property>
-                            <property name="checked">
-                             <bool>false</bool>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="3" column="1">
-                           <widget class="MyComboBox" name="EncoderSelector">
-                            <property name="sizePolicy">
-                             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                              <horstretch>0</horstretch>
-                              <verstretch>0</verstretch>
-                             </sizepolicy>
-                            </property>
-                            <item>
-                             <property name="text">
-                              <string>H264,8bit</string>
-                             </property>
-                            </item>
-                           </widget>
-                          </item>
-                          <item row="4" column="0">
-                           <widget class="QLabel" name="PresetReminder">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;slow或veryslow的压制质量已足够好，但速度慢&lt;/span&gt;&lt;/p&gt;&lt;p&gt;ll是NVIDIA硬件编码专用预设，代表low latency，低延迟，速度快，质量不高&lt;/p&gt;&lt;p&gt;hq是NVIDIA硬件编码和ProRes专用预设，代表high quality，相对高质量，但不会比slow高&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;其他都是字面意思&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：&lt;/span&gt;选择HEVC/H265编码，压制预设选择fast或faster，会调用“者佬™快速编码预设”&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>选择压制预设： (?)</string>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                            </property>
-                           </widget>
-                          </item>
                           <item row="0" column="1">
                            <widget class="MySpinBox" name="CRFSelector">
                             <property name="sizePolicy">
@@ -2215,101 +2127,33 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="9" column="0">
-                           <widget class="QCheckBox" name="QuickExtractChecker">
+                          <item row="0" column="0">
+                           <widget class="QRadioButton" name="UseCRF">
+                            <property name="sizePolicy">
+                             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                             </sizepolicy>
+                            </property>
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;推荐开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;使用ffmpeg内置视频导出图片算法，速度快，但可能出现颜色偏差&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>不懂就百度</string>
                             </property>
                             <property name="text">
-                             <string>快速拆帧 (?)</string>
+                             <string>渲染质量CRF：</string>
                             </property>
                             <property name="checked">
                              <bool>true</bool>
                             </property>
                            </widget>
                           </item>
-                          <item row="5" column="1">
-                           <widget class="MyComboBox" name="HwaccelPresetSelector">
-                            <property name="sizePolicy">
-                             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                              <horstretch>0</horstretch>
-                              <verstretch>0</verstretch>
-                             </sizepolicy>
-                            </property>
+                          <item row="5" column="0">
+                           <widget class="QLabel" name="HwaccelPresetLabel">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;第几代N卡&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅在使用NVENC编码器时生效&lt;/span&gt;&lt;/p&gt;&lt;p&gt;右为编码器辈数（请自行查阅自己显卡的NVENC辈数）&lt;/p&gt;&lt;p&gt;辈数越高，压缩率越好&lt;/p&gt;&lt;p&gt;如果使用此项报Broken Pipe错误，请尝试降级（如7th改为6th）或关闭（调为None）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;恰当选择此项有望显著提高N卡硬编压制质量&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;选择方案请看附赠的NVIDIA NVENC Gen.pdf&lt;/span&gt;&lt;/p&gt;&lt;p&gt;GTX 1050+ 请选5th&lt;/p&gt;&lt;p&gt;GTX 1650+ 请选7th&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
-                            <item>
-                             <property name="text">
-                              <string>None</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>5th</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>6th</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>7th+</string>
-                             </property>
-                            </item>
-                           </widget>
-                          </item>
-                          <item row="2" column="1">
-                           <widget class="MyComboBox" name="HwaccelSelector">
-                            <property name="toolTip">
-                             <string/>
+                            <property name="text">
+                             <string>N卡硬编预设：(?)</string>
                             </property>
-                            <item>
-                             <property name="text">
-                              <string>CPU</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>NVENC</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>QSV</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>NVENCC</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>QSVENCC</string>
-                             </property>
-                            </item>
-                           </widget>
-                          </item>
-                          <item row="11" column="1">
-                           <widget class="QWidget" name="EncodeThreadField" native="true">
-                            <layout class="QGridLayout" name="gridLayout_36">
-                             <item row="0" column="0">
-                              <widget class="QCheckBox" name="UseEncodeThread">
-                               <property name="toolTip">
-                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用N个线程（ffmpeg）进行渲染&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                               </property>
-                               <property name="text">
-                                <string>指定编码线程数 (?)</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item row="0" column="1">
-                              <widget class="MySpinBox" name="EncodeThreadSelector"/>
-                             </item>
-                            </layout>
                            </widget>
                           </item>
                           <item row="1" column="1">
@@ -2345,6 +2189,145 @@
                             </item>
                            </layout>
                           </item>
+                          <item row="3" column="0">
+                           <widget class="QLabel" name="EncoderReminder">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;HEVC&lt;/span&gt;：高效视频压制格式，用更低的码率获得更优的画面质量。对于配置较低的电脑，解码HEVC编码的视频可能会有困难。4K、HDR、用于收藏的蓝光原盘等内容只推荐使用此编码&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;H264&lt;/span&gt;：非常通用的压制编码，不推荐用于超高清内容（&amp;gt;4K）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;ProRes: &lt;/span&gt;剪辑中间格式专用，如果你希望码率越大越好，选这个就完事了&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;8bit，10bit的区别：&lt;/span&gt;自行百度，10bit可以有效除去画面色带&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;带透明通道的输出：&lt;/span&gt;使用ProRes的yuv444p10le编码&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>选择压制编码： (?)</string>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="12" column="1">
+                           <widget class="QCheckBox" name="FastDenoiseChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用cv2的快速降噪，减少画面噪点&lt;/p&gt;&lt;p&gt;会显著降低补帧效率&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>快速降噪 (!)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="12" column="0">
+                           <widget class="QCheckBox" name="DeinterlaceChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用ffmpeg的YADIF滤镜对输入进行反交错&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;（仅支持视频输入）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>开启反交错 (!)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="4" column="0">
+                           <widget class="QLabel" name="PresetReminder">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;slow或veryslow的压制质量已足够好，但速度慢&lt;/span&gt;&lt;/p&gt;&lt;p&gt;ll是NVIDIA硬件编码专用预设，代表low latency，低延迟，速度快，质量不高&lt;/p&gt;&lt;p&gt;hq是NVIDIA硬件编码和ProRes专用预设，代表high quality，相对高质量，但不会比slow高&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;其他都是字面意思&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：&lt;/span&gt;选择HEVC/H265编码，压制预设选择fast或faster，会调用“者佬™快速编码预设”&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>选择压制预设： (?)</string>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="9" column="0">
+                           <widget class="QCheckBox" name="QuickExtractChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;推荐开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;使用ffmpeg内置视频导出图片算法，速度快，但可能出现颜色偏差&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>快速拆帧 (?)</string>
+                            </property>
+                            <property name="checked">
+                             <bool>true</bool>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="13" column="0">
+                           <widget class="QCheckBox" name="DefaultEncodePresetChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用ffmpeg默认的编码方案（不使用者佬的压制方案）&lt;/p&gt;&lt;p&gt;者佬的压制方案输出压缩率更高，画质有提升，但部分参数部分cpu不支持&lt;/p&gt;&lt;p&gt;若遇到Broken Pipe错误，请尝试取消勾选此选项&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>默认编码方案 (?)</string>
+                            </property>
+                            <property name="checked">
+                             <bool>true</bool>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="11" column="1">
+                           <widget class="QWidget" name="EncodeThreadField" native="true">
+                            <layout class="QGridLayout" name="gridLayout_36">
+                             <item row="0" column="0">
+                              <widget class="QCheckBox" name="UseEncodeThread">
+                               <property name="toolTip">
+                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用N个线程（ffmpeg）进行渲染&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               </property>
+                               <property name="text">
+                                <string>指定编码线程数 (?)</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item row="0" column="1">
+                              <widget class="MySpinBox" name="EncodeThreadSelector"/>
+                             </item>
+                            </layout>
+                           </widget>
+                          </item>
+                          <item row="3" column="1">
+                           <widget class="MyComboBox" name="EncoderSelector">
+                            <property name="sizePolicy">
+                             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                             </sizepolicy>
+                            </property>
+                            <item>
+                             <property name="text">
+                              <string>H264,8bit</string>
+                             </property>
+                            </item>
+                           </widget>
+                          </item>
+                          <item row="5" column="1">
+                           <widget class="MyComboBox" name="HwaccelPresetSelector">
+                            <property name="sizePolicy">
+                             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                             </sizepolicy>
+                            </property>
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;第几代N卡&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <item>
+                             <property name="text">
+                              <string>None</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>5th</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>6th</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>7th+</string>
+                             </property>
+                            </item>
+                           </widget>
+                          </item>
                           <item row="4" column="1">
                            <widget class="MyComboBox" name="PresetSelector">
                             <property name="sizePolicy">
@@ -2366,23 +2349,52 @@
                             </item>
                            </widget>
                           </item>
-                          <item row="13" column="0">
-                           <widget class="QCheckBox" name="DefaultEncodePresetChecker">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用ffmpeg默认的编码方案（无者佬方案）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>默认编码方案 (beta)</string>
-                            </property>
-                           </widget>
-                          </item>
                           <item row="13" column="1">
                            <widget class="QCheckBox" name="EncodeAudioChecker">
                             <property name="toolTip">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;aac 640kbps，与当前所有输出格式兼容&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>音频轨二压 (beta)</string>
+                             <string>音频轨二压 (?)</string>
+                            </property>
+                            <property name="checked">
+                             <bool>true</bool>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="1" column="0">
+                           <widget class="QRadioButton" name="UseTargetBitrate">
+                            <property name="sizePolicy">
+                             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                             </sizepolicy>
+                            </property>
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;目标码率，1pass下不代表实际码率&lt;/p&gt;&lt;p&gt;最终输出码率大概率低于目标码率，&lt;span style=&quot; font-weight:600;&quot;&gt;请勿恐慌&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;如果想输出高码率，请使用ProRes编码（剪辑专用）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>目标码率： (?)</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="11" column="0">
+                           <widget class="QCheckBox" name="HwaccelDecode">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;减小CPU解码负担，输入为4K时推荐开启&lt;/p&gt;&lt;p&gt;如果无法补帧，请尝试关闭此选项&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>硬件解码 (!)</string>
+                            </property>
+                            <property name="checked">
+                             <bool>false</bool>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="14" column="0">
+                           <widget class="QCheckBox" name="KeepChunksChecker">
+                            <property name="text">
+                             <string>保留中间文件(chunks)</string>
                             </property>
                            </widget>
                           </item>
@@ -2415,7 +2427,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-108</y>
+                        <y>0</y>
                         <width>365</width>
                         <height>514</height>
                        </rect>
@@ -2460,7 +2472,7 @@
                           <item row="6" column="0">
                            <widget class="QCheckBox" name="AutoInterpScaleChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;动态选择光流尺度，用于N卡将有效缓解物体消失问题&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;p&gt;动态选择光流尺度，有效缓解物体消失问题&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>动态光流尺度 (?)</string>
@@ -2477,7 +2489,7 @@
                           <item row="5" column="0">
                            <widget class="QCheckBox" name="ForwardEnsembleChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;提高光流预测准确性&lt;/p&gt;&lt;p&gt;开启后可有效减轻虚影&lt;/p&gt;&lt;p&gt;速度减慢25%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用，2.x模型不推荐开启&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;提高光流预测准确性&lt;/p&gt;&lt;p&gt;开启后可有效减轻虚影&lt;/p&gt;&lt;p&gt;速度减慢25%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅N卡可用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>双向光流 (?)</string>
@@ -2584,8 +2596,11 @@
                               <verstretch>0</verstretch>
                              </sizepolicy>
                             </property>
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在任务管理器中显示的从0计数的GPU&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
                             <property name="text">
-                             <string>选择的GPU</string>
+                             <string>选择的GPU (?)</string>
                             </property>
                            </widget>
                           </item>
@@ -2620,7 +2635,7 @@
                              <bool>true</bool>
                             </property>
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对N卡生效，节省显存使用量；&lt;/p&gt;&lt;p&gt;处理高分辨率视频时，&lt;span style=&quot; font-weight:600;&quot;&gt;勾选此项可能会导致画面抖动，将自动启用“消除闪烁选项”以最大限度消除抖动。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;此外有可能导致输出花屏，极其不建议开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS: 该选项同样适用于RealESR模型（专业版/内测版）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;仅对N卡生效，节省显存使用量；&lt;/p&gt;&lt;p&gt;处理高分辨率视频时，&lt;span style=&quot; font-weight:600;&quot;&gt;勾选此项可能会导致画面抖动，将自动启用“消除闪烁选项”以最大限度消除抖动。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;开启此项将导致4K输出花屏，不建议开启&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>半精度模式 (!)</string>
@@ -2656,7 +2671,7 @@
                           <item row="11" column="0">
                            <widget class="QLabel" name="label_31">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;可以在软件根目录的train_log文件夹自行修改模型的名字&lt;/p&gt;&lt;p&gt;一般来说，版本号越高代表模型越新&lt;/p&gt;&lt;p&gt;offical：&lt;span style=&quot; font-weight:600;&quot;&gt;官方&lt;/span&gt;发布模型&lt;/p&gt;&lt;p&gt;anime smooth：&lt;span style=&quot; font-weight:600;&quot;&gt;动漫模型&lt;/span&gt;，模糊但动作连贯&lt;/p&gt;&lt;p&gt;anime sharp：更清晰&lt;/p&gt;&lt;p&gt;anime experiment：速度更快，效果更清晰，较不丝滑，属于&lt;span style=&quot; font-weight:600;&quot;&gt;实验&lt;/span&gt;模型&lt;/p&gt;&lt;p&gt;2.x较慢，3.6较快&lt;/p&gt;&lt;p&gt;所有模型（如anime）的获取需要内测资格或者加入订阅。默认完整包仅包括官方模型，请自行下载前往群文件下载模型包&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;版本号越高代表模型越新&lt;/p&gt;&lt;p&gt;offical：&lt;span style=&quot; font-weight:600;&quot;&gt;官方&lt;/span&gt;发布模型&lt;/p&gt;&lt;p&gt;anime smooth：自训练&lt;span style=&quot; font-weight:600;&quot;&gt;动漫模型&lt;/span&gt;，模糊但动作连贯&lt;/p&gt;&lt;p&gt;anime sharp：自训练动漫模型，效果更清晰&lt;/p&gt;&lt;p&gt;anime experiment：自训练动漫模型，速度更快，效果更清晰，较不丝滑&lt;/p&gt;&lt;p&gt;2.x较慢，3.x较快&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>使用的补帧模型 (?)</string>
@@ -2669,7 +2684,7 @@
                           <item row="3" column="0">
                            <widget class="QCheckBox" name="ReverseChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将前一张图片作为补帧的参考，即，&lt;span style=&quot; font-weight:600;&quot;&gt;从后向前补&lt;/span&gt;。&lt;/p&gt;&lt;p&gt;可能会比正向光流更流畅，但会严重影响3D动画补帧的高速运动的画面质量&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将前一张图片作为补帧的参考，&lt;span style=&quot; font-weight:600;&quot;&gt;从后向前补&lt;/span&gt;。&lt;/p&gt;&lt;p&gt;可能会比正向光流更流畅，但会严重影响3D动画补帧的高速运动的画面质量&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>反向光流 (?)</string>
@@ -2875,7 +2890,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-105</y>
                         <width>365</width>
                         <height>511</height>
                        </rect>
@@ -3093,8 +3108,11 @@
                             </item>
                             <item>
                              <widget class="QCheckBox" name="ToolBoxEncodeAudioChecker">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;输出将音轨二压为aac 640kbps&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
                               <property name="text">
-                               <string>二压音频为aac (beta)</string>
+                               <string>二压音频为aac (?)</string>
                               </property>
                              </widget>
                             </item>
@@ -3110,7 +3128,7 @@
                             </sizepolicy>
                            </property>
                            <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将下方“输入视频路径”所指素材的第一视频轨与“输入音频路径（视频）”所指素材的第一音频轨合并输出至“输出视频路径”&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将下方“输入视频路径”所指素材的第一视频轨&lt;/p&gt;&lt;p&gt;与“输入音频路径（视频）”所指素材的第一音频轨&lt;/p&gt;&lt;p&gt;合并输出至“输出视频路径”，三个空均要求完整路径名&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                            </property>
                            <property name="text">
                             <string>音视频合并 (?)</string>
@@ -3135,7 +3153,7 @@
                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对于专业版/内测版，设置超分选项可以对输入内容超分&lt;/p&gt;&lt;p&gt;若不开启AI超分功能，输出无超分效果。&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;特别注意：&lt;/span&gt;输出帧率为左栏“输出帧率”设置的数值&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                          </property>
                          <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对&lt;span style=&quot; font-weight:600;&quot;&gt;选中输入&lt;/span&gt;使用&lt;span style=&quot; font-weight:600; text-decoration: underline;&quot;&gt;除&lt;/span&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;补帧设置&lt;/span&gt;以外的设置进行（超分）压制 (?)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对选中输入跳过补帧&lt;span style=&quot; font-weight:600;&quot;&gt;压制&lt;/span&gt; (?)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                          </property>
                         </widget>
                        </item>
@@ -3196,7 +3214,7 @@
                   </sizepolicy>
                  </property>
                  <property name="text">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并向开发人员提交settings和error.log文件，群号264023742&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并对输出界面截图，并在Steam讨论社区发布求助帖。开发人员将会在48h内对帖子进行回复。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -3364,7 +3382,7 @@ p, li { white-space: pre-wrap; }
    </property>
    <widget class="QMenu" name="menu">
     <property name="title">
-     <string>文件</string>
+     <string>设置</string>
     </property>
     <addaction name="actionImportVideos"/>
     <addaction name="actionClearVideo"/>
@@ -3598,7 +3616,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>MBufferChecker</tabstop>
   <tabstop>BufferSizeSelector</tabstop>
   <tabstop>slowmotion</tabstop>
-  <tabstop>KeepChunksChecker</tabstop>
   <tabstop>GifInput</tabstop>
   <tabstop>DebugChecker</tabstop>
   <tabstop>GifOutput</tabstop>

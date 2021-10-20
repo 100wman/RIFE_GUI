@@ -1184,7 +1184,7 @@ p, li { white-space: pre-wrap; }
         <source>加强丝滑</source>
         <translation type="unfinished">Enhanced Smoothness</translation>
     </message>
-    <message>
+        <message>
         <location filename="SVFI_UI.py" line="1570"/>
         <source>极致丝滑</source>
         <translation type="unfinished">Extreme Smoothness</translation>
@@ -1703,16 +1703,6 @@ p, li { white-space: pre-wrap; }
         <location filename="SVFI_UI.py" line="1649"/>
         <source>超分模型 (?)</source>
         <translation>Super Resolution Model (?)</translation>
-    </message>
-    <message>
-        <location filename="SVFI_UI.py" line="1649"/>
-        <source>超分模型倍数 (?):</source>
-        <translation>SR Scale Times (?)</translation>
-    </message>
-    <message>
-        <location filename="SVFI_UI.py" line="1649"/>
-        <source>转移分辨率 (!)</source>
-        <translation>Transfer Resolution (!)</translation>
     </message>
     <message>
         <location filename="SVFI_UI.py" line="1650"/>
@@ -2818,7 +2808,7 @@ p, li { white-space: pre-wrap; }
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;SimSun&apos;; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;Arial&apos;,&apos;sans-serif&apos;; font-size:14pt; font-weight:600; color:#ffffff;&quot;&gt;In the Output window, the meanings of the different colored fonts are as follows:&lt;/span&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;Arial&apos;,&apos;sans-serif&apos;; font-size:12pt; font-weight:600; color:#ff0000;&quot;&gt;Red -- Error, please post the error.log and screenshot of your output display to Steam Discuss Forum for support. Our Developers will response within 48 hours&lt;/span&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;Arial&apos;,&apos;sans-serif&apos;; font-size:12pt; font-weight:600; color:#ff0000;&quot;&gt;Red -- Error, please upload your current settings in &amp;quot;Interpolation&amp;quot;-&amp;quot;Save Current Settings&amp;quot; and error.log that pops up to developer at https://discord.com/invite/K8Q3juRrM4&lt;/span&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;Arial&apos;,&apos;sans-serif&apos;; font-size:12pt; font-weight:600; color:#ffaa00;&quot;&gt;Orange -- Warning, the result will output normally, but the quality may be affected&lt;/span&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
