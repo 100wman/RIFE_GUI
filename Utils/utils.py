@@ -627,10 +627,7 @@ class ArgumentManager:
 
     f"""
     Update Log
-    - Optimize Necessary Info display at start of mission
-    - Optimize Validation Module, use rsa for retail validation module
-    - Optimize Task Finish Sign to avoid zombie process
-    - Optimize Output Display
+    - Update UI Documentation (Tooltips)
     """
 
     path_len_limit = 230

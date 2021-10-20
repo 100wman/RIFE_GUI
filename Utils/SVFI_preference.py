@@ -15,8 +15,8 @@ class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
         Dialog.resize(400, 540)
-        Dialog.setMinimumSize(QtCore.QSize(120, 300))
-        Dialog.setMaximumSize(QtCore.QSize(600, 23333))
+        Dialog.setMinimumSize(QtCore.QSize(400, 300))
+        Dialog.setMaximumSize(QtCore.QSize(600, 23351))
         self.gridLayout = QtWidgets.QGridLayout(Dialog)
         self.gridLayout.setObjectName("gridLayout")
         self.scrollArea = QtWidgets.QScrollArea(Dialog)
@@ -25,6 +25,7 @@ class Ui_Dialog(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.scrollArea.sizePolicy().hasHeightForWidth())
         self.scrollArea.setSizePolicy(sizePolicy)
+        self.scrollArea.setMinimumSize(QtCore.QSize(300, 300))
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
