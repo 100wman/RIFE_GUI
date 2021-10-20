@@ -66,12 +66,12 @@ app_backend = app_backend_module.UiBackend(splash, taskbar)
 
 
 try:
-    if app_backend.STEAM.steam_valid:
+    if app_backend.Validation.CheckValidateStart():
         form = QCandyUi.CandyWindow.createWindow(app_backend, theme="blueDeep", ico_path="svfi.png",
                                                  title=version_title)
         app_backend.update_QCandyUi_hwnd(form.winId())
         form.show()
-        splash.finish(form)
         app.exec_()
+        splash.finish(form)
 except Exception:
     app_backend_module.logger.critical(traceback.format_exc())

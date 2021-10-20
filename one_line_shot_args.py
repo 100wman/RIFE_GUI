@@ -16,18 +16,23 @@ import numpy as np
 import psutil
 import tqdm
 
-from Utils.utils import STEAMWORKS, SteamUtils, ArgumentManager, appDir, DefaultConfigParser, Tools, VideoInfo, \
+from Utils.utils import ArgumentManager, appDir, DefaultConfigParser, Tools, VideoInfo, \
     SupportFormat, OverTimeReminderBearer, ImageRead, ImageWrite, TransitionDetection_ST, \
     VideoFrameInterpolation, Hdr10PlusProcesser, DoviProcesser, EULAWriter, utils_overtime_reminder_bearer, \
     SuperResolution, overtime_reminder_deco
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
+from steamworks import STEAMWORKS
 from steamworks.exceptions import *
 
 if ArgumentManager.is_steam:
+    from Utils.utils import SteamValidation as ValidationModule
+
     try:
         _steamworks = STEAMWORKS(ArgumentManager.app_id)
     except:
         pass
+else:
+    from Utils.utils import RetailValidation as ValidationModule
 
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 # TODO Fix up SVT-HEVC
@@ -154,7 +159,9 @@ class TaskArgumentManager(ArgumentManager):
         if not self.use_manual_buffer:
             self.frames_queue_len = int(max(10.0, self.frames_queue_len))
         self.dup_skip_limit = int(0.5 * self.input_fps) + 1  # 当前跳过的帧计数超过这个值，将结束当前判断循环
-        logger.info(f"Update QLen to {self.frames_queue_len}, dup_skip_limit to {self.dup_skip_limit}")
+        logger.info(f"Free MEM: {free_mem / 1024:.1f}G, "
+                    f"Update QLen to {self.frames_queue_len}, "
+                    f"dup_skip_limit to {self.dup_skip_limit}")
 
     def __update_frame_size(self):
         """规整化输出输入分辨率"""
@@ -226,10 +233,10 @@ class TaskArgumentManager(ArgumentManager):
         self.main_error.append(e)
 
 
-class SteamFlow(SteamUtils):
+class ValidationFlow(ValidationModule):
     def __init__(self, _args: TaskArgumentManager):
         self.ARGS = _args
-        super().__init__(self.ARGS.is_steam, logger)
+        super().__init__(logger)
         self.kill = False
         pass
 
@@ -733,7 +740,7 @@ class ReadFlow(IOFlow):
             if is_end:
                 break
 
-            if self._kill:
+            if self._kill or self.ARGS.get_main_error() is not None:
                 logger.critical("Reader Thread Killed")
                 break
 
@@ -852,7 +859,7 @@ class ReadFlow(IOFlow):
             if is_end:
                 break
 
-            if self._kill:
+            if self._kill or self.ARGS.get_main_error() is not None:
                 logger.critical("Reader Thread Killed")
                 break
 
@@ -994,7 +1001,7 @@ class RenderFlow(IOFlow):
                                                              self.ARGS.video_info_instance.getInputHdr10PlusMetadata())
         self._input_queue = _reader_queue
         self.is_audio_failed_concat = False
-        self.steam_flow = None
+        self.validation_flow = None
 
     def __modify_hdr_params(self):
         if self.ARGS.is_img_input or self.ARGS.hdr_mode == 1:  # img input or ordinary hdr
@@ -1566,8 +1573,8 @@ class RenderFlow(IOFlow):
         if self.ARGS.is_output_only:
             self.__del_existed_chunks()
 
-        if self.steam_flow is SteamFlow:
-            self.steam_flow.steam_update_achv(concat_filepath)
+        if self.validation_flow is ValidationFlow:
+            self.validation_flow.steam_update_achv(concat_filepath)
 
     def check_concat_result(self):
         concat_filepath, output_ext = self.get_output_path()
@@ -1592,6 +1599,16 @@ class RenderFlow(IOFlow):
                                    self.ARGS.interp_times, logger)
         dovi_maker.run()
 
+    def wait_for_input(self):
+        outside_ok = True
+        while self._input_queue.qsize() == 0:
+            time.sleep(0.1)
+            if self.ARGS.get_main_error():
+                """Sth out there dead"""
+                outside_ok = False
+                break
+        return outside_ok
+
     def run(self):
         """
                 Render thread
@@ -1609,7 +1626,7 @@ class RenderFlow(IOFlow):
         self._release_initiation()
         try:
             while True:
-                if self._kill:
+                if self._kill or not self.wait_for_input():
                     if frame_written:
                         frame_writer.close()
                     logger.warning("Render thread killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
@@ -1664,8 +1681,8 @@ class RenderFlow(IOFlow):
 
         return
 
-    def update_steam_flow(self, steam_flow: SteamFlow):
-        self.steam_flow = steam_flow
+    def update_validation_flow(self, validation_flow: ValidationFlow):
+        self.validation_flow = validation_flow
 
 
 class SuperResolutionFlow(IOFlow):
@@ -1752,6 +1769,16 @@ class SuperResolutionFlow(IOFlow):
             self._release_vram_check_lock()
             raise e
 
+    def wait_for_input(self):
+        outside_ok = True
+        while self._input_queue.qsize() == 0:
+            time.sleep(0.1)
+            if self.ARGS.get_main_error():
+                """Sth out there dead"""
+                outside_ok = False
+                break
+        return outside_ok
+
     def run(self):
         """
         SR thread
@@ -1761,7 +1788,7 @@ class SuperResolutionFlow(IOFlow):
         try:
             self.vram_test()
             while True:
-                if self._kill:
+                if self._kill or not self.wait_for_input():
                     logger.warning("Super Resolution thread killed, break")
                     break
                 task_acquire_time = time.time()
@@ -1888,17 +1915,7 @@ class InterpWorkFlow:
         self.rife_task_queue = Queue(maxsize=queue_len)
         self.render_task_queue = Queue(maxsize=queue_len)
 
-        """Set Flow"""
-        """self.steam_flow = SteamFlow(self.ARGS)
-        self.sr_flow = SuperResolutionFlow(self.ARGS, self.read_task_queue, self.rife_task_queue)
-        if not self.ARGS.use_sr:
-            self.read_flow = ReadFlow(self.ARGS, self.rife_task_queue)
-            self.sr_flow.kill()
-        else:
-            self.read_flow = ReadFlow(self.ARGS, self.read_task_queue)
-        self.render_flow = RenderFlow(self.ARGS, self.render_task_queue)
-        self.update_progress_flow = ProgressUpdateFlow(self.ARGS, self.read_flow)"""
-        self.steam_flow = SteamFlow(self.ARGS)
+        self.validation_flow = ValidationFlow(self.ARGS)
         self.read_flow = ReadFlow(self.ARGS, self.read_task_queue)
         self.sr_flow = SuperResolutionFlow(self.ARGS, self.read_task_queue, self.rife_task_queue)
         self.render_flow = RenderFlow(self.ARGS, self.render_task_queue)
@@ -1956,31 +1973,25 @@ class InterpWorkFlow:
                 limit=ArgumentManager.traceback_limit))
             raise e
 
-    def check_params_with_steam(self):
-        if self.ARGS.is_steam:
-            if not self.steam_flow.steam_valid:
-                error = str(self.steam_flow.steam_error).split('\n')[-1]
-                logger.error(f"Steam Validation Failed: {error}")
-                return
-            else:
-                valid_response = self.steam_flow.CheckSteamAuth()
-                if valid_response != 0:
-                    logger.error(f"Steam Validation Failed, code {valid_response}")
-                    raise GenericSteamException(f"Steam Validation Failed, code {valid_response}")
-
-            steam_dlc_check = self.steam_flow.CheckProDLC(0)
-            if not steam_dlc_check:
-                _msg = "SVFI - Professional DLC Not Purchased,"
-                if self.ARGS.extract_only or self.ARGS.render_only:
-                    raise GenericSteamException(f"{_msg} Extract/Render ToolBox Unavailable")
-                if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
-                    raise GenericSteamException(f"{_msg} Manual Input Section Unavailable")
-                if self.ARGS.is_scdet_output or self.ARGS.is_scdet_mix:
-                    raise GenericSteamException(f"{_msg} Scdet Output/Mix Unavailable")
-                if self.ARGS.use_sr:
-                    raise GenericSteamException(f"{_msg} Super Resolution Module Unavailable")
-                if self.ARGS.use_rife_multi_cards:
-                    raise GenericSteamException(f"{_msg} Multi Video Cards Work flow Unavailable")
+    def check_validation(self):
+        if not self.validation_flow.CheckValidateStart():
+            if self.validation_flow.GetValidateError() is not None:
+                logger.error(f"Validation Failed: ")
+                raise self.validation_flow.GetValidateError()
+            return
+        steam_dlc_check = self.validation_flow.CheckProDLC(0)
+        if not steam_dlc_check:
+            _msg = "SVFI - Professional DLC Not Purchased,"
+            if self.ARGS.extract_only or self.ARGS.render_only:
+                raise GenericSteamException(f"{_msg} Extract/Render ToolBox Unavailable")
+            if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
+                raise GenericSteamException(f"{_msg} Manual Input Section Unavailable")
+            if self.ARGS.is_scdet_output or self.ARGS.is_scdet_mix:
+                raise GenericSteamException(f"{_msg} Scdet Output/Mix Unavailable")
+            if self.ARGS.use_sr:
+                raise GenericSteamException(f"{_msg} Super Resolution Module Unavailable")
+            if self.ARGS.use_rife_multi_cards:
+                raise GenericSteamException(f"{_msg} Multi Video Cards Work flow Unavailable")
 
     def check_interp_prerequisite(self):
         if self.ARGS.render_only or self.ARGS.extract_only or self.ARGS.concat_only:
@@ -2014,10 +2025,7 @@ class InterpWorkFlow:
             self.task_failed()
 
     def task_finish(self):
-        if self.ARGS.get_main_error() is not None:
-            logger.error("Error after finish RIFE Task:")
-            self.feed_to_render([None], is_end=True)
-            raise self.ARGS.get_main_error()
+        self.check_outside_error()
         logger.info(f"Program finished at {datetime.datetime.now()}: "
                     f"Duration: {datetime.datetime.now() - self.run_all_time}")
         logger.info("Please Note That Commercial Use of SVFI's Output is Strictly PROHIBITED, "
@@ -2033,10 +2041,20 @@ class InterpWorkFlow:
         self.update_progress_flow.kill()
         self.reminder_bearer.terminate_all()
         utils_overtime_reminder_bearer.terminate_all()
-        logger.info(f"\n\n\nProgram Failed at {datetime.datetime.now()}: "
-                    f"Duration: {datetime.datetime.now() - self.run_all_time}")
-        if self.ARGS.get_main_error() is not None:
+        logger.error(f"\n\n\nProgram Failed at {datetime.datetime.now()}: "
+                     f"Duration: {datetime.datetime.now() - self.run_all_time}")
+        if self.ARGS.get_main_error():
             raise self.ARGS.get_main_error()
+
+    def wait_for_input(self):
+        outside_ok = True
+        while self.rife_task_queue.qsize() == 0:
+            time.sleep(0.1)
+            if self.ARGS.get_main_error():
+                """Sth out there dead"""
+                outside_ok = False
+                break
+        return outside_ok
 
     def run(self):
         """
@@ -2045,7 +2063,7 @@ class InterpWorkFlow:
         """
 
         """Check Steam Validation"""
-        self.check_params_with_steam()
+        self.check_validation()
 
         """Go through the process"""
         if self.ARGS.concat_only:
@@ -2075,15 +2093,7 @@ class InterpWorkFlow:
 
         try:
             while True:
-                # outside_dead = False
-                # while self.rife_task_queue.qsize() == 0:
-                #     time.sleep(0.1)
-                #     if self.ARGS.get_main_error():
-                #         """Sth out there dead"""
-                #         outside_dead = True
-                #         break
-                # if outside_dead:
-                #     break
+                self.wait_for_input()
                 task_acquire_time = time.time()
                 task = self.rife_task_queue.get(timeout=3600)
                 task_acquire_time = time.time() - task_acquire_time
@@ -2159,8 +2169,6 @@ class InterpWorkFlow:
             logger.critical("Main Thread Panicked")
             logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self.ARGS.save_main_error(e)
-            self.task_failed()
-            return
         if self.ARGS.get_main_error() is not None:
             """Shit happened after receiving None as end signal"""
             self.task_failed()

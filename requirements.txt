@@ -26,3 +26,4 @@ scikit-image~=0.18.1
 QCandyUi~=0.14
 WMI~=1.5.1
 comtypes~=1.1.10
+crypto~=1.4.1
