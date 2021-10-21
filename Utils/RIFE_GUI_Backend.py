@@ -189,7 +189,7 @@ class UiRunThread(QThread):
 
 
 class UiRun(QThread):
-    run_signal = pyqtSignal(str)
+    run_signal = pyqtSignal(dict)
 
     def __init__(self, parent=None, concat_only=False, extract_only=False, render_only=False, task_list: list = None):
         """
@@ -255,10 +255,10 @@ class UiRun(QThread):
         update sub process status
         :return:
         """
-        emit_json = {"cnt": len(self.task_list), "current": self.current_step, "finished": finished,
+        emit_dict = {"cnt": len(self.task_list), "current": self.current_step, "finished": finished,
                      "notice": notice, "subprocess": sp_status, "returncode": returncode}
-        emit_json = json.dumps(emit_json)
-        self.run_signal.emit(emit_json)
+        # emit_json = json.dumps(emit_json)
+        self.run_signal.emit(emit_dict)
 
     @staticmethod
     def maintain_multitask():
@@ -1540,7 +1540,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             reply = self.Validation.SetAchv("ACHV_Use_RTX2060")
         self.Validation.Store()
 
-    def process_update_rife(self, json_data):
+    def process_update_rife(self, subprocess_data: dict):
         """
         Communicate with RIFE Thread
         :return:
@@ -1550,7 +1550,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             progress_data = re.findall("\|.*?(\d+)/(\d+)", subprocess_line)
             if not len(progress_data):
                 return
-            complete_cnt, total_cnt = progress_data[0]
+            complete_cnt, total_cnt = progress_data[-1]
             self.function_update_task_bar_value(int(complete_cnt), int(total_cnt))
 
         def generate_error_log():
@@ -1625,7 +1625,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
                          "AppID", "SteamInternal"]
 
-        data = json.loads(json_data)
+        data = subprocess_data
         self.progressBar.setMaximum(int(data["cnt"]))
         self.progressBar.setValue(int(data["current"]))
         new_text = ""
