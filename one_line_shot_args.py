@@ -1384,9 +1384,9 @@ class RenderFlow(IOFlow):
 
         if self.ARGS.use_manual_encode_thread:
             if self.ARGS.render_hwaccel_mode == "NVENCC":
-                output_dict.update({"--output-thread": f"{self.ARGS.use_manual_encode_thread}"})
+                output_dict.update({"--output-thread": f"{self.ARGS.render_encode_thread}"})
             else:
-                output_dict.update({"-threads": f"{self.ARGS.use_manual_encode_thread}"})
+                output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
 
         logger.debug(f"writer: {output_dict}, {input_dict}")
 
@@ -1493,6 +1493,13 @@ class RenderFlow(IOFlow):
         output_filepath += output_ext  # 添加后缀名
         return output_filepath, output_ext
 
+    def concat_when_default_fail(self):
+        if not self.ARGS.is_encode_audio:
+            self.ARGS.is_encode_audio = True
+            logger.warning("Force Audio to be Encoded into AAC 640kbps to avoid concat error")
+            return True
+        return False
+
     # @profile
     @overtime_reminder_deco(300, logger, "Concat Chunks",
                             "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
@@ -1559,17 +1566,31 @@ class RenderFlow(IOFlow):
                          f'-y'
 
         logger.debug(f"Concat command: {ffmpeg_command}")
-        sp = Tools.popen(ffmpeg_command)
-        sp.wait()
+        try:
+            sp = Tools.popen(ffmpeg_command)
+            sp.wait()
+        except Exception as e:
+            if self.concat_when_default_fail():
+                logger.warning("Retry Concat after FFmpeg failed")
+                self.concat_all()
+            else:
+                logger.info("Failed To Concat Video")
+                self.ARGS.save_main_error(e)
+                raise e
+
         logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
+        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
+            if self.concat_when_default_fail():
+                logger.warning("Retry Concat after Output File Detection failed")
+                self.concat_all()
+            else:
+                main_error = FileExistsError(
+                    f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
+                    "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+                self.ARGS.save_main_error(main_error)
+                raise main_error
         if self.ARGS.hdr_mode == 3:
             self.__run_dovi(concat_filepath)
-        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            main_error = FileExistsError(
-                f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
-                "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
-            self.ARGS.save_main_error(main_error)
-            raise main_error
         if self.ARGS.is_output_only:
             self.__del_existed_chunks()
 

@@ -622,12 +622,15 @@ class ArgumentManager:
     gui_version = "3.7.4"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.1.0"
+    ols_version = "7.1.1"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Update UI Documentation (Tooltips)
+    - Optimize Fail Logic when audio concat error
+    - Add Crypto Package
+    - Some Structural Backend Logic Enhance(PyQt Signal)
+    - Update Documentation for beta options 
     """
 
     path_len_limit = 230
