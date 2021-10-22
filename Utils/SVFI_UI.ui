@@ -77,7 +77,84 @@
              </property>
              <widget class="QWidget" name="InputArea" native="true">
               <layout class="QGridLayout" name="gridLayout">
-               <item row="3" column="0">
+               <item row="0" column="0">
+                <layout class="QHBoxLayout" name="horizontalLayout_7">
+                 <item>
+                  <widget class="QLabel" name="InputLabel">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;条目勾亮说明设置已保存&lt;/p&gt;&lt;p&gt;点击条目以保存设置&lt;span style=&quot; font-weight:600;&quot;&gt;（无需点勾）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;内测/专业版支持任务队列&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>输入文件或文件夹 (?)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="tutorialLinkButton">
+                   <property name="text">
+                    <string>点击查看使用教程</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="ClearInputButton">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string>清除输入列表</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0">
+                <widget class="MyListWidget" name="InputFileName">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;“-”&lt;/span&gt;号为删除当前任务条目（Remove）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;“+”&lt;/span&gt;号为以当前任务条目为基础复制生成相同任务（Duplicate）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="midLineWidth">
+                  <number>-6</number>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustIgnored</enum>
+                 </property>
+                 <property name="tabKeyNavigation">
+                  <bool>true</bool>
+                 </property>
+                 <property name="dragEnabled">
+                  <bool>true</bool>
+                 </property>
+                 <property name="dragDropOverwriteMode">
+                  <bool>true</bool>
+                 </property>
+                 <property name="dragDropMode">
+                  <enum>QAbstractItemView::DragDrop</enum>
+                 </property>
+                 <property name="alternatingRowColors">
+                  <bool>false</bool>
+                 </property>
+                 <property name="viewMode">
+                  <enum>QListView::ListMode</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
                 <widget class="QLabel" name="OutputLabel">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -90,26 +167,82 @@
                  </property>
                 </widget>
                </item>
-               <item row="12" column="0">
-                <widget class="QPushButton" name="AllInOne">
+               <item row="3" column="0">
+                <widget class="MyLineWidget" name="OutputFolder">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="font">
-                  <font>
-                   <family>Abril Fatface</family>
-                   <pointsize>28</pointsize>
-                  </font>
+                 <property name="dragEnabled">
+                  <bool>true</bool>
                  </property>
-                 <property name="text">
-                  <string>一键补帧</string>
+                 <property name="placeholderText">
+                  <string>拖入补帧项目输出的文件夹路径（剩余磁盘空间建议20G+）</string>
                  </property>
                 </widget>
                </item>
-               <item row="9" column="0">
+               <item row="4" column="0">
+                <layout class="QHBoxLayout" name="horizontalLayout_12">
+                 <item>
+                  <widget class="QPushButton" name="InputButton">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;（专业版支持批处理）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>输入视频文件 (?)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="InputDirButton">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;不支持交错或带有透明通道的图片&lt;/span&gt;&lt;/p&gt;&lt;p&gt;如要求输入有序，文件命名&lt;span style=&quot; font-weight:600;&quot;&gt;应等长&lt;/span&gt;，如&lt;br/&gt;input_0001.png, input_0002.png, ...&lt;/p&gt;&lt;p&gt;以下输入不保证输入有序：&lt;/p&gt;&lt;p&gt;1.png, 2.png, ..., 10.png, 11.png&lt;/p&gt;&lt;p&gt;应改为：&lt;/p&gt;&lt;p&gt;01.png, 02.png, ..., 10.png&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>输入帧/图片序列 (?)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="OutputButton">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;当输出为图片序列，最终输出位置为指定输出文件夹&lt;span style=&quot; font-weight:600;&quot;&gt;内&lt;/span&gt;一个带有&lt;span style=&quot; font-weight:600;&quot;&gt;输入文件夹名称&lt;/span&gt;的子文件夹&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>设置输出文件夹 (?)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="ShowAdvance">
+                   <property name="text">
+                    <string>显示高级选项</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="5" column="0">
                 <widget class="QGroupBox" name="groupBox">
                  <property name="title">
                   <string/>
@@ -350,153 +483,7 @@
                  </layout>
                 </widget>
                </item>
-               <item row="8" column="0">
-                <layout class="QHBoxLayout" name="horizontalLayout_12">
-                 <item>
-                  <widget class="QPushButton" name="InputButton">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;（专业版支持批处理）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="text">
-                    <string>输入视频文件 (?)</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="InputDirButton">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;不支持交错或带有透明通道的图片&lt;/span&gt;&lt;/p&gt;&lt;p&gt;如要求输入有序，文件命名&lt;span style=&quot; font-weight:600;&quot;&gt;应等长&lt;/span&gt;，如&lt;br/&gt;input_0001.png, input_0002.png, ...&lt;/p&gt;&lt;p&gt;以下输入不保证输入有序：&lt;/p&gt;&lt;p&gt;1.png, 2.png, ..., 10.png, 11.png&lt;/p&gt;&lt;p&gt;应改为：&lt;/p&gt;&lt;p&gt;01.png, 02.png, ..., 10.png&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="text">
-                    <string>输入帧/图片序列 (?)</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="OutputButton">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;当输出为图片序列，最终输出位置为指定输出文件夹&lt;span style=&quot; font-weight:600;&quot;&gt;内&lt;/span&gt;一个带有&lt;span style=&quot; font-weight:600;&quot;&gt;输入文件夹名称&lt;/span&gt;的子文件夹&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="text">
-                    <string>设置输出文件夹 (?)</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="ShowAdvance">
-                   <property name="text">
-                    <string>显示高级选项</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="2" column="0">
-                <widget class="MyListWidget" name="InputFileName">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;“-”&lt;/span&gt;号为删除当前任务条目（Remove）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;“+”&lt;/span&gt;号为以当前任务条目为基础复制生成相同任务（Duplicate）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="midLineWidth">
-                  <number>-6</number>
-                 </property>
-                 <property name="sizeAdjustPolicy">
-                  <enum>QAbstractScrollArea::AdjustIgnored</enum>
-                 </property>
-                 <property name="tabKeyNavigation">
-                  <bool>true</bool>
-                 </property>
-                 <property name="dragEnabled">
-                  <bool>true</bool>
-                 </property>
-                 <property name="dragDropOverwriteMode">
-                  <bool>true</bool>
-                 </property>
-                 <property name="dragDropMode">
-                  <enum>QAbstractItemView::DragDrop</enum>
-                 </property>
-                 <property name="alternatingRowColors">
-                  <bool>false</bool>
-                 </property>
-                 <property name="viewMode">
-                  <enum>QListView::ListMode</enum>
-                 </property>
-                </widget>
-               </item>
-               <item row="4" column="0">
-                <widget class="MyLineWidget" name="OutputFolder">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="dragEnabled">
-                  <bool>true</bool>
-                 </property>
-                 <property name="placeholderText">
-                  <string>拖入补帧项目输出的文件夹路径（剩余磁盘空间建议20G+）</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <layout class="QHBoxLayout" name="horizontalLayout_7">
-                 <item>
-                  <widget class="QLabel" name="InputLabel">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;条目勾亮说明设置已保存&lt;/p&gt;&lt;p&gt;点击条目以保存设置&lt;span style=&quot; font-weight:600;&quot;&gt;（无需点勾）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;内测/专业版支持任务队列&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="text">
-                    <string>输入文件或文件夹 (?)</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="tutorialLinkButton">
-                   <property name="text">
-                    <string>点击查看使用教程</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="ClearInputButton">
-                   <property name="text">
-                    <string>清除输入列表</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="10" column="0">
+               <item row="6" column="0">
                 <widget class="QGroupBox" name="SettingsPresetGroup">
                  <property name="title">
                   <string/>
@@ -572,7 +559,7 @@
                  </layout>
                 </widget>
                </item>
-               <item row="11" column="0">
+               <item row="7" column="0">
                 <widget class="QWidget" name="ShortCutGroup" native="true">
                  <layout class="QGridLayout" name="ShortCutLayout">
                   <item row="0" column="7">
@@ -670,6 +657,49 @@
                   </item>
                  </layout>
                 </widget>
+               </item>
+               <item row="8" column="0">
+                <layout class="QHBoxLayout" name="horizontalLayout_20">
+                 <item>
+                  <widget class="QPushButton" name="StartExtractButton">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;拆帧&lt;span style=&quot; font-weight:600;&quot;&gt;选中输入&lt;/span&gt;到输出文件夹（可用于GIF拆帧）&lt;/p&gt;&lt;p&gt;请先勾选“输出图片序列”，并选择要输出的文件格式&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;若未勾选“输出图片序列”，输出将自动改为png图片序列&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>一键拆帧 (?)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="AllInOne">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <family>Abril Fatface</family>
+                     <pointsize>9</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>一键补帧 (?)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="StartRenderButton">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对于专业版/内测版，设置超分选项可以对输入内容超分&lt;/p&gt;&lt;p&gt;若不开启AI超分功能，输出无超分效果。&lt;/p&gt;&lt;p&gt;压制将跳过补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;特别注意：&lt;/span&gt;输出帧率为左栏“输入帧率”设置的数值&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>一键压制 (?)</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
               </layout>
              </widget>
@@ -774,7 +804,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>2</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -890,7 +920,7 @@
                                </size>
                               </property>
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;进度恢复输入规则：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输出文件夹的最后一个chunk，第三个数字+1&lt;/p&gt;&lt;p&gt;e.g. 最后一个chunk是chunk-003-333-335.mp4，此栏输入336&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;-1 为自动识别进度（请确保任务id相同）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;进度恢复输入规则：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输出文件夹的最后一个chunk，第三个数字+1&lt;/p&gt;&lt;p&gt;e.g. 最后一个chunk是chunk-003-333-335.mp4，此栏输入336&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;-1 为自动识别进度（请确保任务id相同）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>起始输入帧数：(?)</string>
@@ -1331,7 +1361,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-70</y>
                         <width>365</width>
                         <height>476</height>
                        </rect>
@@ -1555,7 +1585,7 @@
                              <number>50</number>
                             </property>
                             <property name="value">
-                             <number>100</number>
+                             <number>400</number>
                             </property>
                            </widget>
                           </item>
@@ -1834,10 +1864,10 @@
                                </sizepolicy>
                               </property>
                               <property name="toolTip">
-                               <string>输入项数必须为偶数</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;专业选项，必须输入和编码器对应的参数（FFmpeg、EnCc系列或SVT）&lt;/p&gt;&lt;p&gt;此参数用于压制&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
-                               <string>自定义ffmpeg压制参数： (?)</string>
+                               <string>自定义压制参数： (?)</string>
                               </property>
                              </widget>
                             </item>
@@ -2039,6 +2069,11 @@
                             <item>
                              <property name="text">
                               <string>QSV</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>SVT</string>
                              </property>
                             </item>
                             <item>
@@ -2352,10 +2387,10 @@
                           <item row="13" column="1">
                            <widget class="QCheckBox" name="EncodeAudioChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;aac 640kbps，与当前所有输出格式兼容&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将输入视频中的音轨全部二压为AAC格式， 640kbps，与当前所有输出格式兼容&lt;/p&gt;&lt;p&gt;若输出视频格式与输入视频格式不兼容，则推荐开启此选项。&lt;/p&gt;&lt;p&gt;如带有pcm的输入合并至mkv中&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>音频轨二压 (?)</string>
+                             <string>音频二压为AAC (?)</string>
                             </property>
                             <property name="checked">
                              <bool>true</bool>
@@ -2427,7 +2462,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-108</y>
                         <width>365</width>
                         <height>514</height>
                        </rect>
@@ -2890,28 +2925,15 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-105</y>
-                        <width>365</width>
-                        <height>511</height>
+                        <y>0</y>
+                        <width>382</width>
+                        <height>406</height>
                        </rect>
                       </property>
                       <attribute name="label">
-                       <string>工具箱（不能在补帧过程中使用)</string>
+                       <string>工具箱</string>
                       </attribute>
                       <layout class="QGridLayout" name="gridLayout_7">
-                       <item row="8" column="0">
-                        <spacer name="verticalSpacer">
-                         <property name="orientation">
-                          <enum>Qt::Vertical</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>20</width>
-                           <height>40</height>
-                          </size>
-                         </property>
-                        </spacer>
-                       </item>
                        <item row="1" column="0">
                         <widget class="QLabel" name="GIFLabel">
                          <property name="sizePolicy">
@@ -2928,21 +2950,18 @@
                          </property>
                         </widget>
                        </item>
-                       <item row="7" column="0">
-                        <widget class="QGroupBox" name="RenderBox">
-                         <property name="title">
-                          <string/>
+                       <item row="4" column="0">
+                        <spacer name="verticalSpacer">
+                         <property name="orientation">
+                          <enum>Qt::Vertical</enum>
                          </property>
-                         <layout class="QGridLayout" name="gridLayout_34">
-                          <item row="0" column="0">
-                           <widget class="QPushButton" name="StartRenderButton">
-                            <property name="text">
-                             <string>开压</string>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </widget>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>20</width>
+                           <height>40</height>
+                          </size>
+                         </property>
+                        </spacer>
                        </item>
                        <item row="2" column="0">
                         <layout class="QGridLayout" name="gridLayout_16">
@@ -3030,8 +3049,11 @@
                                 <verstretch>0</verstretch>
                                </sizepolicy>
                               </property>
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;当任务中途失败或合并失败时，若需要将渲染子块(chunk)合并为视频文件，请使用此按钮&lt;/span&gt;&lt;/p&gt;&lt;p&gt;将左侧任务输入框&lt;span style=&quot; font-weight:600;&quot;&gt;选中的任务条目&lt;/span&gt;对应的&lt;span style=&quot; font-weight:600;&quot;&gt;输出项目文件夹&lt;/span&gt;内的渲染子块(&lt;span style=&quot; font-weight:600;&quot;&gt;chunk&lt;/span&gt;)合并为视频&lt;/p&gt;&lt;p&gt;注意事项：&lt;/p&gt;&lt;p&gt;1. 输出项目文件夹所在磁盘必须处于活动状态中，否则将报“未找到输入或输出文件错误”&lt;/p&gt;&lt;p&gt;2. 任务条目id必须与输出项目文件夹的id相同，项目文件夹名称结尾以“_”间隔的后一字符串即为任务id&lt;/p&gt;&lt;p&gt;3. &lt;span style=&quot; font-weight:600;&quot;&gt;输出为图片序列&lt;/span&gt;必须处于未选中状态&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
                               <property name="text">
-                               <string>合并已有区块</string>
+                               <string>合并已有区块 (!)</string>
                               </property>
                              </widget>
                             </item>
@@ -3112,7 +3134,7 @@
                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;输出将音轨二压为aac 640kbps&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
-                               <string>二压音频为aac (?)</string>
+                               <string>音频二压为AAC (?)</string>
                               </property>
                              </widget>
                             </item>
@@ -3128,7 +3150,7 @@
                             </sizepolicy>
                            </property>
                            <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将下方“输入视频路径”所指素材的第一视频轨&lt;/p&gt;&lt;p&gt;与“输入音频路径（视频）”所指素材的第一音频轨&lt;/p&gt;&lt;p&gt;合并输出至“输出视频路径”，三个空均要求完整路径名&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;将下方“输入视频路径”所指素材的第一视频轨&lt;/p&gt;&lt;p&gt;与“输入音频路径（视频）”所指素材的第一音频轨&lt;/p&gt;&lt;p&gt;合并输出至“输出视频路径”，&lt;span style=&quot; font-weight:600;&quot;&gt;三个输入框均要求填写完整路径名&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                            </property>
                            <property name="text">
                             <string>音视频合并 (?)</string>
@@ -3136,45 +3158,6 @@
                           </widget>
                          </item>
                         </layout>
-                       </item>
-                       <item row="3" column="0">
-                        <widget class="QLabel" name="ExtractLabel">
-                         <property name="toolTip">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;拆帧&lt;span style=&quot; font-weight:600;&quot;&gt;选中输入&lt;/span&gt;到输出文件夹（可用于GIF拆帧）&lt;span style=&quot; font-weight:600;&quot;&gt;（请先勾选“输出图片序列”）&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;拆帧&lt;span style=&quot; font-weight:600;&quot;&gt;选中输入&lt;/span&gt;到输出文件夹 (?)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="6" column="0">
-                        <widget class="QLabel" name="label">
-                         <property name="toolTip">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对于专业版/内测版，设置超分选项可以对输入内容超分&lt;/p&gt;&lt;p&gt;若不开启AI超分功能，输出无超分效果。&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;特别注意：&lt;/span&gt;输出帧率为左栏“输出帧率”设置的数值&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅供专业版/内测版&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对选中输入跳过补帧&lt;span style=&quot; font-weight:600;&quot;&gt;压制&lt;/span&gt; (?)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="4" column="0">
-                        <widget class="QGroupBox" name="ExtractBox">
-                         <property name="title">
-                          <string/>
-                         </property>
-                         <layout class="QGridLayout" name="gridLayout_23">
-                          <item row="0" column="0">
-                           <widget class="QPushButton" name="StartExtractButton">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;请先在左侧基础设置栏勾选“输出图片序列”并选择要导出的文件格式（如png）&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>开拆</string>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </widget>
                        </item>
                       </layout>
                      </widget>
@@ -3214,7 +3197,7 @@
                   </sizepolicy>
                  </property>
                  <property name="text">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，请在首页导出当前设置并对输出界面截图，并在Steam讨论社区发布求助帖。开发人员将会在48h内对帖子进行回复。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终效果，但不影响输出&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600; color:#ffffff;&quot;&gt;输出窗口&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#ffffff;&quot;&gt;页面，字体的不同颜色意义如下：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;红色——错误，程序无法正常完成，请在首页导出当前设置并对输出界面截图，并在Steam讨论社区发布求助帖。开发人员将会在48h内对帖子进行回复。&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffaa00;&quot;&gt;橙色——警告，可能会影响最终画面效果，但不影响程序完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#00aa00;&quot;&gt;绿色——当前任务完成&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若输出为视频，则程序将会先输出若干个子块(chunk)，补帧完成后程序将会合并这些子块为一个文件&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ffffff;&quot;&gt;若程序卡死，请点击右上角的强制结束进程按钮，并重新启动补帧程序！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -3624,8 +3607,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>ConcatInputA</tabstop>
   <tabstop>OutputConcat</tabstop>
   <tabstop>ConcatButton</tabstop>
-  <tabstop>StartExtractButton</tabstop>
-  <tabstop>StartRenderButton</tabstop>
   <tabstop>OutputFolder</tabstop>
   <tabstop>InputButton</tabstop>
   <tabstop>InputDirButton</tabstop>
@@ -3636,7 +3617,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>InputFPS</tabstop>
   <tabstop>ExpSelecter</tabstop>
   <tabstop>OutputFPS</tabstop>
-  <tabstop>AllInOne</tabstop>
   <tabstop>OutputSettingsButton</tabstop>
   <tabstop>OptionCheck</tabstop>
   <tabstop>AdvanceSettingsArea</tabstop>

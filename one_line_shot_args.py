@@ -16,23 +16,25 @@ import numpy as np
 import psutil
 import tqdm
 
-from Utils.utils import ArgumentManager, appDir, DefaultConfigParser, Tools, VideoInfo, \
-    SupportFormat, OverTimeReminderBearer, ImageRead, ImageWrite, TransitionDetection_ST, \
-    VideoFrameInterpolation, Hdr10PlusProcesser, DoviProcesser, EULAWriter, utils_overtime_reminder_bearer, \
-    SuperResolution, overtime_reminder_deco
+from Utils.LicenseModule import EULAWriter
+from Utils.StaticParameters import appDir, SupportFormat
+from Utils.utils import ArgumentManager, DefaultConfigParser, Tools, VideoInfoProcessor, \
+    OverTimeReminderBearer, ImageRead, ImageWrite, TransitionDetection_ST, \
+    VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, utils_overtime_reminder_bearer, \
+    SuperResolutionBase, overtime_reminder_deco
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
 from steamworks import STEAMWORKS
-from steamworks.exceptions import *
+from steamworks.exceptions import GenericSteamException
 
 if ArgumentManager.is_steam:
-    from Utils.utils import SteamValidation as ValidationModule
+    from Utils.LicenseModule import SteamValidation as ValidationModule
 
     try:
         _steamworks = STEAMWORKS(ArgumentManager.app_id)
     except:
         pass
 else:
-    from Utils.utils import RetailValidation as ValidationModule
+    from Utils.LicenseModule import RetailValidation as ValidationModule
 
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
 # TODO Fix up SVT-HEVC
@@ -94,8 +96,9 @@ class TaskArgumentManager(ArgumentManager):
         self.__validate_io_path()
         self.__initiate_logger()
         self.__set_ffmpeg_path()
-        self.video_info_instance = VideoInfo(input_file=self.input, logger=logger, project_dir=self.project_dir,
-                                             interp_exp=self.rife_exp)
+        self.video_info_instance = VideoInfoProcessor(input_file=self.input, logger=logger,
+                                                      project_dir=self.project_dir,
+                                                      interp_exp=self.rife_exp)
         self.__update_hdr_mode()
         self.__update_io_fps()
         self.__update_frames_cnt()
@@ -365,7 +368,7 @@ class ReadFlow(IOFlow):
                                                       use_fixed_scdet=self.ARGS.use_scdet_fixed,
                                                       fixed_max_scdet=self.ARGS.scdet_fixed_max,
                                                       scdet_output=self.ARGS.is_scdet_output)
-        self.vfi_core = VideoFrameInterpolation(self.ARGS)
+        self.vfi_core = VideoFrameInterpolationBase(self.ARGS)
 
     def __crop(self, img):
         """
@@ -969,7 +972,7 @@ class ReadFlow(IOFlow):
             {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "scale": scale,
              "is_end": is_end, "add_scene": add_scene})
 
-    def update_vfi_core(self, vfi_core: VideoFrameInterpolation):
+    def update_vfi_core(self, vfi_core: VideoFrameInterpolationBase):
         self.vfi_core = vfi_core
 
     def update_scene_status(self):
@@ -996,7 +999,7 @@ class RenderFlow(IOFlow):
         super().__init__(_args)
         self.name = 'Render'
         self.__ffmpeg = "ffmpeg"
-        self.__hdr10_metadata_processer = Hdr10PlusProcesser(logger, self.ARGS.project_dir, self.ARGS.render_gap,
+        self.__hdr10_metadata_processer = Hdr10PlusProcessor(logger, self.ARGS.project_dir, self.ARGS.render_gap,
                                                              self.ARGS.interp_times,
                                                              self.ARGS.video_info_instance.getInputHdr10PlusMetadata())
         self._input_queue = _reader_queue
@@ -1312,10 +1315,10 @@ class RenderFlow(IOFlow):
 
             if '-s' in output_dict:
                 _output_dict.update({'-s': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
-                _output_dict.update({"-bit-depth": "10"})
-            else:
-                _output_dict.update({"-bit-depth": "8"})
+            # if "10bit" in self.ARGS.render_encoder:
+            #     _output_dict.update({"-bit-depth": "10"})
+            # else:
+            _output_dict.update({"-bit-depth": "8"})
 
             preset_mapper = {"slowest": "4", "slow": "5", "fast": "7", "faster": "9"}
 
@@ -1616,7 +1619,7 @@ class RenderFlow(IOFlow):
 
     def __run_dovi(self, concat_filepath: str):
         logger.info("Start DOVI Conversion")
-        dovi_maker = DoviProcesser(concat_filepath, self.ARGS.input, self.ARGS.project_dir,
+        dovi_maker = DoviProcessor(concat_filepath, self.ARGS.input, self.ARGS.project_dir,
                                    self.ARGS.interp_times, logger)
         dovi_maker.run()
 
@@ -1712,7 +1715,7 @@ class SuperResolutionFlow(IOFlow):
         self.name = 'SuperResolution'
         self._input_queue = _reader_queue
         self._output_queue = _render_queue
-        self.sr_module = SuperResolution()  # 超分类
+        self.sr_module = SuperResolutionBase()  # 超分类
         self._vram_check_lock = threading.Event()
         self._vram_check_lock.clear()
         if not self.ARGS.use_sr:
@@ -1943,7 +1946,7 @@ class InterpWorkFlow:
         self.update_progress_flow = ProgressUpdateFlow(self.ARGS, self.read_flow)
 
         """Set VFI Core"""
-        self.vfi_core = VideoFrameInterpolation(self.ARGS)
+        self.vfi_core = VideoFrameInterpolationBase(self.ARGS)
 
         """Set 'Global' Reminder"""
         self.reminder_bearer = OverTimeReminderBearer()

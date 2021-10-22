@@ -4,7 +4,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from Utils.utils import overtime_reminder_deco, Tools, appDir
+from Utils.utils import overtime_reminder_deco, Tools
+from Utils.StaticParameters import appDir
 from ncnn.sr.realSR.realsr_ncnn_vulkan import RealSR
 from ncnn.sr.waifu2x.waifu2x_ncnn_vulkan import Waifu2x
 
