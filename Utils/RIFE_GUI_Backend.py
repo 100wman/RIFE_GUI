@@ -404,7 +404,7 @@ class UiRun(QThread):
         self.kill = True
         self.current_step = len(self.task_list) if self.task_list is not None else 0
         if self.current_proc is not None:
-            self.current_proc.terminate()
+            self.current_proc.kill()
             _msg = _translate('', '补帧已被强制结束')
             self.update_status(False, notice=f"\n\nWARNING, {_msg}", returncode=-1)
             logger.info("Kill Process")
@@ -2212,6 +2212,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.rife_thread = RIFE_thread
         _msg1 = _translate('', '仅拆帧操作启动')
         self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
 
     @pyqtSlot(bool)
     def on_StartRenderButton_clicked(self):
@@ -2230,6 +2231,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.rife_thread = RIFE_thread
         _msg1 = _translate('', '仅渲染操作启动')
         self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
 
     @pyqtSlot(bool)
     def on_KillProcButton_clicked(self):
@@ -2353,6 +2355,20 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_send_msg("Invalid Operation", _translate('', "已有任务在执行"))
             return
         self.on_AllInOne_clicked()
+
+    @pyqtSlot(bool)
+    def on_actionStartRenderProcess_triggered(self):
+        if not self.StartRenderButton.isEnabled():
+            self.function_send_msg("Invalid Operation", _translate('', "已有任务在执行"))
+            return
+        self.on_StartRenderButton_clicked()
+
+    @pyqtSlot(bool)
+    def on_actionStartExtractProcess_triggered(self):
+        if not self.StartExtractButton.isEnabled():
+            self.function_send_msg("Invalid Operation", _translate('', "已有任务在执行"))
+            return
+        self.on_StartExtractButton_clicked()
 
     @pyqtSlot(bool)
     def on_actionStopProcess_triggered(self):

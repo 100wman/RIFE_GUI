@@ -804,7 +804,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>1</number>
+                      <number>3</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -3382,7 +3382,9 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>启动</string>
     </property>
+    <addaction name="actionStartExtractProcess"/>
     <addaction name="actionStartProcess"/>
+    <addaction name="actionStartRenderProcess"/>
     <addaction name="actionStopProcess"/>
     <addaction name="separator"/>
     <addaction name="actionSaveSettings"/>
@@ -3503,7 +3505,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="actionStopProcess">
    <property name="text">
-    <string>终止补帧程序</string>
+    <string>终止当前任务</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+End</string>
@@ -3533,6 +3535,25 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+O</string>
+   </property>
+  </action>
+  <action name="actionStartRenderProcess">
+   <property name="text">
+    <string>启动压制程序</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionStartExtractProcess">
+   <property name="text">
+    <string>启动拆帧程序</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+U</string>
    </property>
   </action>
  </widget>

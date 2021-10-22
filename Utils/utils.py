@@ -78,18 +78,17 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.5"
+    gui_version = "3.7.6"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.0"
+    ols_version = "7.2.1"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Update Chinese Documentation
-    - Update Code Structure (File - Class Distribution)
-    - Update UI ico, from ico8
-    - Add SVT Encode Module
+    - Update names of parameters related to Render
+    - Update SVT Mode to better parameter (still Unusable for process clogging after reading frames)
+    - Update Some UI
     """
 
     path_len_limit = 230
@@ -160,10 +159,10 @@ class ArgumentManager:
         self.use_bitrate = args.get("use_bitrate", False)
         self.render_crf = args.get("render_crf", 16)
         self.render_bitrate = args.get("render_bitrate", 90)
+        self.render_encode_format = args.get("render_encoder", "")
+        self.render_encoder = args.get("render_hwaccel_mode", "")
         self.render_encoder_preset = args.get("render_encoder_preset", "slow")
-        self.render_encoder = args.get("render_encoder", "")
-        self.render_hwaccel_mode = args.get("render_hwaccel_mode", "")
-        self.render_hwaccel_preset = args.get("render_hwaccel_preset", "")
+        self.render_nvenc_preset = args.get("render_hwaccel_preset", "")
         self.use_hwaccel_decode = args.get("use_hwaccel_decode", True)
         self.use_manual_encode_thread = args.get("use_manual_encode_thread", False)
         self.render_encode_thread = args.get("render_encode_thread", 16)
