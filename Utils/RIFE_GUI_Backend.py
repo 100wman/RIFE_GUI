@@ -23,9 +23,10 @@ from PyQt5.QtGui import QIcon, QTextCursor
 from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFileDialog, QSplashScreen
 
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
+from Utils.LicenseModule import RetailValidation, SteamValidation
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator, StateTooltip
-from Utils.utils import Tools, EncodePresetAssemply, SupportFormat, ArgumentManager, SteamValidation, appDir, \
-    TASKBAR_STATE, RetailValidation, ImageWrite
+from Utils.StaticParameters import appDir, TASKBAR_STATE, SupportFormat, EncodePresetAssemply
+from Utils.utils import Tools, ArgumentManager, ImageWrite
 
 MAC = True
 try:
@@ -426,7 +427,7 @@ class UiRun(QThread):
 
 
 class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
-    def __init__(self, splash_screen: QSplashScreen, taskbar,  parent=None):
+    def __init__(self, splash_screen: QSplashScreen, taskbar, parent=None):
         """
         SVFI 主界面类初始化方法
 
@@ -528,7 +529,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.task_bar_controller.ActivateTab(hwnd)
         self._super_hwnd = hwnd
 
-    def splash_screen_initiating(self, msg:str):
+    def splash_screen_initiating(self, msg: str):
         """
         Update Initiation Information via splash screen widget
         :return:
@@ -572,11 +573,13 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.DupFramesTSelector.setValue(0.2)
         self.DupRmMode.clear()
         ST_RmMode = [_translate('', "不去除重复帧"),
-                     _translate('', "单一识别")]
+                     _translate('', "单一识别"),
+                     _translate('', "去除一拍二"),
+                     ]
         for m in ST_RmMode:
             self.DupRmMode.addItem(m)
 
-        ST_HwaccelMode = ['CPU', 'QSV']
+        ST_HwaccelMode = ['CPU', 'QSV', 'SVT']
         try:
             self.HwaccelSelector.disconnect()
         except:
@@ -591,36 +594,35 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         for m in ST_HdrMode:
             self.HDRModeSelector.addItem(m)
 
-        self.StartPoint.setVisible(False)
-        self.EndPoint.setVisible(False)
-        self.StartPointLabel.setVisible(False)
-        self.EndPointLabel.setVisible(False)
-        self.ScdetOutput.setVisible(False)
-        self.ScdetUseMix.setVisible(False)
+        self.StartPoint.setEnabled(False)
+        self.EndPoint.setEnabled(False)
+        self.StartPointLabel.setEnabled(False)
+        self.EndPointLabel.setEnabled(False)
+
+        self.ScdetOutput.setEnabled(False)
+        self.ScdetUseMix.setEnabled(False)
+
         self.UseAiSR.setChecked(False)
         self.UseAiSR.setEnabled(False)
         self.SrField.setVisible(False)
-        self.RenderSettingsLabel.setVisible(False)
-        self.RenderSettingsGroup.setVisible(False)
+
+        self.RenderSettingsGroup.setEnabled(False)
         self.UseMultiCardsChecker.setVisible(False)
-        self.TtaModeSelector.setVisible(False)
-        self.TtaIterTimesSelector.setVisible(False)
-        self.TtaModeLabel.setVisible(False)
-        self.EvictFlickerChecker.setVisible(False)
-        self.AutoInterpScaleChecker.setVisible(False)
-        self.ReverseChecker.setVisible(False)
+        self.TtaModeSelector.setEnabled(False)
+        self.TtaIterTimesSelector.setEnabled(False)
+        self.TtaModeLabel.setEnabled(False)
+        self.EvictFlickerChecker.setEnabled(False)
+        self.AutoInterpScaleChecker.setEnabled(False)
+        self.ReverseChecker.setEnabled(False)
         self.ProAdLabel_1.setVisible(True)
 
-        self.DeinterlaceChecker.setVisible(False)
+        self.DeinterlaceChecker.setEnabled(False)
         self.FastDenoiseChecker.setVisible(False)
-        self.HwaccelDecode.setVisible(False)
         self.EncodeThreadField.setVisible(False)
         self.HwaccelPresetLabel.setVisible(False)
         self.HwaccelPresetSelector.setVisible(False)
 
         self.GifBox.setEnabled(False)
-        self.RenderBox.setEnabled(False)
-        self.ExtractBox.setEnabled(False)
         self.SettingsPresetBox.setEnabled(False)
 
         self.DebugChecker.setVisible(False)
@@ -2318,14 +2320,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         expert_mode = appPref.value("expert", True, type=bool)
         self.UseFixedScdet.setVisible(expert_mode)
         self.ScdetMaxDiffSelector.setVisible(expert_mode)
-        # self.QuickExtractChecker.setVisible(expert_mode)
         self.HDRModeField.setVisible(expert_mode)
         self.RenderSettingsLabel.setVisible(expert_mode)
         self.RenderSettingsGroup.setVisible(expert_mode)
         self.FP16Checker.setVisible(expert_mode)
         self.ReverseChecker.setVisible(expert_mode)
         self.KeepChunksChecker.setVisible(expert_mode)
-        # self.AutoInterpScaleChecker.setVisible(expert_mode)
         self.ScdetOutput.setVisible(expert_mode)
         self.ScdetUseMix.setVisible(expert_mode)
         self.DeinterlaceChecker.setVisible(expert_mode)

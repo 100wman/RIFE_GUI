@@ -6,7 +6,7 @@ import torch.backends.cudnn as cudnn
 
 from utils_xvfi import *
 from XVFInet import *
-from Utils.utils import ArgumentManager, VideoFrameInterpolation
+from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
 
 
 # Utils = Utils()
@@ -24,7 +24,7 @@ class XVFIArgument(ArgumentManager):
         self.divide = 0
 
 
-class XVFInterpolation(VideoFrameInterpolation):
+class XVFInterpolation(VideoFrameInterpolationBase):
     def __init__(self, __args: XVFIArgument):
         super().__init__(__args)
 

@@ -7,12 +7,13 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 
-from Utils.utils import ArgumentManager, appDir, VideoFrameInterpolation
+from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
+from Utils.StaticParameters import appDir
 
 warnings.filterwarnings("ignore")
 
 
-class RifeInterpolation(VideoFrameInterpolation):
+class RifeInterpolation(VideoFrameInterpolationBase):
     def __init__(self, __args: ArgumentManager):
         super().__init__(__args)
         self.initiated = False

@@ -453,24 +453,29 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
 
     """QButtonIcon"""
     qss += f"""
-    QPushButton#AdvanceSettingsLabel {{
-        icon: url({os.path.join(img_dir, "right_arrow.png")})
-    }}
-    
-    QPushButton#SaveCurrentSettings {{
-        icon: url({os.path.join(img_dir, "select.png")})
-    }}
-    
-    QPushButton#LoadCurrentSettings {{
-        icon: url({os.path.join(img_dir, "refresh.png")})
-    }}
     
     QPushButton#AllInOne {{
-        icon: url({os.path.join(img_dir, "dynamic-filling.png")})
+        icon: url({os.path.join(img_dir, "icons8-ok-50.png")})
+    }}
+    
+    QPushButton#StartExtractButton {{
+        icon: url({os.path.join(img_dir, "icons8-image-file-50.png")})
+    }}
+    
+    QPushButton#StartRenderButton {{
+        icon: url({os.path.join(img_dir, "icons8-file-50.png")})
+    }}
+    
+    QPushButton#ClearInputButton {{
+        icon: url({os.path.join(img_dir, "icons8-trash-50.png")})
+    }}
+    
+    QPushButton#ShowAdvance {{
+        icon: url({os.path.join(img_dir, "icons8-settings-50.png")})
     }}
     
     QPushButton#AutoSet {{
-        icon: url({os.path.join(img_dir, "smile.png")})
+        icon: url({os.path.join(img_dir, "icons8-idea-50.png")})
     }}
     
     QRadioButton {{

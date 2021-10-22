@@ -71,7 +71,7 @@ try:
                                                  title=version_title)
         app_backend.update_QCandyUi_hwnd(form.winId())
         form.show()
-        app.exec_()
         splash.finish(form)
+        app.exec_()
 except Exception:
     app_backend_module.logger.critical(traceback.format_exc())

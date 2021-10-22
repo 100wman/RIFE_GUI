@@ -2,14 +2,14 @@ import os
 import random
 import warnings
 
-from Utils.utils import ArgumentManager, VideoFrameInterpolation
+from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
 from ncnn.rife import rife_ncnn_vulkan
 
 warnings.filterwarnings("ignore")
 raw = rife_ncnn_vulkan.raw
 
 
-class RifeInterpolation(VideoFrameInterpolation):
+class RifeInterpolation(VideoFrameInterpolationBase):
     def __init__(self, __args: ArgumentManager):
         super().__init__(__args)
         self.ARGS = __args

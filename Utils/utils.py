@@ -1,7 +1,5 @@
 # coding: utf-8
-import base64
 import datetime
-import enum
 import functools
 import glob
 import hashlib
@@ -9,7 +7,6 @@ import json
 import logging
 import math
 import os
-import pickle
 import random
 import re
 import shlex
@@ -27,66 +24,10 @@ from queue import Queue
 import cv2
 import numpy as np
 import psutil
-import wmi
-from Crypto.Cipher import PKCS1_v1_5 as Cipher_pkcs1_v1_5
-from Crypto.PublicKey import RSA
 from sklearn import linear_model
 
-import steamworks
+from Utils.StaticParameters import appDir, SupportFormat
 from skvideo.utils import check_output
-from steamworks.exceptions import *
-
-abspath = os.path.abspath(__file__)
-appDir = os.path.dirname(os.path.dirname(abspath))
-
-
-class AiModulePaths:
-    """Relevant to root dir(app dir)"""
-    sr_algos = ["ncnn/sr", ]
-
-
-class SupportFormat:
-    img_inputs = ['.png', '.tif', '.tiff', '.jpg', '.jpeg']
-    img_outputs = ['.png', '.tiff', '.jpg']
-    vid_outputs = ['.mp4', '.mkv', '.mov']
-
-
-class EncodePresetAssemply:
-    encoder = {
-        "CPU": {
-            "H264,8bit": ["slow", "ultrafast", "fast", "medium", "veryslow", "placebo", ],
-            "H264,10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
-            "H265,8bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
-            "H265,10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
-            "ProRes,422": ["hq", "4444", "4444xq"],
-            "ProRes,444": ["hq", "4444", "4444xq"],
-        },
-        "NVENC":
-            {"H264,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
-             "H265,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
-             "H265,10bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"], },
-        "NVENCC":
-            {"H264,8bit": ["default", "performance", "quality"],
-             "H265,8bit": ["default", "performance", "quality"],
-             "H265,10bit": ["default", "performance", "quality"], },
-        "QSVENCC":
-            {"H264,8bit": ["best", "higher", "high", "balanced", "fast", "faster", "fastest"],
-             "H265,8bit": ["best", "higher", "high", "balanced", "fast", "faster", "fastest"],
-             "H265,10bit": ["best", "higher", "high", "balanced", "fast", "faster", "fastest"], },
-        "QSV":
-            {"H264,8bit": ["slow", "fast", "medium", "veryslow", ],
-             "H265,8bit": ["slow", "fast", "medium", "veryslow", ],
-             "H265,10bit": ["slow", "fast", "medium", "veryslow", ], },
-        "SVT":
-            {"VP9,8bit": ["slowest", "slow", "fast", "faster"],
-             "H265,8bit": ["slowest", "slow", "fast", "faster"],
-             "H265,10bit": ["slowest", "slow", "fast", "faster"], },
-
-    }
-
-
-class SettingsPresets:
-    genre_2 = {(0, 0, 0): {"render_crf": 16}}
 
 
 class DefaultConfigParser(ConfigParser):
@@ -120,6 +61,160 @@ class DefaultConfigParser(ConfigParser):
             return True
 
         return value
+
+
+class ArgumentManager:
+    """
+    For OLS's arguments input management
+    """
+    app_id = 1692080
+    pro_dlc_id = [1718750]
+
+    community_qq = 264023742
+    professional_qq = 1054016374
+
+    """Release Version Control"""
+    is_steam = True
+    is_free = False
+    is_release = True
+    traceback_limit = 0 if is_release else None
+    gui_version = "3.7.5"
+    version_tag = f"{gui_version}-beta " \
+                  f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
+    ols_version = "7.2.0"
+    """ 发布前改动以上参数即可 """
+
+    f"""
+    Update Log
+    - Update Chinese Documentation
+    - Update Code Structure (File - Class Distribution)
+    - Update UI ico, from ico8
+    - Add SVT Encode Module
+    """
+
+    path_len_limit = 230
+
+    def __init__(self, args: dict):
+        self.app_dir = args.get("app_dir", appDir)
+
+        self.config = args.get("config", "")
+        self.input = args.get("input", "")
+        self.output_dir = args.get("output_dir", "")
+        self.task_id = args.get("task_id", "")
+        self.gui_inputs = args.get("gui_inputs", "")
+        self.input_fps = args.get("input_fps", 0)
+        self.target_fps = args.get("target_fps", 0)
+        self.input_ext = ".mp4"
+        self.output_ext = args.get("output_ext", ".mp4")
+        self.is_img_input = args.get("is_img_input", False)
+        self.is_img_output = args.get("is_img_output", False)
+        self.is_output_only = args.get("is_output_only", True)
+        self.is_save_audio = args.get("is_save_audio", True)
+        self.input_start_point = args.get("input_start_point", None)
+        self.input_end_point = args.get("input_end_point", None)
+        if self.input_start_point == "00:00:00":
+            self.input_start_point = None
+        if self.input_end_point == "00:00:00":
+            self.input_end_point = None
+        self.output_chunk_cnt = args.get("output_chunk_cnt", 0)
+        self.interp_start = args.get("interp_start", 0)
+        self.risk_resume_mode = args.get("risk_resume_mode", False)
+
+        self.is_no_scdet = args.get("is_no_scdet", False)
+        self.is_scdet_mix = args.get("is_scdet_mix", False)
+        self.use_scdet_fixed = args.get("use_scdet_fixed", False)
+        self.is_scdet_output = args.get("is_scdet_output", False)
+        self.scdet_threshold = args.get("scdet_threshold", 12)
+        self.scdet_fixed_max = args.get("scdet_fixed_max", 40)
+        self.scdet_flow_cnt = args.get("scdet_flow_cnt", 4)
+        self.scdet_mode = args.get("scdet_mode", 0)
+        self.remove_dup_mode = args.get("remove_dup_mode", 0)
+        self.remove_dup_threshold = args.get("remove_dup_threshold", 0.1)
+        self.use_dedup_sobel = args.get("use_dedup_sobel", False)
+
+        self.use_manual_buffer = args.get("use_manual_buffer", False)
+        self.manual_buffer_size = args.get("manual_buffer_size", 1)
+
+        self.resize_width = Tools.get_plural(args.get("resize_width", 0))
+        self.resize_height = Tools.get_plural(args.get("resize_height", 0))
+        self.resize_param = [self.resize_width, self.resize_height]  # resize parameter, 输出分辨率参数
+        self.resize_exp = args.get("resize_exp", 1)  # TODO Remove this
+
+        self.transfer_width = Tools.get_plural(args.get("transfer_width", 0))
+        self.transfer_height = Tools.get_plural(args.get("transfer_height", 0))
+        self.transfer_param = [self.transfer_width, self.transfer_height]  # crop parameter, 裁切参数
+
+        self.crop_width = Tools.get_plural(args.get("crop_width", 0))
+        self.crop_height = Tools.get_plural(args.get("crop_height", 0))
+        self.crop_param = [self.crop_width, self.crop_height]  # crop parameter, 裁切参数
+
+        self.use_sr = args.get("use_sr", False)
+        self.use_sr_algo = args.get("use_sr_algo", "")
+        self.use_sr_model = args.get("use_sr_model", "")
+        self.use_sr_mode = args.get("use_sr_mode", "")
+        self.sr_tilesize = args.get("sr_tilesize", 200)
+        self.use_realesr_fp16 = args.get("use_realesr_fp16", False)
+
+        self.render_gap = args.get("render_gap", 1000)
+        self.use_crf = args.get("use_crf", True)
+        self.use_bitrate = args.get("use_bitrate", False)
+        self.render_crf = args.get("render_crf", 16)
+        self.render_bitrate = args.get("render_bitrate", 90)
+        self.render_encoder_preset = args.get("render_encoder_preset", "slow")
+        self.render_encoder = args.get("render_encoder", "")
+        self.render_hwaccel_mode = args.get("render_hwaccel_mode", "")
+        self.render_hwaccel_preset = args.get("render_hwaccel_preset", "")
+        self.use_hwaccel_decode = args.get("use_hwaccel_decode", True)
+        self.use_manual_encode_thread = args.get("use_manual_encode_thread", False)
+        self.render_encode_thread = args.get("render_encode_thread", 16)
+        self.use_render_encoder_default_preset = args.get("use_render_encoder_default_preset", False)
+        self.is_encode_audio = args.get("is_encode_audio", False)
+        self.is_quick_extract = args.get("is_quick_extract", True)
+        self.hdr_mode = args.get("hdr_mode", 0)
+        self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "")
+        self.is_no_concat = args.get("is_no_concat", False)
+        self.use_fast_denoise = args.get("use_fast_denoise", False)
+        self.gif_loop = args.get("gif_loop", True)
+        self.is_render_slow_motion = args.get("is_render_slow_motion", False)
+        self.render_slow_motion_fps = args.get("render_slow_motion_fps", 0)
+        self.use_deinterlace = args.get("use_deinterlace", False)
+
+        self.use_ncnn = args.get("use_ncnn", False)
+        self.ncnn_thread = args.get("ncnn_thread", 4)
+        self.ncnn_gpu = args.get("ncnn_gpu", 0)
+        self.rife_tta_mode = args.get("rife_tta_mode", 0)
+        self.rife_tta_iter = args.get("rife_tta_iter", 1)
+        self.use_evict_flicker = args.get("use_evict_flicker", False)
+        self.use_rife_fp16 = args.get("use_rife_fp16", False)
+        self.rife_scale = args.get("rife_scale", 1.0)
+        self.rife_model_dir = args.get("rife_model_dir", "")
+        self.rife_model = args.get("rife_model", "")
+        self.rife_model_name = args.get("rife_model_name", "")
+        self.rife_exp = args.get("rife_exp", 1.0)
+        self.rife_cuda_cnt = args.get("rife_cuda_cnt", 0)
+        self.is_rife_reverse = args.get("is_rife_reverse", False)
+        self.use_specific_gpu = args.get("use_specific_gpu", 0)  # !
+        self.use_rife_auto_scale = args.get("use_rife_auto_scale", False)
+        self.rife_auto_scale_predict_size = args.get("rife_auto_scale_predict_size", 64)
+        self.use_rife_forward_ensemble = args.get("use_rife_forward_ensemble", False)
+        self.use_rife_multi_cards = args.get("use_rife_multi_cards", False)
+
+        self.debug = args.get("debug", False)
+        self.multi_task_rest = args.get("multi_task_rest", False)
+        self.multi_task_rest_interval = args.get("multi_task_rest_interval", 1)
+        self.after_mission = args.get("after_mission", False)
+        self.force_cpu = args.get("force_cpu", False)
+        self.expert_mode = args.get("expert_mode", False)
+        self.preview_args = args.get("preview_args", False)
+        self.is_rude_exit = args.get("is_rude_exit", False)
+        self.pos = args.get("pos", "")
+        self.size = args.get("size", "")
+
+        """OLS Params"""
+        self.concat_only = args.get("concat_only", False)
+        self.extract_only = args.get("extract_only", False)
+        self.render_only = args.get("render_only", False)
+        self.version = args.get("version", "0.0.0 beta")
 
 
 class Tools:
@@ -560,7 +655,7 @@ class ImageWrite(ImageIO):
         return
 
 
-class SuperResolution:
+class SuperResolutionBase:
     """
     超分抽象类
     """
@@ -595,170 +690,7 @@ class SuperResolution:
         return img
 
 
-class PathManager:
-    """
-    路径管理器
-    """
-
-    def __init__(self):
-        pass
-
-
-class ArgumentManager:
-    """
-    For OLS's arguments input management
-    """
-    app_id = 1692080
-    pro_dlc_id = [1718750]
-
-    community_qq = 264023742
-    professional_qq = 1054016374
-
-    """Release Version Control"""
-    is_steam = True
-    is_free = False
-    is_release = True
-    traceback_limit = 0 if is_release else None
-    gui_version = "3.7.4"
-    version_tag = f"{gui_version}-beta " \
-                  f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.1.1"
-    """ 发布前改动以上参数即可 """
-
-    f"""
-    Update Log
-    - Optimize Fail Logic when audio concat error
-    - Add Crypto Package
-    - Some Structural Backend Logic Enhance(PyQt Signal)
-    - Update Documentation for beta options 
-    """
-
-    path_len_limit = 230
-
-    def __init__(self, args: dict):
-        self.app_dir = args.get("app_dir", appDir)
-
-        self.config = args.get("config", "")
-        self.input = args.get("input", "")
-        self.output_dir = args.get("output_dir", "")
-        self.task_id = args.get("task_id", "")
-        self.gui_inputs = args.get("gui_inputs", "")
-        self.input_fps = args.get("input_fps", 0)
-        self.target_fps = args.get("target_fps", 0)
-        self.input_ext = ".mp4"
-        self.output_ext = args.get("output_ext", ".mp4")
-        self.is_img_input = args.get("is_img_input", False)
-        self.is_img_output = args.get("is_img_output", False)
-        self.is_output_only = args.get("is_output_only", True)
-        self.is_save_audio = args.get("is_save_audio", True)
-        self.input_start_point = args.get("input_start_point", None)
-        self.input_end_point = args.get("input_end_point", None)
-        if self.input_start_point == "00:00:00":
-            self.input_start_point = None
-        if self.input_end_point == "00:00:00":
-            self.input_end_point = None
-        self.output_chunk_cnt = args.get("output_chunk_cnt", 0)
-        self.interp_start = args.get("interp_start", 0)
-        self.risk_resume_mode = args.get("risk_resume_mode", False)
-
-        self.is_no_scdet = args.get("is_no_scdet", False)
-        self.is_scdet_mix = args.get("is_scdet_mix", False)
-        self.use_scdet_fixed = args.get("use_scdet_fixed", False)
-        self.is_scdet_output = args.get("is_scdet_output", False)
-        self.scdet_threshold = args.get("scdet_threshold", 12)
-        self.scdet_fixed_max = args.get("scdet_fixed_max", 40)
-        self.scdet_flow_cnt = args.get("scdet_flow_cnt", 4)
-        self.scdet_mode = args.get("scdet_mode", 0)
-        self.remove_dup_mode = args.get("remove_dup_mode", 0)
-        self.remove_dup_threshold = args.get("remove_dup_threshold", 0.1)
-        self.use_dedup_sobel = args.get("use_dedup_sobel", False)
-
-        self.use_manual_buffer = args.get("use_manual_buffer", False)
-        self.manual_buffer_size = args.get("manual_buffer_size", 1)
-
-        self.resize_width = Tools.get_plural(args.get("resize_width", 0))
-        self.resize_height = Tools.get_plural(args.get("resize_height", 0))
-        self.resize_param = [self.resize_width, self.resize_height]  # resize parameter, 输出分辨率参数
-        self.resize_exp = args.get("resize_exp", 1)  # TODO Remove this
-
-        self.transfer_width = Tools.get_plural(args.get("transfer_width", 0))
-        self.transfer_height = Tools.get_plural(args.get("transfer_height", 0))
-        self.transfer_param = [self.transfer_width, self.transfer_height]  # crop parameter, 裁切参数
-
-        self.crop_width = Tools.get_plural(args.get("crop_width", 0))
-        self.crop_height = Tools.get_plural(args.get("crop_height", 0))
-        self.crop_param = [self.crop_width, self.crop_height]  # crop parameter, 裁切参数
-
-        self.use_sr = args.get("use_sr", False)
-        self.use_sr_algo = args.get("use_sr_algo", "")
-        self.use_sr_model = args.get("use_sr_model", "")
-        self.use_sr_mode = args.get("use_sr_mode", "")
-        self.sr_tilesize = args.get("sr_tilesize", 200)
-        self.use_realesr_fp16 = args.get("use_realesr_fp16", False)
-
-        self.render_gap = args.get("render_gap", 1000)
-        self.use_crf = args.get("use_crf", True)
-        self.use_bitrate = args.get("use_bitrate", False)
-        self.render_crf = args.get("render_crf", 16)
-        self.render_bitrate = args.get("render_bitrate", 90)
-        self.render_encoder_preset = args.get("render_encoder_preset", "slow")
-        self.render_encoder = args.get("render_encoder", "")
-        self.render_hwaccel_mode = args.get("render_hwaccel_mode", "")
-        self.render_hwaccel_preset = args.get("render_hwaccel_preset", "")
-        self.use_hwaccel_decode = args.get("use_hwaccel_decode", True)
-        self.use_manual_encode_thread = args.get("use_manual_encode_thread", False)
-        self.render_encode_thread = args.get("render_encode_thread", 16)
-        self.use_render_encoder_default_preset = args.get("use_render_encoder_default_preset", False)
-        self.is_encode_audio = args.get("is_encode_audio", False)
-        self.is_quick_extract = args.get("is_quick_extract", True)
-        self.hdr_mode = args.get("hdr_mode", 0)
-        self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "")
-        self.is_no_concat = args.get("is_no_concat", False)
-        self.use_fast_denoise = args.get("use_fast_denoise", False)
-        self.gif_loop = args.get("gif_loop", True)
-        self.is_render_slow_motion = args.get("is_render_slow_motion", False)
-        self.render_slow_motion_fps = args.get("render_slow_motion_fps", 0)
-        self.use_deinterlace = args.get("use_deinterlace", False)
-
-        self.use_ncnn = args.get("use_ncnn", False)
-        self.ncnn_thread = args.get("ncnn_thread", 4)
-        self.ncnn_gpu = args.get("ncnn_gpu", 0)
-        self.rife_tta_mode = args.get("rife_tta_mode", 0)
-        self.rife_tta_iter = args.get("rife_tta_iter", 1)
-        self.use_evict_flicker = args.get("use_evict_flicker", False)
-        self.use_rife_fp16 = args.get("use_rife_fp16", False)
-        self.rife_scale = args.get("rife_scale", 1.0)
-        self.rife_model_dir = args.get("rife_model_dir", "")
-        self.rife_model = args.get("rife_model", "")
-        self.rife_model_name = args.get("rife_model_name", "")
-        self.rife_exp = args.get("rife_exp", 1.0)
-        self.rife_cuda_cnt = args.get("rife_cuda_cnt", 0)
-        self.is_rife_reverse = args.get("is_rife_reverse", False)
-        self.use_specific_gpu = args.get("use_specific_gpu", 0)  # !
-        self.use_rife_auto_scale = args.get("use_rife_auto_scale", False)
-        self.rife_auto_scale_predict_size = args.get("rife_auto_scale_predict_size", 64)
-        self.use_rife_forward_ensemble = args.get("use_rife_forward_ensemble", False)
-        self.use_rife_multi_cards = args.get("use_rife_multi_cards", False)
-
-        self.debug = args.get("debug", False)
-        self.multi_task_rest = args.get("multi_task_rest", False)
-        self.multi_task_rest_interval = args.get("multi_task_rest_interval", 1)
-        self.after_mission = args.get("after_mission", False)
-        self.force_cpu = args.get("force_cpu", False)
-        self.expert_mode = args.get("expert_mode", False)
-        self.preview_args = args.get("preview_args", False)
-        self.is_rude_exit = args.get("is_rude_exit", False)
-        self.pos = args.get("pos", "")
-        self.size = args.get("size", "")
-
-        """OLS Params"""
-        self.concat_only = args.get("concat_only", False)
-        self.extract_only = args.get("extract_only", False)
-        self.render_only = args.get("render_only", False)
-        self.version = args.get("version", "0.0.0 beta")
-
-
-class VideoFrameInterpolation:
+class VideoFrameInterpolationBase:
     def __init__(self, __args):
         self.initiated = False
         self.args = {}
@@ -791,7 +723,7 @@ class VideoFrameInterpolation:
         raise NotImplementedError("Abstract")
 
 
-class Hdr10PlusProcesser:
+class Hdr10PlusProcessor:
     def __init__(self, logger: logging, project_dir: str, render_gap: int,
                  interp_times: int, hdr10_metadata: dict, **kwargs):
         """
@@ -842,7 +774,7 @@ class Hdr10PlusProcesser:
         return hdr10plus_metadata_path.replace('/', '\\')
 
 
-class DoviProcesser:
+class DoviProcessor:
     def __init__(self, concat_input: str, original_input: str, project_dir: str, interp_times: int, logger: logging,
                  **kwargs):
         """
@@ -988,7 +920,7 @@ class DoviProcesser:
         return True
 
 
-class VideoInfo:
+class VideoInfoProcessor:
     def __init__(self, input_file: str, logger, project_dir: str, interp_exp=0, **kwargs):
         """
 
@@ -1155,165 +1087,6 @@ class VideoInfo:
             except json.JSONDecodeError:
                 self.logger.error("Unable to Decode HDR10Plus Metadata")
         return {}
-
-
-class VideoInfo_obsolete:
-    def __init__(self, file_input: str, logger, project_dir: str, app_dir=None, img_input=False,
-                 hdr_mode=False, exp=0, **kwargs):
-        self.filepath = file_input
-        self.img_input = img_input
-        self.hdr_mode = -1
-        self.ffmpeg = "ffmpeg"
-        self.ffprobe = "ffprobe"
-        self.hdr10_parser = "hdr10plus_parser"
-        self.logger = logger
-        self.project_dir = project_dir
-        if app_dir is not None:
-            self.ffmpeg = Tools.fillQuotation(os.path.join(app_dir, "ffmpeg.exe"))
-            self.ffprobe = Tools.fillQuotation(os.path.join(app_dir, "ffprobe.exe"))
-            self.hdr10_parser = Tools.fillQuotation(os.path.join(app_dir, "hdr10plus_parser.exe"))
-        if not os.path.exists(self.ffmpeg):
-            self.ffmpeg = "ffmpeg"
-            self.ffprobe = "ffprobe"
-            self.hdr10_parser = "hdr10plus_parser"
-        self.color_info = dict()
-        self.exp = exp
-        self.frames_cnt = 0
-        self.frames_size = (0, 0)  # width, height
-        self.fps = 0
-        self.duration = 0
-        self.video_info = dict()
-        self.hdr10plus_metadata = ""
-        self.update_info()
-
-    def update_hdr_mode(self):
-        if any([i in str(self.video_info["video_info"]) for i in ['dv_profile', 'DOVI']]):
-            # Dolby Vision
-            self.hdr_mode = 3
-            self.logger.warning("Dolby Vision Content Detected")
-            return
-        if "color_transfer" not in self.video_info["video_info"]:
-            self.logger.warning("Not Find Color Transfer Characteristics")
-            self.hdr_mode = 0
-            return
-        color_trc = self.video_info["video_info"]["color_transfer"]
-        if "smpte2084" in color_trc or "bt2020" in color_trc:
-            """should be 10bit encoding"""
-            self.hdr_mode = 1  # hdr(normal)
-            self.logger.warning("HDR Content Detected")
-            if any([i in str(self.video_info["video_info"]).lower()]
-                   for i in ['mastering-display', "mastering display", "content light level metadata"]):
-                self.hdr_mode = 2  # hdr10
-                self.logger.warning("HDR10+ Content Detected")
-                self.hdr10plus_metadata = os.path.join(self.project_dir, "hdr10plus_metadata.json")
-                check_command = (f'{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.filepath)} -c:v copy '
-                                 f'-vbsf hevc_mp4toannexb -f hevc - | '
-                                 f'{self.hdr10_parser} -o {Tools.fillQuotation(self.hdr10plus_metadata)} -')
-                try:
-                    check_output(shlex.split(check_command), shell=True)
-                except Exception:
-                    self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
-
-        elif "arib-std-b67" in color_trc:
-            self.hdr_mode = 4  # HLG
-            self.logger.warning("HLG Content Detected")
-        pass
-
-    def update_frames_info_ffprobe(self):
-        check_command = (f'{self.ffprobe} -v error -show_streams -select_streams v:0 -v error '
-                         f'-show_entries stream=index,width,height,r_frame_rate,nb_frames,duration,'
-                         f'color_primaries,color_range,color_space,color_transfer -print_format json '
-                         f'{Tools.fillQuotation(self.filepath)}')
-        result = check_output(shlex.split(check_command))
-        try:
-            video_info = json.loads(result)["streams"][0]  # select first video stream as input
-        except Exception as e:
-            self.logger.warning(f"Parse Video Info Failed: {result}")
-            raise e
-        self.video_info = video_info
-        self.video_info['video_info'] = video_info
-        self.logger.info(f"\nInput Video Info\n{video_info}")
-        # update color info
-        if "color_range" in video_info:
-            self.color_info["-color_range"] = video_info["color_range"]
-        if "color_space" in video_info:
-            self.color_info["-colorspace"] = video_info["color_space"]
-        if "color_transfer" in video_info:
-            self.color_info["-color_trc"] = video_info["color_transfer"]
-        if "color_primaries" in video_info:
-            self.color_info["-color_primaries"] = video_info["color_primaries"]
-
-        self.update_hdr_mode()
-
-        # update frame size info
-        if 'width' in video_info and 'height' in video_info:
-            self.frames_size = (int(video_info['width']), int(video_info['height']))
-
-        if "r_frame_rate" in video_info:
-            fps_info = video_info["r_frame_rate"].split('/')
-            self.fps = int(fps_info[0]) / int(fps_info[1])
-            self.logger.info(f"Auto Find FPS in r_frame_rate: {self.fps}")
-        else:
-            self.logger.warning("Auto Find FPS Failed")
-            return False
-
-        if "nb_frames" in video_info:
-            self.frames_cnt = int(video_info["nb_frames"])
-            self.logger.info(f"Auto Find frames cnt in nb_frames: {self.frames_cnt}")
-        elif "duration" in video_info:
-            self.duration = float(video_info["duration"])
-            self.frames_cnt = round(float(self.duration * self.fps))
-            self.logger.info(f"Auto Find Frames Cnt by duration deduction: {self.frames_cnt}")
-        else:
-            self.logger.warning("FFprobe Not Find Frames Cnt")
-            return False
-        return True
-
-    def update_frames_info_cv2(self):
-        # if not os.path.isfile(self.filepath):
-        #     height, width = 0, 0
-        video_input = cv2.VideoCapture(self.filepath)
-        if not self.fps:
-            self.fps = video_input.get(cv2.CAP_PROP_FPS)
-        if not self.frames_cnt:
-            self.frames_cnt = video_input.get(cv2.CAP_PROP_FRAME_COUNT)
-        if not self.duration:
-            self.duration = self.frames_cnt / self.fps
-        self.frames_size = (
-            round(video_input.get(cv2.CAP_PROP_FRAME_WIDTH)), round(video_input.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-
-    def update_info(self):
-        if self.img_input:
-            if os.path.isfile(self.filepath):
-                self.filepath = os.path.dirname(self.filepath)
-            seqlist = os.listdir(self.filepath)
-            self.frames_cnt = len(seqlist) * 2 ** self.exp
-            img = cv2.imdecode(np.fromfile(os.path.join(self.filepath, seqlist[0]), dtype=np.uint8), 1)[:, :,
-                  ::-1].copy()
-            self.frames_size = (int(img.shape[1]), int(img.shape[0]))
-            return
-        self.update_frames_info_ffprobe()
-        self.update_frames_info_cv2()
-
-    def get_info(self):
-        get_dict = {}
-        get_dict.update(self.color_info)
-        get_dict.update({"video_info": self.video_info})
-        get_dict["fps"] = self.fps
-        get_dict["size"] = self.frames_size
-        get_dict["cnt"] = self.frames_cnt
-        get_dict["duration"] = self.duration
-        get_dict['hdr_mode'] = self.hdr_mode
-        if os.path.exists(self.hdr10plus_metadata):
-            hdr10plus_metadata = {}
-            try:
-                hdr10plus_metadata = json.load(open(self.hdr10plus_metadata, 'r'))
-            except json.JSONDecodeError:
-                self.logger.error("Unable to Decode HDR10Plus Metadata")
-            get_dict['hdr10plus_metadata'] = hdr10plus_metadata
-        else:
-            get_dict['hdr10plus_metadata'] = {}
-        return get_dict
 
 
 class TransitionDetection_ST:
@@ -1801,313 +1574,6 @@ def overtime_reminder_deco(interval: int, logger=None, msg_1="Function Type", ms
         return wrapper
 
     return decorator
-
-
-class RSACipher(object):
-    private_pem = None
-    public_pem = None
-
-    def __init__(self):
-        self.private_pem = b"" \
-                           b"-----BEGIN RSA PRIVATE KEY-----\n" \
-                           b"MIICWwIBAAKBgQCWWXMIp0clTrB4m9Lt64+Yv6MDxZuS+cRw/IhDFM87ueYcbTqZ\n" \
-                           b"U1iOyWd5sk3BDbS5CsVQ45omm3bWWw1/fs7G6iafWXwEH4jCqmNjkZOmPXvswY0U\n" \
-                           b"G750m+1uko35vuWj4V0tN0OIrp9A7ONPzrVi/yQtoVtruHoZHrqDF4ASGwIDAQAB\n" \
-                           b"AoGABo3ltuXb8yNoDAn2+wo+21DXYW2254Rd7PMFWa9JjXgAMRMN7+szPB5JlYOR\n" \
-                           b"Yi4fx8VRbsJNUQuL9bJId1tm1jH4XHawJh5SbGIv344UCDYwz4bPOAscagM9j5oA\n" \
-                           b"nFqt3GkOzTVTrOwqzC6fNoqaTTRXyM8BgjbiOGiCG+9pXIkCQQC+4w+7oIjlybgh\n" \
-                           b"6QIYGQt3zbsT56K8ae84EqsKTGm4u7KVkbCjPRx/SneM0TJhSSSVbjCbvRl25C+3\n" \
-                           b"3hTCVpQNAkEAyaKAvOUtDFubR33mAP92SIBAljFUIbsbaz2Fp5lA4Jmr3CDyCcaa\n" \
-                           b"E5Qx/udy1kYt3jKdV9jQNHbh5jt2K9PsxwJATMfWVzked5do+jLYRcslIr5c5ofA\n" \
-                           b"nJrbvyk7JTxRNh5BmgntC+wT31ubtMecxSb/kR+ua6ZnbLwiOYoZvYXHrQJAEQql\n" \
-                           b"/NEVzJyVdCZk4SK2OYx1aPxEUxGAUMEDYdXnENSMHO+/5Sme7haxXwzqvMdzqvr2\n" \
-                           b"J22Qs05060ONSkkAEwJADGBeXhf5cwxtktbZGC1+TvtQJwlcTDLIjecziDhCD98i\n" \
-                           b"/Z88zsJxYoxy0ZZSIItEw+S2GtWGVj6TIQNmZlLZ/A==\n" \
-                           b"-----END RSA PRIVATE KEY-----"
-        self.public_pem = b""
-
-    def get_public_key(self):
-        return self.public_pem
-
-    def get_private_key(self):
-        return self.private_pem
-
-    def decrypt_with_private_key(self, _cipher_text):
-        try:
-            _rsa_key = RSA.importKey(self.private_pem)
-            _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
-            _text = _cipher.decrypt(base64.b64decode(_cipher_text), "ERROR")
-            return _text.decode(encoding="utf-8")
-        except:
-            return ""
-
-    def encrypt_with_public_key(self, _text):
-        _rsa_key = RSA.importKey(self.public_pem)
-        _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
-        _cipher_text = base64.b64encode(_cipher.encrypt(_text.encode(encoding="utf-8")))
-        return _cipher_text
-
-    # encrypt with private key & decrypt with public key is not allowed in Python
-    # although it is allowed in RSA
-    def encrypt_with_private_key(self, _text):
-        _rsa_key = RSA.importKey(self.private_pem)
-        _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
-        _cipher_text = base64.b64encode(_cipher.encrypt(_text.encode(encoding="utf-8")))
-        return _cipher_text
-
-    def decrypt_with_public_key(self, _cipher_text):
-        _rsa_key = RSA.importKey(self.public_pem)
-        _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
-        _text = _cipher.decrypt(base64.b64decode(_cipher_text), "ERROR")
-        return _text.decode(encoding="utf-8")
-
-
-class ValidationBase:
-    def __init__(self, logger):
-        self.logger = logger
-        self._is_validate_start = False
-        self._validate_error = None
-        pass
-
-    def CheckValidateStart(self):
-        return self._is_validate_start
-
-    def CheckProDLC(self, pro_dlc_id: int):
-        pass
-
-    def GetStat(self, key: str, key_type: type):
-        pass
-
-    def GetAchv(self, key: str):
-        pass
-
-    def SetStat(self, key: str, value):
-        pass
-
-    def SetAchv(self, key: str, clear=False):
-        pass
-
-    def Store(self):
-        pass
-
-    def GetValidateError(self):
-        return self._validate_error
-
-
-class RetailValidation(ValidationBase):
-    def __init__(self, logger):
-        """
-        Whether use steam for validation
-        """
-        super().__init__(logger)
-        original_cwd = os.getcwd()
-        self._rsa_worker = RSACipher()
-        self._bin_path = os.path.join(appDir, 'license.dat')
-        try:
-            self._is_validate_start = self._regist()  # This method has to be called in order for the wrapper to become functional!
-        except Exception as e:
-            self._is_validate_start = False
-            self._validate_error = e
-            self.logger.error('Failed to initiate Retail License. Shutting down.')
-            return
-        os.chdir(original_cwd)
-
-    def CheckValidateStart(self):
-        return self._is_validate_start
-
-    def _GetCVolumeSerialNumber(self):
-        c = wmi.WMI()
-        for physical_disk in c.Win32_DiskDrive():
-            return physical_disk.SerialNumber
-        else:
-            return 0
-
-    def _GenerateRegisterBin(self):
-        bin_data = {'license_data': self._rsa_worker.encrypt_with_private_key(self._GetCVolumeSerialNumber())}
-        pickle.dump(bin_data, open(self._bin_path, 'wb'))
-
-    def _ReadRegisterBin(self):
-        if not os.path.exists(self._bin_path):
-            self._GenerateRegisterBin()
-            raise OSError("Could not find License File. The system had generated a .dat file at the root dir "
-                          "of this app for license, please send this to administrator "
-                          "and replace it with the one that was sent you")
-        bin_data = pickle.load(open(self._bin_path, 'rb'))
-        assert type(bin_data) is dict, "Type of License Data is not correct, " \
-                                       "please consult administrator for further support"
-        license_key = bin_data.get('license_key', "")
-        return license_key
-
-    def _regist(self):
-        license_key = self._ReadRegisterBin()
-        volume_serial = self._GetCVolumeSerialNumber()
-        key_decrypted = self._rsa_worker.decrypt_with_private_key(license_key)
-        if volume_serial != key_decrypted:
-            self._GenerateRegisterBin()
-            raise OSError("Wrong Register code, please check your license with your administrator")
-        elif volume_serial == key_decrypted:
-            return True
-
-    def CheckProDLC(self, pro_dlc_id: int):
-        """All DLC Purchased as default"""
-        return True
-
-    def GetStat(self, key: str, key_type: type):
-        return False
-
-    def GetAchv(self, key: str):
-        return False
-
-    def SetStat(self, key: str, value):
-        return
-
-    def SetAchv(self, key: str, clear=False):
-        return
-
-    def Store(self):
-        return False
-
-
-class SteamValidation(ValidationBase):
-    def __init__(self, logger):
-        """
-        Whether use steam for validation
-        """
-        super().__init__(logger)
-        original_cwd = os.getcwd()
-        self.steamworks = None
-        self.steamworks = steamworks.STEAMWORKS(ArgumentManager.app_id)
-        try:
-            self.steamworks.initialize()  # This method has to be called in order for the wrapper to become functional!
-        except:
-            self._is_validate_start = False
-            self._validate_error = GenericSteamException(
-                'Failed to Load Steam Status, Please Make Sure this game is purchased')
-            self.logger.error('Failed to initiate Steam API. Shutting down.')
-            return
-        self._is_validate_start = True
-        if self.steamworks.UserStats.RequestCurrentStats():
-            self.logger.info('Steam Stats successfully retrieved!')
-        else:
-            self._is_validate_start = False
-            self._validate_error = GenericSteamException('Failed to get Stats Error, Please Make Sure Steam is On')
-            self.logger.error('Failed to get Steam stats. Shutting down.')
-        os.chdir(original_cwd)
-
-    def _CheckPurchaseStatus(self):
-        steam_64id = self.steamworks.Users.GetSteamID()
-        valid_response = self.steamworks.Users.GetAuthSessionTicket()
-        self.logger.debug(f'Steam User Logged on as {steam_64id}, auth: {valid_response}')
-        if valid_response != 0:  # Abnormal Purchase
-            self._is_validate_start = False
-            self._validate_error = GenericSteamException("Abnormal Start, Please Check Software's Purchase Status, "
-                                                         f"Response: {valid_response}")
-
-    def CheckValidateStart(self):
-        return self._is_validate_start
-
-    def CheckProDLC(self, dlc_id: int) -> bool:
-        """
-
-        :param dlc_id: DLC for SVFI, start from 0
-        0: Pro
-        :return:
-        """
-        purchase_pro = self.steamworks.Apps.IsDLCInstalled(ArgumentManager.pro_dlc_id[dlc_id])
-        self.logger.info(f'Steam User Purchase Pro DLC Status: {purchase_pro}')
-        return purchase_pro
-
-    def GetStat(self, key: str, key_type: type):
-        if key_type is int:
-            return self.steamworks.UserStats.GetStatInt(key)
-        elif key_type is float:
-            return self.steamworks.UserStats.GetStatFloat(key)
-
-    def GetAchv(self, key: str):
-        return self.steamworks.UserStats.GetAchievement(key)
-
-    def SetStat(self, key: str, value):
-        return self.steamworks.UserStats.SetStat(key, value)
-
-    def SetAchv(self, key: str, clear=False):
-        if clear:
-            return self.steamworks.UserStats.ClearAchievement(key)
-        return self.steamworks.UserStats.SetAchievement(key)
-
-    def Store(self):
-        return self.steamworks.UserStats.StoreStats()
-
-
-class TASKBAR_STATE(enum.Enum):
-    TBPF_NOPROGRESS = 0x00000000
-    TBPF_INDETERMINATE = 0x00000001
-    TBPF_NORMAL = 0x00000002
-    TBPF_ERROR = 0x00000004
-    TBPF_PAUSED = 0x00000008
-
-
-class EULAWriter:
-    eula_hi = """
-    EULA
-    
-    重要须知——请仔细阅读：请确保仔细阅读并理解《最终用户许可协议》（简称“协议”）中描述的所有权利与限制。
-    
-    协议
-    本协议是您与SDT Core及其附属公司（简称“公司”）之间达成的协议。仅在您接受本协议中包含的所有条件的情况下，您方可使用软件及任何附属印刷材料。
-    安装或使用软件即表明，您同意接受本《协议》各项条款的约束。如果您不同意本《协议》中的条款：(i)请勿安装软件, (ii)如果您已经购买软件，请立即凭购买凭证将其退回购买处，并获得退款。
-    在您安装软件时，会被要求预览并通过点击“我接受”按钮决定接受或不接受本《协议》的所有条款。点击“我接受”按钮，即表明您承认已经阅读过本《协议》，并且理解并同意受其条款与条件的约束。
-    版权
-    软件受版权法、国际协约条例以及其他知识产权法和条例的保护。软件（包括但不限于软件中含有的任何图片、照片、动画、视频、音乐、文字和小型应用程序）及其附属于软件的任何印刷材料的版权均由公司及其许可者拥有。
-    
-    许可证的授予
-    软件的授权与使用须遵从本《协议》。公司授予您有限的、个人的、非独占的许可证，允许您使用软件，并且以将其安装在您的手机上为唯一目的。公司保留一切未在本《协议》中授予您的权利。
-    
-    授权使用
-    1. 如果软件配置为在一个硬盘驱动器上运行，您可以将软件安装在单一电脑上，以便在您的手机上安装和使用它。
-    2. 您可以制作和保留软件的一个副本用于备份和存档，条件是软件及副本归属于您。
-    3. 您可以将您在本《协议》项下的所有权利永久转让，转让的条件是您不得保留副本，转让软件（包括全部组件、媒体、印刷材料及任何升级版本），并且受让人接受本《协议》的各项条款。
-    
-    限制
-    1. 您不得删除或掩盖软件或附属印刷材料注明的版权、商标或其他所有权。
-    2. 您不得对软件进行反编译、修改、逆向工程、反汇编或重制。
-    3. 您不得复制、租赁、发布、散布或公开展示软件，不得制作软件的衍生产品（除非编辑器和本协议最终用户变更部分或其他附属于软件的文件明确许可），或是以商业目的对软件进行开发。
-    4. 您不得通过电子方式或网络将软件从一台电脑、控制台或其他平台传送到另一个上。
-    5. 您不得将软件的备份或存档副本用作其他用途，只可在原始副本被损坏或残缺的情况下，用其替换原始副本。
-    6. 您不得将软件的输出结果用于商业用途
-    
-    试用版本
-    如果提供给您的软件为试用版，其使用期限或使用数量有限制，您同意在试用期结束后停止使用软件。您知晓并同意软件可能包含用于避免您突破这些限制的代码，并且这些代码会在您删除软件后仍保留在您的电脑上，避免您下载其他副本并重复利用试用期。
-    
-    编辑器和最终用户变更
-    如果软件允许您进行修改或创建新内容（“编辑器”），您可以使用该编辑器修改或优化软件，包括创建新内容（统称“变更”），但必须遵守下列限制。您的变更(i)必须符合已注册的完整版软件；(ii)不得对执行文件进行改动；(iii)不得包含任何诽谤、中伤、违法、损害他人或公众利益的内容；(iv)不得包含任何商标、著作权保护内容或第三方的所有权内容；(v)不得用作商业目的，包括但不限于，出售变更内容、按次计费或分时服务。
-    
-    终止
-    本协议在终止前都是有效的。您可以随时卸载软件来终止该协议。如果您违反了协议的任何条款或条件，本协议将自动终止，恕不另行通知。本协议中涉及到的保证、责任限制和损失赔偿的部分在协议终止后仍然有效。
-    
-    有限保修及免责条款
-    您知道并同意因使用该软件及其记录该软件的媒体所产生的风险由您自行承担。该软件和媒体“照原样”发布。除非有适用法律规定，本公司向此产品的原始购买人保证，在正常使用的情况，该软件媒体存储介质在30天内（自购买之日算起）无缺陷。对于因意外、滥用、疏忽或误用引起的缺陷，该保证无效。如果软件没有达到保证要求，您可能会单方面获得补偿，如果您退回有缺陷的软件，您可以免费获得替换产品。本公司不保证该软件及其操作和功能达到您的要求，也不保证软件的使用不会出现中断或错误。
-    在适用法律许可的最大范围下，除了上述的明确保证之外，本公司不做其他任何保证，包括但不限于暗含性的适销保证、特殊用途保证及非侵权保证。除了上述的明确保证之外，本公司不对软件使用和软件使用结果在正确性、准确性、可靠性、通用性和其他方面做出保证、担保或陈述。部分司法管辖区不允许排除或限制暗含性保证，因此上面的例外和限制情况可能对您不适用。
-    
-    责任范围
-    在任何情况下，本公司及其员工和授权商都不对任何由软件使用或无法使用软件而引起的任何附带、间接、特殊、偶然或惩罚性伤害以及其他伤害（包括但不限于对人身或财产的伤害，利益损失，运营中断，商业信息丢失，隐私侵犯，履行职责失败及疏忽）负责，即使公司或公司授权代表已知悉了存在这种伤害的可能性。部分司法管辖区不允许排除附带或间接伤害，因此，上述例外情况可能对您不适用。
-    
-    在任何情况下，公司承担的和软件伤害相关的费用都不超过您对该软件实际支付的数额。
-    
-    其他
-    如果发现此最终用户许可协议的任意条款或规定违法、无效或因某些原因无法强制执行，该条款和部分将被自动舍弃，不会影响本协议其余规定的有效性和可执行性。
-    本协议包含软您和本软件公司之间的所有协议及其使用方法。
-    
-    eula = true
-    """
-
-    def __init__(self):
-        self.eula_dir = os.path.join(appDir, 'train_log')
-        os.makedirs(self.eula_dir, exist_ok=True)
-        self.eula_path = os.path.join(self.eula_dir, 'md5.svfi')
-
-    def boom(self):
-        with open(self.eula_path, 'w', encoding='utf-8') as w:
-            w.write(self.eula_hi)
 
 
 if __name__ == "__main__":
