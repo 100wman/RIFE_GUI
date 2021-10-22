@@ -48,7 +48,7 @@ class EncodePresetAssemply:
         "SVT":
             {"VP9,8bit": ["slowest", "slow", "fast", "faster"],
              "H265,8bit": ["slowest", "slow", "fast", "faster"],
-             # "H265,10bit": ["slowest", "slow", "fast", "faster"],
+             "AV1,8bit": ["slowest", "slow", "fast", "faster"],
              },
 
     }

@@ -122,7 +122,7 @@ class TaskArgumentManager(ArgumentManager):
         self.input_ext = self.input_ext.lower()
         if not self.output_ext.startswith('.'):
             self.output_ext = "." + self.output_ext
-        if "ProRes" in self.render_encoder and not self.is_img_output:
+        if "ProRes" in self.render_encode_format and not self.is_img_output:
             self.output_ext = ".mov"
         if self.is_img_output and self.output_ext not in SupportFormat.img_outputs:
             self.output_ext = ".png"
@@ -137,10 +137,14 @@ class TaskArgumentManager(ArgumentManager):
             self.input_fps = self.video_info_instance.fps
         elif not self.input_fps:  # 输入是文件夹，使用用户的输入帧率; 用户有毒，未发现有效的输入帧率
             raise OSError("Not Find FPS, Input File is not valid")
-        if not self.target_fps:  # 未找到用户的输出帧率
-            self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
-        if self.is_img_input:  # 图片序列输入，不保留音频（也无音频可保留
-            self.is_save_audio = False
+        if self.render_only:
+            self.target_fps = self.input_fps
+            logger.info(f"Render only, target fps change to input fps: {self.target_fps}")
+        else:
+            if not self.target_fps:  # 未找到用户的输出帧率
+                self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
+            if self.is_img_input:  # 图片序列输入，不保留音频（也无音频可保留
+                self.is_save_audio = False
 
         """Set interpolation exp related to hdr mode"""
         self.interp_times = round(self.target_fps / self.input_fps)
@@ -291,9 +295,10 @@ class ValidationFlow(ValidationModule):
 
 
 class IOFlow(threading.Thread):
-    def __init__(self, __args: TaskArgumentManager):
+    def __init__(self, __args: TaskArgumentManager, __logger):
         super().__init__()
         self.ARGS = __args
+        self.logger = __logger
         self.initiation_event = threading.Event()
         self.initiation_event.clear()
         self.reminder_bearer = OverTimeReminderBearer()
@@ -358,8 +363,8 @@ class IOFlow(threading.Thread):
 
 class ReadFlow(IOFlow):
 
-    def __init__(self, _args: TaskArgumentManager, _output_queue: Queue):
-        super().__init__(_args)
+    def __init__(self, _args: TaskArgumentManager, __logger, _output_queue: Queue):
+        super().__init__(_args, __logger)
         self.name = 'Reader'
         self._output_queue = _output_queue
         self.scene_detection = TransitionDetection_ST(self.ARGS.project_dir, int(0.3 * self.ARGS.input_fps),
@@ -995,8 +1000,8 @@ class ReadFlow(IOFlow):
 
 
 class RenderFlow(IOFlow):
-    def __init__(self, _args: TaskArgumentManager, _reader_queue: Queue):
-        super().__init__(_args)
+    def __init__(self, _args: TaskArgumentManager, __logger, _reader_queue: Queue):
+        super().__init__(_args, __logger)
         self.name = 'Render'
         self.__ffmpeg = "ffmpeg"
         self.__hdr10_metadata_processer = Hdr10PlusProcessor(logger, self.ARGS.project_dir, self.ARGS.render_gap,
@@ -1012,19 +1017,19 @@ class RenderFlow(IOFlow):
 
         if self.ARGS.hdr_mode == 2:
             """HDR10"""
-            self.ARGS.render_hwaccel_mode = "CPU"
-            if "H265" in self.ARGS.render_encoder:
-                self.ARGS.render_encoder = "H265, 10bit"
-            elif "H264" in self.ARGS.render_encoder:
-                self.ARGS.render_encoder = "H264, 10bit"
+            self.ARGS.render_encoder = "CPU"
+            if "H265" in self.ARGS.render_encode_format:
+                self.ARGS.render_encode_format = "H265, 10bit"
+            elif "H264" in self.ARGS.render_encode_format:
+                self.ARGS.render_encode_format = "H264, 10bit"
             self.ARGS.render_encoder_preset = "medium"
         elif self.ARGS.hdr_mode == 4:
             """HLG"""
-            self.ARGS.render_encoder = "H265, 10bit"
-            self.ARGS.render_hwaccel_mode = "CPU"
+            self.ARGS.render_encode_format = "H265, 10bit"
+            self.ARGS.render_encoder = "CPU"
             self.ARGS.render_encoder_preset = "medium"
 
-    def __generate_frame_writer(self, start_frame: int, output_path: str):
+    def __generate_frame_writer(self, start_frame: int, output_path: str, _assign_last_n_frames=0):
         """
         渲染帧
         :param start_frame: for IMG IO, select start_frame to generate IO instance
@@ -1120,10 +1125,10 @@ class RenderFlow(IOFlow):
 
         """Assign Render Codec"""
         """CRF / Bitrate Control"""
-        if self.ARGS.render_hwaccel_mode == "CPU":
-            if "H264" in self.ARGS.render_encoder:
+        if self.ARGS.render_encoder == "CPU":
+            if "H264" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "libx264", "-preset:v": self.ARGS.render_encoder_preset})
-                if "8bit" in self.ARGS.render_encoder:
+                if "8bit" in self.ARGS.render_encode_format:
                     output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "high",
                                         "-x264-params": params_libx264s["8bit"]})
                 else:
@@ -1137,9 +1142,9 @@ class RenderFlow(IOFlow):
                     output_dict.update({"-x264-params": params_libx264s["hdr10"]})
                 if self.ARGS.use_render_encoder_default_preset:
                     output_dict.pop('-x264-params')
-            elif "H265" in self.ARGS.render_encoder:
+            elif "H265" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
-                if "8bit" in self.ARGS.render_encoder:
+                if "8bit" in self.ARGS.render_encode_format:
                     output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main",
                                         "-x265-params": params_libx265s["8bit"]})
                 else:
@@ -1160,25 +1165,25 @@ class RenderFlow(IOFlow):
                 if "-preset" in output_dict:
                     output_dict.pop("-preset")
                 output_dict.update({"-c:v": "prores_ks", "-profile:v": self.ARGS.render_encoder_preset, })
-                if "422" in self.ARGS.render_encoder:
+                if "422" in self.ARGS.render_encode_format:
                     output_dict.update({"-pix_fmt": "yuv422p10le"})
                 else:
                     output_dict.update({"-pix_fmt": "yuv444p10le"})
 
-        elif self.ARGS.render_hwaccel_mode == "NVENC":
+        elif self.ARGS.render_encoder == "NVENC":
             output_dict.update({"-pix_fmt": "yuv420p"})
-            if "10bit" in self.ARGS.render_encoder:
+            if "10bit" in self.ARGS.render_encode_format:
                 output_dict.update({"-pix_fmt": "yuv420p10le"})
                 pass
-            if "H264" in self.ARGS.render_encoder:
+            if "H264" in self.ARGS.render_encode_format:
                 output_dict.update(
                     {f"-g": f"{int(self.ARGS.target_fps * 3)}", "-c:v": "h264_nvenc", "-rc:v": "vbr_hq", })
-            elif "H265" in self.ARGS.render_encoder:
+            elif "H265" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "hevc_nvenc", "-rc:v": "vbr_hq",
                                     f"-g": f"{int(self.ARGS.target_fps * 3)}", })
 
             if self.ARGS.render_encoder_preset != "loseless":
-                hwacccel_preset = self.ARGS.render_hwaccel_preset
+                hwacccel_preset = self.ARGS.render_nvenc_preset
                 if hwacccel_preset != "None":
                     output_dict.update({"-i_qfactor": "0.71", "-b_qfactor": "1.3", "-keyint_min": "1",
                                         f"-rc-lookahead": "120", "-forced-idr": "1", "-nonref_p": "1",
@@ -1192,7 +1197,7 @@ class RenderFlow(IOFlow):
             else:
                 output_dict.update({"-preset": "10", })
 
-        elif self.ARGS.render_hwaccel_mode == "NVENCC":
+        elif self.ARGS.render_encoder == "NVENCC":
             _input_dict = {  # '--avsw': '',
                 'encc': "NVENCC",
                 '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
@@ -1218,14 +1223,14 @@ class RenderFlow(IOFlow):
 
             if '-s' in output_dict:
                 _output_dict.update({'--output-res': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
+            if "10bit" in self.ARGS.render_encode_format:
                 _output_dict.update({"--output-depth": "10"})
-            if "H264" in self.ARGS.render_encoder:
+            if "H264" in self.ARGS.render_encode_format:
                 _output_dict.update({f"-c": f"h264",
-                                     "--profile": "high10" if "10bit" in self.ARGS.render_encoder else "high", })
-            elif "H265" in self.ARGS.render_encoder:
+                                     "--profile": "high10" if "10bit" in self.ARGS.render_encode_format else "high", })
+            elif "H265" in self.ARGS.render_encode_format:
                 _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "-b": "5"})
 
             if self.ARGS.hdr_mode == 2:
@@ -1246,7 +1251,7 @@ class RenderFlow(IOFlow):
             input_dict = _input_dict
             output_dict = _output_dict
             pass
-        elif self.ARGS.render_hwaccel_mode == "QSVENCC":
+        elif self.ARGS.render_encoder == "QSVENCC":
             _input_dict = {  # '--avsw': '',
                 'encc': "QSVENCC",
                 '--fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
@@ -1269,18 +1274,18 @@ class RenderFlow(IOFlow):
 
             if '-s' in output_dict:
                 _output_dict.update({'--output-res': output_dict['-s']})
-            if "10bit" in self.ARGS.render_encoder:
+            if "10bit" in self.ARGS.render_encode_format:
                 _output_dict.update({"--output-depth": "10"})
-            if "H264" in self.ARGS.render_encoder:
+            if "H264" in self.ARGS.render_encode_format:
                 _output_dict.update({f"-c": f"h264",
                                      "--profile": "high", "--repartition-check": "", "--trellis": "all"})
-            elif "H265" in self.ARGS.render_encoder:
+            elif "H265" in self.ARGS.render_encode_format:
                 _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64", })
             if self.ARGS.hdr_mode == 2:
                 _output_dict.update({"-c": "hevc",
-                                     "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
+                                     "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64",
                                      "--max-cll": "1000,100",
                                      "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
@@ -1290,52 +1295,64 @@ class RenderFlow(IOFlow):
             input_dict = _input_dict
             output_dict = _output_dict
             pass
-        elif self.ARGS.render_hwaccel_mode == "SVT":
+        elif self.ARGS.render_encoder == "SVT":
             _input_dict = {  # '--avsw': '',
-                '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
                 "-pix_fmt": "rgb24",
-                '-n': f"{self.ARGS.render_gap}"
+                '-n': f"{self.ARGS.render_gap}",
             }
-            _output_dict = {
-                "encc": "hevc", "-brr": "1", "-sharp": "1", "-b": ""
-            }
-            if "VP9" in self.ARGS.render_encoder:
+            if _assign_last_n_frames:
+                _input_dict.update({'n': f"{_assign_last_n_frames}"})
+            if "H265" in self.ARGS.render_encode_format:
                 _output_dict = {
-                    "encc": "vp9", "-tune": "0", "-b": ""
+                    "encc": "hevc",
+                    '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                    "-bit-depth": "8",
+                    "-profile": "1",
+                    "-level": "6.2",
+                    "-lad": "17",
+                    "-brr": "1", "-sharp": "1",
                 }
-            # TODO SVT Color Info
-            # if '-color_range' in output_dict:
-            #     _output_dict.update({"--colorrange": output_dict["-color_range"]})
-            # if '-colorspace' in output_dict:
-            #     _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
-            # if '-color_trc' in output_dict:
-            #     _output_dict.update({"--transfer": output_dict["-color_trc"]})
-            # if '-color_primaries' in output_dict:
-            #     _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+            elif "VP9" in self.ARGS.render_encode_format:
+                _output_dict = {
+                    "encc": "vp9",
+                    '-fps': output_dict['-r'] if '-r' in output_dict else input_dict['-r'],
+                    "-bit-depth": "8",
+                    "-tune": "0",
+                    "-level": "6.2",
+                }
+                """Source Height must be a multiple of 8"""
+                shit_flag = False
+                if self.ARGS.resize_param[1] > 0:
+                    if self.ARGS.resize_param[1] % 8:
+                        shit_flag = True
+                elif self.ARGS.frame_size[1] > 0 and self.ARGS.frame_size[1] % 8:
+                    shit_flag = True
+                if shit_flag:
+                    raise OSError("For VP9 Encode, Source Height must be a multiple of 8, please alter input's height "
+                                  "to a valid one")
+            else:
+                """AV1"""
+                _output_dict = {
+                    "encc": "av1",
+                    "--input-depth": "8",
+                    "--profile": "0",
+                    "--level": "6.2",
+                }
+            preset_mapper = {"slowest": "2", "slow": "4", "fast": "6", "faster": "8"}
+            if "H265" in self.ARGS.render_encode_format:
+                _output_dict.update({"-encMode": preset_mapper[self.ARGS.render_encoder_preset]})
+            elif "VP9" in self.ARGS.render_encode_format:
+                _output_dict.update({"-enc-mode": preset_mapper[self.ARGS.render_encoder_preset]})
+            else:
+                """AV1"""
+                _output_dict.update({"--preset": preset_mapper[self.ARGS.render_encoder_preset]})
 
             if '-s' in output_dict:
                 _output_dict.update({'-s': output_dict['-s']})
+            # TODO 10bit support for SVT encoders
             # if "10bit" in self.ARGS.render_encoder:
             #     _output_dict.update({"-bit-depth": "10"})
             # else:
-            _output_dict.update({"-bit-depth": "8"})
-
-            preset_mapper = {"slowest": "4", "slow": "5", "fast": "7", "faster": "9"}
-
-            if "H265" in self.ARGS.render_encoder_preset:
-                _output_dict.update({"-encMode": preset_mapper[self.ARGS.render_encoder_preset]})
-            elif "VP9" in self.ARGS.render_encoder_preset:
-                _output_dict.update({"-enc-mode": preset_mapper[self.ARGS.render_encoder_preset]})
-
-            # TODO SVT max cll, master display
-            # if self.ARGS.hdr_mode == 2:
-            #     _output_dict.update({"-c": "hevc",
-            #                          "--profile": "main10" if "10bit" in self.ARGS.render_encoder else "main",
-            #                          "--tier": "main", "--sao": "luma", "--ctu": "64",
-            #                          "--max-cll": "1000,100",
-            #                          "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
-            #                          })
-
             input_dict = _input_dict
             output_dict = _output_dict
             pass
@@ -1343,50 +1360,56 @@ class RenderFlow(IOFlow):
         else:
             """QSV"""
             output_dict.update({"-pix_fmt": "yuv420p"})
-            if "10bit" in self.ARGS.render_encoder:
+            if "10bit" in self.ARGS.render_encode_format:
                 output_dict.update({"-pix_fmt": "yuv420p10le"})
                 pass
-            if "H264" in self.ARGS.render_encoder:
+            if "H264" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "h264_qsv",
                                     "-i_qfactor": "0.75", "-b_qfactor": "1.1",
                                     f"-rc-lookahead": "120", })
-            elif "H265" in self.ARGS.render_encoder:
+            elif "H265" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "hevc_qsv",
                                     f"-g": f"{int(self.ARGS.target_fps * 3)}", "-i_qfactor": "0.75",
                                     "-b_qfactor": "1.1",
                                     f"-look_ahead": "120", })
 
-        if "ProRes" not in self.ARGS.render_encoder and self.ARGS.render_encoder_preset != "loseless":
+        if "ProRes" not in self.ARGS.render_encode_format and self.ARGS.render_encoder_preset != "loseless":
 
             if self.ARGS.render_crf and self.ARGS.use_crf:
-                if self.ARGS.render_hwaccel_mode != "CPU":
-                    hwaccel_mode = self.ARGS.render_hwaccel_mode
-                    if hwaccel_mode == "NVENC":
-                        output_dict.update({"-cq:v": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "QSV":
-                        output_dict.update({"-q": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "NVENCC":
-                        output_dict.update({"--vbr": "0", "--vbr-quality": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "QSVENCC":
-                        output_dict.update({"--la-icq": str(self.ARGS.render_crf)})
-                    elif hwaccel_mode == "SVT":
-                        output_dict.update({"-q": str(self.ARGS.render_crf)})
-
-                else:  # CPU
+                encoder = self.ARGS.render_encoder
+                if encoder == "CPU":
                     output_dict.update({"-crf": str(self.ARGS.render_crf)})
-
+                elif encoder == "NVENC":
+                    output_dict.update({"-cq:v": str(self.ARGS.render_crf)})
+                elif encoder == "QSV":
+                    output_dict.update({"-q": str(self.ARGS.render_crf)})
+                elif encoder == "NVENCC":
+                    output_dict.update({"--vbr": "0", "--vbr-quality": str(self.ARGS.render_crf)})
+                elif encoder == "QSVENCC":
+                    output_dict.update({"--la-icq": str(self.ARGS.render_crf)})
+                elif encoder == "SVT":
+                    if "VP9" in self.ARGS.render_encode_format or "H265" in self.ARGS.render_encode_format:
+                        output_dict.update({"-q": str(self.ARGS.render_crf)})
+                    else:
+                        """AV1"""
+                        output_dict.update({"--crf": str(self.ARGS.render_crf)})
             if self.ARGS.render_bitrate and self.ARGS.use_bitrate:
-                if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
+                if self.ARGS.render_encoder in ["NVENCC", "QSVENCC"]:
                     output_dict.update({"--vbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
-                elif self.ARGS.render_hwaccel_mode == "SVT":
-                    output_dict.update({"-tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
+                elif self.ARGS.render_encoder == "SVT":
+                    if "VP9" in self.ARGS.render_encode_format or "H265" in self.ARGS.render_encode_format:
+                        output_dict.update({"-tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
+                    else:
+                        """AV1"""
+                        output_dict.update({"--tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
                 else:
+                    """FFMPEG"""
                     output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
-                if self.ARGS.render_hwaccel_mode == "QSV":
+                if self.ARGS.render_encoder == "QSV":
                     output_dict.update({"-maxrate": "200M"})
 
         if self.ARGS.use_manual_encode_thread:
-            if self.ARGS.render_hwaccel_mode == "NVENCC":
+            if self.ARGS.render_encoder == "NVENCC":
                 output_dict.update({"--output-thread": f"{self.ARGS.render_encode_thread}"})
             else:
                 output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
@@ -1398,17 +1421,21 @@ class RenderFlow(IOFlow):
         if len(self.ARGS.render_ffmpeg_customized):
             shlex_out = shlex.split(self.ARGS.render_ffmpeg_customized)
             if len(shlex_out) % 2 != 0:
-                logger.warning(f"Customized FFmpeg is invalid: {self.ARGS.render_ffmpeg_customized}")
+                logger.warning(
+                    f"Customized FFmpeg is invalid, should be multiple of 2: {self.ARGS.render_ffmpeg_customized}")
             else:
                 for i in range(int(len(shlex_out) / 2)):
                     ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
         logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
-        if self.ARGS.render_hwaccel_mode in ["NVENCC", "QSVENCC"]:
-            return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
-        elif self.ARGS.render_hwaccel_mode in ["SVT"]:
-            return SVTWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
-        return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict)
+        if self.ARGS.render_encoder in ["NVENCC", "QSVENCC"]:
+            return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
+                              verbosity=self.ARGS.debug)
+        elif self.ARGS.render_encoder in ["SVT"]:
+            return SVTWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
+                             verbosity=self.ARGS.debug)
+        return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
+                            verbosity=self.ARGS.debug)
 
     def __rename_chunk(self, chunk_from_path: str, chunk_cnt: int, start_frame: int, end_frame: int):
         """Maintain Chunk json"""
@@ -1453,7 +1480,7 @@ class RenderFlow(IOFlow):
         """
         """Check Input file ext"""
         output_ext = self.ARGS.output_ext
-        if "ProRes" in self.ARGS.render_encoder:
+        if "ProRes" in self.ARGS.render_encode_format:
             output_ext = ".mov"
 
         output_filepath = f"{os.path.join(self.ARGS.output_dir, Tools.get_filename(self.ARGS.input))}"
@@ -1642,13 +1669,14 @@ class RenderFlow(IOFlow):
         chunk_cnt, start_frame = self.check_chunk()
         chunk_frame_cnt = 1  # number of frames of current output chunk
         chunk_tmp_path = os.path.join(self.ARGS.project_dir, f"chunk-tmp{self.ARGS.output_ext}")
-        frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )  # get frame renderer
-
-        now_frame = start_frame
-        is_end = False
-        frame_written = False
-        self._release_initiation()
+        if self.ARGS.all_frames_cnt < self.ARGS.render_gap:
+            self.ARGS.render_gap = self.ARGS.render_gap
         try:
+            frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )  # get frame renderer
+            now_frame = start_frame
+            is_end = False
+            frame_written = False
+            self._release_initiation()
             while True:
                 if self._kill or not self.wait_for_input():
                     if frame_written:
@@ -1691,7 +1719,10 @@ class RenderFlow(IOFlow):
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     chunk_cnt += 1
                     start_frame = now_frame + 1
-                    frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )
+                    _assign_last_n_frames = 0
+                    # if self.ARGS.all_frames_cnt - (chunk_frame_cnt - 1) < self.ARGS.render_gap:
+                    #     _assign_last_n_frames = self.ARGS.all_frames_cnt - (chunk_frame_cnt - 1)
+                    frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, _assign_last_n_frames)
             if not self.ARGS.is_no_concat and not self.ARGS.is_img_output \
                     and not self._kill and self.ARGS.get_main_error() is None:
                 # Do not concat when main error is detected
@@ -1710,8 +1741,8 @@ class RenderFlow(IOFlow):
 
 
 class SuperResolutionFlow(IOFlow):
-    def __init__(self, _args: TaskArgumentManager, _reader_queue: Queue, _render_queue: Queue):
-        super().__init__(_args)
+    def __init__(self, _args: TaskArgumentManager, __logger, _reader_queue: Queue, _render_queue: Queue):
+        super().__init__(_args, __logger)
         self.name = 'SuperResolution'
         self._input_queue = _reader_queue
         self._output_queue = _render_queue
@@ -1866,8 +1897,8 @@ class SuperResolutionFlow(IOFlow):
 
 
 class ProgressUpdateFlow(IOFlow):
-    def __init__(self, _args: TaskArgumentManager, _read_flow: ReadFlow):
-        super().__init__(_args)
+    def __init__(self, _args: TaskArgumentManager, __logger, _read_flow: ReadFlow):
+        super().__init__(_args, __logger)
         self.name = 'Pbar'
         self.start_frame = 0
         self.read_flow = _read_flow
@@ -1888,7 +1919,7 @@ class ProgressUpdateFlow(IOFlow):
         previous_cnt = self.start_frame
         self._release_initiation()
         while True:
-            if self._kill:
+            if self._kill or self.ARGS.get_main_error() is not None:
                 break
             task_status = self.ARGS.task_info  # render status quo
             if self.ARGS.render_only or self.ARGS.extract_only:
@@ -1940,10 +1971,10 @@ class InterpWorkFlow:
         self.render_task_queue = Queue(maxsize=queue_len)
 
         self.validation_flow = ValidationFlow(self.ARGS)
-        self.read_flow = ReadFlow(self.ARGS, self.read_task_queue)
-        self.sr_flow = SuperResolutionFlow(self.ARGS, self.read_task_queue, self.rife_task_queue)
-        self.render_flow = RenderFlow(self.ARGS, self.render_task_queue)
-        self.update_progress_flow = ProgressUpdateFlow(self.ARGS, self.read_flow)
+        self.read_flow = ReadFlow(self.ARGS, logger, self.read_task_queue)
+        self.sr_flow = SuperResolutionFlow(self.ARGS, logger, self.read_task_queue, self.rife_task_queue)
+        self.render_flow = RenderFlow(self.ARGS, logger, self.render_task_queue)
+        self.update_progress_flow = ProgressUpdateFlow(self.ARGS, logger, self.read_flow)
 
         """Set VFI Core"""
         self.vfi_core = VideoFrameInterpolationBase(self.ARGS)

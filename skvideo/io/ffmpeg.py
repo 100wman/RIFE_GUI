@@ -57,7 +57,7 @@ class FFmpegReader(VideoReaderAbstract):
 
         if verbosity > 0:
             cmd = [_FFMPEG_PATH + "/" + _FFMPEG_APPLICATION] + iargs + ['-i', self._filename] + oargs + ['-']
-            print(cmd)
+            print("FFmpeg Read Command:", self._cmd)
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
                                   stdout=sp.PIPE, stderr=None, startupinfo=startupinfo)
         else:
@@ -111,7 +111,7 @@ class FFmpegWriter(VideoWriterAbstract):
 
         # Launch process
         if self.verbosity > 0:
-            print(self._cmd)
+            print("FFmpeg Write Command:", self._cmd)
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
                                   stdout=sp.PIPE, stderr=None, startupinfo=startupinfo)
         else:
@@ -183,7 +183,7 @@ class EnccWriter(VideoWriterAbstract):
 
         # Launch process
         if self.verbosity > 0:
-            print(self._cmd)
+            print("EnCc Command:", self._cmd)
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
                                   stdout=sp.PIPE, stderr=None, startupinfo=startupinfo)
         else:
@@ -235,8 +235,10 @@ class SVTWriter(EnccWriter):
     def _createProcess(self, inputdict, outputdict, verbosity):
         if outputdict['encc'] == "hevc":
             _SVT_APPLICATION = "SvtHevcEncApp"
-        else:
+        elif outputdict['encc'] == "vp9":
             _SVT_APPLICATION = "SvtVp9EncApp"
+        else:  # av1
+            _SVT_APPLICATION = "SvtAv1EncApp"
         _SVT_APPLICATION += ".exe"
         outputdict.pop('encc')
         n_inputdict = self._dealWithFFmpegArgs(inputdict)
@@ -278,7 +280,7 @@ class SVTWriter(EnccWriter):
 
         # Launch process
         if self.verbosity > 0:
-            print(self._cmd)
+            print("SVT Command:", self._cmd)
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
                                   stdout=sp.PIPE, stderr=None, startupinfo=startupinfo)
         else:
