@@ -239,12 +239,12 @@ class RealESRGANer:
         # else:
         #     output = (output_img * 255.0).round().astype(np.uint8)
 
-        if outscale is not None and outscale != float(self.scale):
-            output = cv2.resize(
-                output, (
-                    int(w_input * outscale),
-                    int(h_input * outscale),
-                ), interpolation=cv2.INTER_LANCZOS4)
+        # if outscale is not None and outscale != float(self.scale):
+        #     output = cv2.resize(
+        #         output, (
+        #             int(w_input * outscale),
+        #             int(h_input * outscale),
+        #         ), interpolation=cv2.INTER_)
 
         return output, img_mode
 
