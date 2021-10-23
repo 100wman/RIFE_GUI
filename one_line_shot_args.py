@@ -500,18 +500,18 @@ class ReadFlow(IOFlow):
 
         if frame_check:
             """用以一拍二一拍N除重模式的预处理"""
-            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
+            output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
                                 "-s": f"300x300"})
         else:
             if not self.ARGS.use_sr:
                 """直接用最终输出分辨率"""
                 if self.ARGS.frame_size != self.ARGS.resize_param and all(self.ARGS.resize_param):
-                    output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
+                    output_dict.update({"-sws_flags": "lanczos+accurate_rnd+full_chroma_int",
                                         "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
             else:
                 """超分"""
                 if self.ARGS.frame_size != self.ARGS.transfer_param and all(self.ARGS.transfer_param):
-                    output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
+                    output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
                                         "-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
         """Quick Extraction"""
@@ -1119,9 +1119,9 @@ class RenderFlow(IOFlow):
         vf_args = "copy"  # debug
         output_dict.update({"-vf": vf_args})
 
-        if self.ARGS.use_sr and all(self.ARGS.resize_param):
-            output_dict.update({"-sws_flags": "lanczos+full_chroma_inp",
-                                "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
+        if all(self.ARGS.resize_param):
+            output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
+                                "-s": f"{self.ARGS.resize_param[0]}x{self.ARGS.resize_param[1]}"})
 
         """Assign Render Codec"""
         """CRF / Bitrate Control"""
@@ -2177,11 +2177,11 @@ class InterpWorkFlow:
                     self.feed_to_render([None], is_end=True)
                     break
 
-                if all(self.ARGS.resize_param):
-                    img0 = cv2.resize(img0, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
-                                      interpolation=cv2.INTER_LANCZOS4)
-                    img1 = cv2.resize(img1, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
-                                      interpolation=cv2.INTER_LANCZOS4)
+                # if all(self.ARGS.resize_param):
+                #     img0 = cv2.resize(img0, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
+                #                       interpolation=cv2.INTER_LANCZOS4)
+                #     img1 = cv2.resize(img1, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
+                #                       interpolation=cv2.INTER_LANCZOS4)
 
                 frames_list = [img0]
                 if self.ARGS.is_scdet_mix and add_scene:

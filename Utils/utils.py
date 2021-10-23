@@ -78,17 +78,15 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.6"
+    gui_version = "3.7.7"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.1"
+    ols_version = "7.2.2"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Update names of parameters related to Render
-    - Update SVT Mode to better parameter (still Unusable for process clogging after reading frames)
-    - Update Some UI
+    - Update Color Parameters to avoid banding and discoloration (using +accurate_rnd+full_chroma_int)
     """
 
     path_len_limit = 230
