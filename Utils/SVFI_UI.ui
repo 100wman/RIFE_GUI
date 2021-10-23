@@ -1361,7 +1361,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-70</y>
+                        <y>0</y>
                         <width>365</width>
                         <height>476</height>
                        </rect>
@@ -1837,8 +1837,8 @@
                      <widget class="QWidget" name="RenderSettings">
                       <property name="geometry">
                        <rect>
-                        <x>-13</x>
-                        <y>0</y>
+                        <x>0</x>
+                        <y>-210</y>
                         <width>378</width>
                         <height>599</height>
                        </rect>
@@ -1864,7 +1864,7 @@
                                </sizepolicy>
                               </property>
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;专业选项，必须输入和编码器对应的参数（FFmpeg、EnCc系列或SVT）&lt;/p&gt;&lt;p&gt;此参数用于压制&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;专业选项，必须输入和编码器对应的参数（FFmpeg、EnCc系列或SVT）&lt;/p&gt;&lt;p&gt;此参数将替换用于压制的部分参数，&lt;/p&gt;&lt;p&gt;参数与值成对，若参数值为空则留出一空格，结尾保留空格&lt;/p&gt;&lt;p&gt;e.g.&lt;/p&gt;&lt;p&gt;&amp;quot;-x265-params loseless=1 -preset:v placebo &amp;quot;&lt;/p&gt;&lt;p&gt;&amp;quot;-an  &amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>自定义压制参数： (?)</string>
@@ -2302,7 +2302,7 @@
                              <item row="0" column="0">
                               <widget class="QCheckBox" name="UseEncodeThread">
                                <property name="toolTip">
-                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用N个线程（ffmpeg）进行渲染&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用N个线程进行渲染&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅在CPU(ffmpeg)作为编码器下生效&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                                </property>
                                <property name="text">
                                 <string>指定编码线程数 (?)</string>
@@ -2462,7 +2462,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-108</y>
+                        <y>0</y>
                         <width>365</width>
                         <height>514</height>
                        </rect>

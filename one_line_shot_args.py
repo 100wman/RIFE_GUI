@@ -37,7 +37,6 @@ else:
     from Utils.LicenseModule import RetailValidation as ValidationModule
 
 print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
-# TODO Fix up SVT-HEVC
 
 """设置环境路径"""
 os.chdir(appDir)
@@ -100,7 +99,7 @@ class TaskArgumentManager(ArgumentManager):
                                                       project_dir=self.project_dir,
                                                       interp_exp=self.rife_exp)
         self.__update_hdr_mode()
-        self.__update_io_fps()
+        self.__update_io_info()
         self.__update_frames_cnt()
         self.__update_frame_size()
         self.__update_task_queue_size_by_memory()
@@ -127,7 +126,7 @@ class TaskArgumentManager(ArgumentManager):
         if self.is_img_output and self.output_ext not in SupportFormat.img_outputs:
             self.output_ext = ".png"
 
-    def __update_io_fps(self):
+    def __update_io_info(self):
         """
         Update io fps and interp times
         :return:
@@ -143,7 +142,8 @@ class TaskArgumentManager(ArgumentManager):
         else:
             if not self.target_fps:  # 未找到用户的输出帧率
                 self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
-            if self.is_img_input:  # 图片序列输入，不保留音频（也无音频可保留
+            if self.is_img_input or not len(self.video_info_instance.audio_info):  # 图片序列输入，不保留音频（也无音频可保留
+                logger.warning("Image Sequence input or Video does not contain audio, audio concat set to false")
                 self.is_save_audio = False
 
         """Set interpolation exp related to hdr mode"""
@@ -208,7 +208,6 @@ class TaskArgumentManager(ArgumentManager):
 
         """Extract Only Mode"""
         if self.extract_only and self.output_ext not in SupportFormat.img_outputs:
-            # TODO Extract only mode Be removed soon
             self.is_img_output = True
             self.output_ext = ".png"
             logger.warning("Auto change output extension to png")
@@ -1408,25 +1407,18 @@ class RenderFlow(IOFlow):
                 if self.ARGS.render_encoder == "QSV":
                     output_dict.update({"-maxrate": "200M"})
 
-        if self.ARGS.use_manual_encode_thread:
-            if self.ARGS.render_encoder == "NVENCC":
-                output_dict.update({"--output-thread": f"{self.ARGS.render_encode_thread}"})
-            else:
-                output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
+        if self.ARGS.use_manual_encode_thread and self.ARGS.render_encoder == "CPU":
+            output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
 
         logger.debug(f"writer: {output_dict}, {input_dict}")
 
-        """Customize FFmpeg Render Command"""
+        """Customize FFmpeg Render Parameters"""
         ffmpeg_customized_command = {}
         if len(self.ARGS.render_ffmpeg_customized):
-            shlex_out = shlex.split(self.ARGS.render_ffmpeg_customized)
-            if len(shlex_out) % 2 != 0:
-                logger.warning(
-                    f"Customized FFmpeg is invalid, should be multiple of 2: {self.ARGS.render_ffmpeg_customized}")
-            else:
-                for i in range(int(len(shlex_out) / 2)):
-                    ffmpeg_customized_command.update({shlex_out[i * 2]: shlex_out[i * 2 + 1]})
-        logger.debug(f"ffmpeg custom: {ffmpeg_customized_command}")
+            key_args = re.findall('(-.*?)\s(.*?)\s', self.ARGS.render_ffmpeg_customized)
+            for param, arg in key_args:
+                ffmpeg_customized_command.update({param: arg})
+        logger.debug(f"render custom parameters: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
         if self.ARGS.render_encoder in ["NVENCC", "QSVENCC"]:
             return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
@@ -1752,7 +1744,7 @@ class SuperResolutionFlow(IOFlow):
         if not self.ARGS.use_sr:
             self._release_vram_check_lock()
             return
-        sr_scale = self.ARGS.resize_exp  # TODO evict this later
+        sr_scale = self.ARGS.resize_exp
         resize_param = self.ARGS.frame_size
         if all(self.ARGS.transfer_param):
             resize_param = self.ARGS.transfer_param
@@ -1809,7 +1801,7 @@ class SuperResolutionFlow(IOFlow):
             if all(self.ARGS.transfer_param):
                 w, h = self.ARGS.transfer_param
             else:
-                w, h = self.ARGS.video_info_instance.frames_size
+                w, h = self.ARGS.frame_size
 
             logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
 
@@ -2014,7 +2006,7 @@ class InterpWorkFlow:
             if self.ARGS.resize_width and self.ARGS.resize_height:
                 w, h = self.ARGS.resize_width, self.ARGS.resize_height
             else:
-                w, h = self.ARGS.video_info_instance.frames_size
+                w, h = self.ARGS.frame_size
 
             logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
