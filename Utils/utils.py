@@ -78,15 +78,18 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.7"
+    gui_version = "3.7.8"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.2"
+    ols_version = "7.2.3"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Update Color Parameters to avoid banding and discoloration (using +accurate_rnd+full_chroma_int)
+    - Fix Video without audio tracks performs audio mux check
+    - Fix Custom Render Command parameters fixed to multiple of 2
+    - Fix some names of parameters for better maintenance
+    - Remove Torchvision Import Error display 
     """
 
     path_len_limit = 230
@@ -135,7 +138,7 @@ class ArgumentManager:
         self.resize_width = Tools.get_plural(args.get("resize_width", 0))
         self.resize_height = Tools.get_plural(args.get("resize_height", 0))
         self.resize_param = [self.resize_width, self.resize_height]  # resize parameter, 输出分辨率参数
-        self.resize_exp = args.get("resize_exp", 1)  # TODO Remove this
+        self.resize_exp = args.get("resize_exp", 1)
 
         self.transfer_width = Tools.get_plural(args.get("transfer_width", 0))
         self.transfer_height = Tools.get_plural(args.get("transfer_height", 0))
