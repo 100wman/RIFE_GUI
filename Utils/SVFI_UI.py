@@ -1533,7 +1533,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.tabWidget.setCurrentIndex(0)
-        self.toolBox.setCurrentIndex(3)
+        self.toolBox.setCurrentIndex(5)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.AutoSet)
         MainWindow.setTabOrder(self.AutoSet, self.StartPoint)
@@ -1672,7 +1672,7 @@ class Ui_MainWindow(object):
         self.SaveCurrentSettings.setText(_translate("MainWindow", "单独保存当前选中的输入设置"))
         self.LoadCurrentSettings.setText(_translate("MainWindow", "载入当前选中输入的设置"))
         self.OutputSettingsButton.setText(_translate("MainWindow", "导出当前设置到文本文件"))
-        self.DebugChecker.setToolTip(_translate("MainWindow", "<html><head/><body><p>除虫模式：</p><p><span style=\" font-weight:600;\">该模式启用后将不会弹窗</span></p></body></html>"))
+        self.DebugChecker.setToolTip(_translate("MainWindow", "<html><head/><body><p>调试模式：</p><p><span style=\" font-weight:600;\">该模式启用后将不会弹出必要的启动信息提示窗口，并在输出窗口显示调试信息</span></p></body></html>"))
         self.DebugChecker.setText(_translate("MainWindow", "Debug (?)"))
         self.EndPoint.setDisplayFormat(_translate("MainWindow", "HH:mm:ss"))
         self.label_22.setToolTip(_translate("MainWindow", "<html><head/><body><p><span style=\" font-weight:600;\">进度恢复输入规则：</span></p><p>输出文件夹的最后一个chunk，第一个数字+1</p><p>e.g. 最后一个chunk是chunk-003-333-335.mp4，此栏输入004</p><p><span style=\" font-weight:600;\">-1 为自动识别进度（请确保任务id相同）</span></p></body></html>"))

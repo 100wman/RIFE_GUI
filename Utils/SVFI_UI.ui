@@ -786,7 +786,7 @@
                      <item>
                       <widget class="QCheckBox" name="DebugChecker">
                        <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;除虫模式：&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;该模式启用后将不会弹窗&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;调试模式：&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;该模式启用后将不会弹出必要的启动信息提示窗口，并在输出窗口显示调试信息&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                        </property>
                        <property name="text">
                         <string>Debug (?)</string>
@@ -804,7 +804,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>3</number>
+                      <number>5</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
