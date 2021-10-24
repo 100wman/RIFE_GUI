@@ -66,8 +66,8 @@ def change_utils_with_mighty_power():
 # steam_ver = [True, False]
 steam_ver = [True]
 # steam_ver = [False]
-# free_ver = [True, False]
-free_ver = [False]
+free_ver = [True, False]
+# free_ver = [False]
 # free_ver = [False]
 for _steam_ver in steam_ver:
     for _free_ver in free_ver:
@@ -78,3 +78,8 @@ for _steam_ver in steam_ver:
         time.sleep(5)
         pass
 # generate_release()
+# """
+# TODO Before Release:
+# 1. Remove SVT
+# 2. Remove OLS Extract and Render only mode validation
+# """
