@@ -765,7 +765,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         for m in ST_RmMode:
             self.DupRmMode.addItem(m)
 
-        ST_HwaccelMode = ['CPU', 'QSV', 'SVT']
+        ST_HwaccelMode = ['CPU', 'QSV']
         try:
             self.HwaccelSelector.disconnect()
         except:
