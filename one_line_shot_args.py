@@ -2029,8 +2029,8 @@ class InterpWorkFlow:
         steam_dlc_check = self.validation_flow.CheckProDLC(0)
         if not steam_dlc_check:
             _msg = "SVFI - Professional DLC Not Purchased,"
-            if self.ARGS.extract_only or self.ARGS.render_only:
-                raise GenericSteamException(f"{_msg} Extract/Render ToolBox Unavailable")
+            # if self.ARGS.extract_only or self.ARGS.render_only:
+            #     raise GenericSteamException(f"{_msg} Extract/Render ToolBox Unavailable")
             if self.ARGS.input_start_point is not None or self.ARGS.input_end_point is not None:
                 raise GenericSteamException(f"{_msg} Manual Input Section Unavailable")
             if self.ARGS.is_scdet_output or self.ARGS.is_scdet_mix:
@@ -2039,6 +2039,12 @@ class InterpWorkFlow:
                 raise GenericSteamException(f"{_msg} Super Resolution Module Unavailable")
             if self.ARGS.use_rife_multi_cards:
                 raise GenericSteamException(f"{_msg} Multi Video Cards Work flow Unavailable")
+            if self.ARGS.use_deinterlace:
+                raise GenericSteamException(f"{_msg} DeInterlace is Unavailable")
+            if self.ARGS.use_rife_auto_scale:
+                raise GenericSteamException(f"{_msg} RIFE Dynamic Scale is Unavailable")
+            if self.ARGS.is_rife_reverse:
+                raise GenericSteamException(f"{_msg} RIFE Reversed Flow is Unavailable")
 
     def check_interp_prerequisite(self):
         if self.ARGS.render_only or self.ARGS.extract_only or self.ARGS.concat_only:

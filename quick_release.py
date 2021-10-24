@@ -80,6 +80,4 @@ for _steam_ver in steam_ver:
 # generate_release()
 # """
 # TODO Before Release:
-# 1. Remove SVT
-# 2. Remove OLS Extract and Render only mode validation
 # """

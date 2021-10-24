@@ -86,7 +86,7 @@ class ArgumentManager:
 
     f"""
     Update Log
-    - Update UI and some Options Documentations
+    - Update UI and validation module for specific functions for Final Release Notes
     """
 
     path_len_limit = 230
