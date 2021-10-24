@@ -99,17 +99,17 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
     }}
     
     QMenu {{
-        background: transparent;
+        background: {disDark};
         padding: 8px 1px;
         /*设置菜单项文字上下和左右的内边距，效果就是菜单中的条目左右上下有了间隔*/
         margin: 2px 2px;
         /*设置菜单项的外边距*/
+        border: 2px {disDark};
         border-radius: 4px;
     }}
     
     QMenu::item {{
         font-family: 'Microsoft Yahei';
-        background: transparent;
         padding: 8px;
     }}
     
@@ -131,6 +131,7 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
     }}
     
     QPushButton:hover {{
+        border: {light};
         color: {light};
         background: {fontLight};
     }}
@@ -141,6 +142,7 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
     }}
     
     QPushButton:disabled {{
+        border: #CCCCCC;
         color: #CCCCCC;
         background: {fontDark};
     }}
@@ -154,6 +156,13 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
             border: 2px solid {disDark};
             font: light;
         }}
+        
+        QPushButton#{q}:hover {{
+            background: {fontLight};
+            border: {light};
+            font: light;
+        }}
+        
         """
 
     """QLabel"""
@@ -534,9 +543,10 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
     }}
     
     QTabBar::tab {{
-        color: {normal};
-        background: {disDark};
-        border-top-radius: 2px solid {disDark};
+        color: {light};
+        background: {normal};
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
         padding-left: 5px;
         padding-right: 5px;
         padding-top: 2px;
@@ -546,22 +556,22 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
     QTabBar::tab:hover {{
         color: {light};
         background: {normal};
-        border-top-radius: 2px solid {disDark};
-        border: 4px;
+        border: 2px solid {normal};
     }}
     
     QTabBar::tab:selected {{
         color: {light};
-        background: {normal};
-        border-top-left-radius: 6px;
-        border-top-right-radius: 6px;
-        border: 2px solid {disDark};
+        margin-left: -3px;
+        margin-right: -3px;
         border-bottom: 1px;
-        border-bottom-color: {disDark};
+        border-bottom-color: {light};
     }}
     
     QTabBar::tab:!selected {{
-        margin-top: 3px;
+        color: {normal};
+        background: {disDark};
+        border: 2px solid {disDark};
+        margin-top: 2px;
         /* make non-selected tabs look smaller */
     }}
     
@@ -574,13 +584,6 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
         border-top-right-radius: 0px;
     }}
     
-    /* make use of negative margins for overlapping tabs */
-    QTabBar::tab:selected {{
-        /* expand/overlap to the left and right by 4px */
-        margin-left: -3px;
-        margin-right: -3px;
-    }}
-    
     QTabBar::tab:only-one {{
         margin: 0;
         /* if there is only one tab, we don't want overlapping margins */
@@ -589,27 +592,6 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
 
     """QSlider"""
     qss += f"""
-    QSlider::groove:horizontal,
-    QSlider::add-page:horizontal {{
-        height: 8px;
-        border-radius: 4px;
-        background: {light};
-    }}
-    
-    QSlider::sub-page:horizontal {{
-        height: 8px;
-        border-radius: 4px;
-        background: {normal};
-    }}
-    
-    QSlider::handle:horizontal {{
-        width: 13px;
-        margin-top: -3px;
-        margin-bottom: -3px;
-        border-radius: 6px;
-        background: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0.6 {normal}, stop:0.8 {light});
-    }}
-    
     QScrollBar::handle {{
         background: {disDark};
         border-radius: 5px;
@@ -622,12 +604,24 @@ def __getAllQss(fontLight, fontDark, normal, light, deep, disLight, disDark, the
     
     QScrollBar:horizontal {{
         height: 10px;
-        background: transparent;
+        background: {deep};
     }}
     
     QScrollBar:vertical {{
         width: 10px;
-        background: transparent;
+        background: {deep};
+    }}
+    
+    QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal, 
+    QScrollBar::down-arrow:vertical, QScrollBar::up-arrow:vertical,
+    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal,
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical,
+    QScrollBar::sub-line:horizontal, QScrollBar::add-line:horizontal,
+    QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical
+    {{
+        border: none;
+        color: none;
+        background: none;
     }}
     
     """
