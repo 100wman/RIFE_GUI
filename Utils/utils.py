@@ -86,10 +86,7 @@ class ArgumentManager:
 
     f"""
     Update Log
-    - Fix Video without audio tracks performs audio mux check
-    - Fix Custom Render Command parameters fixed to multiple of 2
-    - Fix some names of parameters for better maintenance
-    - Remove Torchvision Import Error display 
+    - Update UI and some Options Documentations
     """
 
     path_len_limit = 230
