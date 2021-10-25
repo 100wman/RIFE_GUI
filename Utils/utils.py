@@ -78,15 +78,16 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.8"
+    gui_version = "3.7.9"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.3"
+    ols_version = "7.2.4"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Update UI and validation module for specific functions for Final Release Notes
+    - Fix HDR10+ mis-recognition
+    - Fix Unable to input assign render parameters(with better design, replace preset with preset:v to be more accurate
     """
 
     path_len_limit = 230
@@ -168,7 +169,7 @@ class ArgumentManager:
         self.is_encode_audio = args.get("is_encode_audio", False)
         self.is_quick_extract = args.get("is_quick_extract", True)
         self.hdr_mode = args.get("hdr_mode", 0)
-        self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "")
+        self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "").strip('"').strip("'")
         self.is_no_concat = args.get("is_no_concat", False)
         self.use_fast_denoise = args.get("use_fast_denoise", False)
         self.gif_loop = args.get("gif_loop", True)
@@ -309,9 +310,12 @@ class Tools:
 
     @staticmethod
     def check_pure_img(img1):
-        if np.var(img1) < 10:
-            return True
-        return False
+        try:
+            if np.var(img1) < 10:
+                return True
+            return False
+        except:
+            return False
 
     @staticmethod
     def check_non_ascii(s: str):
@@ -441,6 +445,43 @@ class Tools:
         last_chunk = chunk_paths[-1]
         chunk_cnt, last_frame = re.findall('chunk-(\d+)-\d+-(\d+).*?', last_chunk)[0]
         return chunk_paths, int(chunk_cnt), int(last_frame)
+
+    @staticmethod
+    def get_custom_cli_params(command: str):
+        command_params = command.split(' ')
+        hint = False
+        result = list()
+        current = ""
+        command_dict = dict()
+        try:
+            for command in command_params:
+                command = command.strip()
+                if not len(command):
+                    continue
+                current_hint = '"' in command or "'" in command
+                if hint and current_hint:
+                    result.append(current+command)
+                    current = ""
+                    hint=False
+                elif (current_hint and not hint) or (not current_hint and hint):
+                    current += command + " "
+                    hint = current_hint
+                else:
+                    result.append(command)
+                    current = ""
+                    hint = current_hint
+            param = ""
+            for command in result:
+                if command.startswith("-"):
+                    if param != "":
+                        command_dict.update({param: ""})
+                    param = command
+                else:
+                    command_dict.update({param: command})
+                    param = ""
+        except:
+            traceback.print_exc()
+        return command_dict
 
     @staticmethod
     def popen(args: str):
@@ -967,8 +1008,7 @@ class VideoInfoProcessor:
             self.logger.warning("HDR Content Detected")
             if any([i in str(self.video_info).lower()]
                    for i in ['mastering-display', "mastering display", "content light level metadata"]):
-                self.hdr_mode = 2  # hdr10
-                self.logger.warning("HDR10+ Content Detected")
+                """Could be HDR10+"""
                 self.hdr10plus_metadata_path = os.path.join(self.project_dir, "hdr10plus_metadata.json")
                 check_command = (f'{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.input_file)} -c:v copy '
                                  f'-vbsf hevc_mp4toannexb -f hevc - | '
@@ -978,6 +1018,9 @@ class VideoInfoProcessor:
                 except Exception:
                     self.logger.warning("Failed to extract HDR10+ data")
                     self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+                if len(self.getInputHdr10PlusMetadata()):
+                    self.logger.warning("HDR10+ Content Detected")
+                    self.hdr_mode = 2  # hdr10
 
         elif "arib-std-b67" in color_trc:
             self.hdr_mode = 4  # HLG
@@ -1204,13 +1247,14 @@ class TransitionDetection_ST:
         :param no_diff: check after "add_diff" mode
         :return: 是转场则返回真
         """
+
+        if self.no_scdet:
+            return False
+
         img1 = _img1.copy()
         img2 = _img2.copy()
         self.img1 = img1
         self.img2 = img2
-
-        if self.no_scdet:
-            return False
 
         if use_diff != -1:
             diff = use_diff
@@ -1588,4 +1632,7 @@ if __name__ == "__main__":
     #                int(72 / 24),
     #                )
     # dm.run()
+    u = Tools()
+    # print(u.get_custom_cli_params("-t -d x=\" t\":p=6 -p g='p ':z=1 -qf 3 --dd-e 233"))
+    print(u.get_custom_cli_params("-x265-params loseless=1 -preset:v placebo"))
     pass

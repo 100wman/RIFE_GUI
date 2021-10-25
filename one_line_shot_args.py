@@ -148,10 +148,9 @@ class TaskArgumentManager(ArgumentManager):
 
         """Set interpolation exp related to hdr mode"""
         self.interp_times = round(self.target_fps / self.input_fps)
-        if self.hdr_mode == 3 or (
-                self.hdr_mode == 2 and self.video_info_instance.getInputHdr10PlusMetadata() is not None):
-            """DoVi or Valid HDR10 Metadata Detected, change target fps"""
+        if self.hdr_mode == 3 or self.hdr_mode == 2:
             self.target_fps = self.interp_times * self.input_fps
+            logger.info(f"DoVi or Valid HDR10+ Metadata Detected, change target fps to {self.target_fps}")
 
     def __update_task_queue_size_by_memory(self):
         """Guess Memory and Fix Resolution"""
@@ -480,8 +479,9 @@ class ReadFlow(IOFlow):
         else:
             logger.info(f"Input Time Section is original course")
 
-        output_dict = {
-            "-vframes": str(10 ** 10), }  # use read frames cnt to avoid ffprobe, fuck
+        output_dict = {"-map": "0:v:0", "-vframes": str(10 ** 10),
+                       "-sws_flags": "+bicubic+full_chroma_int+accurate_rnd",
+                       }  # use read frames cnt to avoid ffprobe, fuck
 
         output_dict.update(self._get_color_info_dict())
 
@@ -499,19 +499,16 @@ class ReadFlow(IOFlow):
 
         if frame_check:
             """用以一拍二一拍N除重模式的预处理"""
-            output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
-                                "-s": f"300x300"})
+            output_dict.update({"-s": f"300x300"})
         else:
             if not self.ARGS.use_sr:
                 """直接用最终输出分辨率"""
                 if self.ARGS.frame_size != self.ARGS.resize_param and all(self.ARGS.resize_param):
-                    output_dict.update({"-sws_flags": "lanczos+accurate_rnd+full_chroma_int",
-                                        "-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
+                    output_dict.update({"-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
             else:
                 """超分"""
                 if self.ARGS.frame_size != self.ARGS.transfer_param and all(self.ARGS.transfer_param):
-                    output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
-                                        "-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
+                    output_dict.update({"-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
         """Quick Extraction"""
         if not self.ARGS.is_quick_extract:
@@ -1083,6 +1080,8 @@ class RenderFlow(IOFlow):
                      "cll='1000,100'"
         }
 
+        # TODO ASCII can not decode, max cll not recognized by libx265, FFmpeg Writer Command been hidden, parse string with [ which is not in progress info is foolish
+
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
             img_io = ImageWrite(logger, folder=self.ARGS.output_dir, start_frame=start_frame, exp=self.ARGS.rife_exp,
@@ -1096,7 +1095,7 @@ class RenderFlow(IOFlow):
         """Output Video"""
         input_dict = {"-vsync": "cfr"}
 
-        output_dict = {"-r": f"{self.ARGS.target_fps}", "-preset": self.ARGS.render_encoder_preset,
+        output_dict = {"-r": f"{self.ARGS.target_fps}", "-preset:v": self.ARGS.render_encoder_preset,
                        "-metadata": f'title="Powered By SVFI {self.ARGS.version}"'}
 
         output_dict.update(self._get_color_info_dict())
@@ -1161,8 +1160,8 @@ class RenderFlow(IOFlow):
                     output_dict.pop('-x265-params')
             else:
                 """ProRes"""
-                if "-preset" in output_dict:
-                    output_dict.pop("-preset")
+                if "-preset:v" in output_dict:
+                    output_dict.pop("-preset:v")
                 output_dict.update({"-c:v": "prores_ks", "-profile:v": self.ARGS.render_encoder_preset, })
                 if "422" in self.ARGS.render_encode_format:
                     output_dict.update({"-pix_fmt": "yuv422p10le"})
@@ -1194,7 +1193,7 @@ class RenderFlow(IOFlow):
                     elif hwacccel_preset == "7th+":
                         output_dict.update({"-bf": "4", "-temporal-aq": "1", "-b_ref_mode": "2"})
             else:
-                output_dict.update({"-preset": "10", })
+                output_dict.update({"-preset:v": "10", })
 
         elif self.ARGS.render_encoder == "NVENCC":
             _input_dict = {  # '--avsw': '',
@@ -1414,9 +1413,8 @@ class RenderFlow(IOFlow):
 
         """Customize FFmpeg Render Parameters"""
         ffmpeg_customized_command = {}
-        if len(self.ARGS.render_ffmpeg_customized):
-            key_args = re.findall('(-.*?)\s(.*?)\s', self.ARGS.render_ffmpeg_customized)
-            for param, arg in key_args:
+        if type(self.ARGS.render_ffmpeg_customized) is str and len(self.ARGS.render_ffmpeg_customized):
+            for param, arg in Tools.get_custom_cli_params(self.ARGS.render_ffmpeg_customized).items():
                 ffmpeg_customized_command.update({param: arg})
         logger.debug(f"render custom parameters: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
