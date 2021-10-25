@@ -745,7 +745,7 @@ class ReadFlow(IOFlow):
                 break
 
             if self._kill or self.ARGS.get_main_error() is not None:
-                logger.critical("Reader Thread Killed")
+                logger.debug("Reader Thread Killed")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -864,7 +864,7 @@ class ReadFlow(IOFlow):
                 break
 
             if self._kill or self.ARGS.get_main_error() is not None:
-                logger.critical("Reader Thread Killed")
+                logger.debug("Reader Thread Killed")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -1671,7 +1671,7 @@ class RenderFlow(IOFlow):
                 if self._kill or not self.wait_for_input():
                     if frame_written:
                         frame_writer.close()
-                    logger.warning("Render thread killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
+                    logger.debug("Render thread killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
                     frame_writer.close()
                     is_end = True
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
@@ -1833,10 +1833,10 @@ class SuperResolutionFlow(IOFlow):
         try:
             self.vram_test()
             while True:
-                if self._kill or not self.wait_for_input():
-                    logger.warning("Super Resolution thread killed, break")
-                    break
                 task_acquire_time = time.time()
+                if self._kill or not self.wait_for_input():
+                    logger.debug("Super Resolution thread killed, break")
+                    break
                 task = self._input_queue.get()
                 task_acquire_time = time.time() - task_acquire_time
                 if task is None:
@@ -2144,8 +2144,10 @@ class InterpWorkFlow:
 
         try:
             while True:
-                self.wait_for_input()
                 task_acquire_time = time.time()
+                if not self.wait_for_input():
+                    logger.debug("Main thread about to be killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
+                    break
                 task = self.rife_task_queue.get(timeout=3600)
                 task_acquire_time = time.time() - task_acquire_time
                 process_time = time.time()

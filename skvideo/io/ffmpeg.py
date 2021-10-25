@@ -57,7 +57,10 @@ class FFmpegReader(VideoReaderAbstract):
 
         if verbosity > 0:
             cmd = [_FFMPEG_PATH + "/" + _FFMPEG_APPLICATION] + iargs + ['-i', self._filename] + oargs + ['-']
-            print("FFmpeg Read Command:", self._cmd)
+            try:
+                print("FFmpeg Read Command:", self._cmd)
+            except UnicodeEncodeError:
+                print("FFmpeg Read Command: NON-ASCII character exists in command, not shown")
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
                                   stdout=sp.PIPE, stderr=None, startupinfo=startupinfo)
         else:
@@ -111,7 +114,10 @@ class FFmpegWriter(VideoWriterAbstract):
 
         # Launch process
         if self.verbosity > 0:
-            print("FFmpeg Write Command:", self._cmd)
+            try:
+                print("FFmpeg Write Command:", self._cmd)
+            except UnicodeEncodeError:
+                print("FFmpeg Write Command: NON-ASCII character exists in command, not shown")
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
                                   stdout=sp.PIPE, stderr=None, startupinfo=startupinfo)
         else:
@@ -183,7 +189,10 @@ class EnccWriter(VideoWriterAbstract):
 
         # Launch process
         if self.verbosity > 0:
-            print("EnCc Command:", self._cmd)
+            try:
+                print("EnCc Write Command:", self._cmd)
+            except UnicodeEncodeError:
+                print("EnCc Write Command: NON-ASCII character exists in command, not shown")
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
                                   stdout=sp.PIPE, stderr=None, startupinfo=startupinfo)
         else:
@@ -280,7 +289,10 @@ class SVTWriter(EnccWriter):
 
         # Launch process
         if self.verbosity > 0:
-            print("SVT Command:", self._cmd)
+            try:
+                print("SVT Write Command:", self._cmd)
+            except UnicodeEncodeError:
+                print("SVT Write Command: NON-ASCII character exists in command, not shown")
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
                                   stdout=sp.PIPE, stderr=None, startupinfo=startupinfo)
         else:

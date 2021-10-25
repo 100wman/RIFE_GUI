@@ -1838,7 +1838,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-210</y>
+                        <y>0</y>
                         <width>378</width>
                         <height>599</height>
                        </rect>
@@ -2279,7 +2279,7 @@
                              <string>快速拆帧 (?)</string>
                             </property>
                             <property name="checked">
-                             <bool>true</bool>
+                             <bool>false</bool>
                             </property>
                            </widget>
                           </item>

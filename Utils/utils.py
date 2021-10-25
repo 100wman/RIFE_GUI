@@ -78,16 +78,19 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.9"
+    gui_version = "3.7.10"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.4"
+    ols_version = "7.2.5"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix HDR10+ mis-recognition
-    - Fix Unable to input assign render parameters(with better design, replace preset with preset:v to be more accurate
+    - Fix Zombie Process (Fix Main thread held up unexpectedly
+    - Fix UI info display (string parse)
+    - Fix Internationalization file location
+    - Fix Quick Extract to Default 
+    - Fix Release Dependencies, remove "skvideo"
     """
 
     path_len_limit = 230
@@ -518,7 +521,7 @@ class Tools:
         pids = Tools.get_pids()
         for pid, pname in pids.items():
             if pname in ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
-                         'SvtHevcEncApp.exe']:
+                         'SvtHevcEncApp.exe', 'SvtVp9EncApp.exe', 'SvtAv1EncApp.exe']:
                 try:
                     os.kill(pid, signal.SIGABRT)
                 except PermissionError:

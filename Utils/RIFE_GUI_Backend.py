@@ -348,15 +348,17 @@ class UiRun(QThread):
                             """Replace Field"""
                             flush_lines += line.replace("[A", "")
 
-                            panic_sign = ['Program Failed', 'Thread Panicked', 'VRAM Check Failed', 'Broken pipe',
-                                          'CUDA out of memory']
+                            must_kill_sign = ['Program Failed', ]
+                            panic_sign = ['Thread Panicked', 'VRAM Check Failed', 'Broken pipe', 'CUDA out of memory']
+                            panic_sign.extend(must_kill_sign)
                             if any([i.lower() in flush_lines.lower() for i in panic_sign]):
-                                """Imediately Upload"""
-                                logger.error(f"[In ONE LINE SHOT]: {flush_lines}")
+                                """Imediately Kill and Upload"""
+                                logger.error(f"[OLS Program Failed]\n {flush_lines}")
                                 self.update_status(False, sp_status=f"{flush_lines}")
                                 self.main_error = flush_lines
                                 flush_lines = ""
-                                # self.kill_proc_exec()
+                                if any([i.lower() in flush_lines.lower() for i in must_kill_sign]):
+                                    self.kill_proc_exec()
 
                             elif len(flush_lines) and time.time() - interval_time > 0.1:
                                 interval_time = time.time()
@@ -405,6 +407,8 @@ class UiRun(QThread):
         self.current_step = len(self.task_list) if self.task_list is not None else 0
         if self.current_proc is not None:
             self.current_proc.kill()
+            if appPref.value("is_rude_exit", False, type=bool):
+                Tools.kill_svfi_related()
             _msg = _translate('', '补帧已被强制结束')
             self.update_status(False, notice=f"\n\nWARNING, {_msg}", returncode=-1)
             logger.info("Kill Process")
@@ -548,7 +552,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             reply = self.Validation.SetAchv("ACHV_Use_RTX2060")
         self.Validation.Store()
 
-    def process_update_rife(self, subprocess_data: dict):
+    def process_update_rife(self, data_subprocess: dict):
         """
         Communicate with RIFE Thread
         :return:
@@ -566,16 +570,17 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             # TODO Combine OLS and GUI log
 
         def remove_last_line():
-            cursor = self.OptionCheck.textCursor()
-            cursor.movePosition(QTextCursor.End)
-            cursor.select(QTextCursor.LineUnderCursor)
-            text = cursor.selectedText()
+            _cursor = self.OptionCheck.textCursor()
+            _cursor.movePosition(QTextCursor.End)
+            _cursor.select(QTextCursor.LineUnderCursor)
+            text = _cursor.selectedText()
             if not any([i in text for i in dup_keys_list]):
+                _cursor.movePosition(QTextCursor.Start)
                 return
-            cursor.removeSelectedText()
-            cursor.deletePreviousChar()
-            cursor.movePosition(QTextCursor.Start)
-            self.OptionCheck.setTextCursor(cursor)
+            _cursor.removeSelectedText()
+            _cursor.deletePreviousChar()
+            _cursor.movePosition(QTextCursor.Start)
+            self.OptionCheck.setTextCursor(_cursor)
 
         def error_handle():
             now_text = self.OptionCheck.toPlainText().lower() + data.get("subprocess", "").lower()  # 复合寻找错误
@@ -630,10 +635,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if 'torchvision' not in now_text:
                 self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
 
-        dup_keys_list = ["Process at", "frame=", "matroska @", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
+        dup_keys_list = ["Process at", "frame=", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
                          "AppID", "SteamInternal", "torchvision"]
 
-        data = subprocess_data
+        data = data_subprocess
         self.progressBar.setMaximum(int(data["cnt"]))
         self.progressBar.setValue(int(data["current"]))
         new_text = ""
@@ -642,13 +647,17 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             new_text += data["notice"] + "\n"
 
         if len(data.get("subprocess", "")):
-
-            if 'error' not in data['subprocess'] and any([i in data["subprocess"] for i in dup_keys_list]):
+            data_subprocess = data['subprocess']
+            if 'error' not in data_subprocess and any([i in data_subprocess for i in dup_keys_list]):
                 tmp = ""
-                subprocess_data = data["subprocess"]
-                lines = subprocess_data.splitlines()
+                lines = data_subprocess.splitlines()
                 for line in lines:
-                    for _line in line.split(']', maxsplit=1):
+                    tmp_lines = list()
+                    if any([i in line for i in dup_keys_list]):
+                        tmp_lines = line.split(']', maxsplit=1)
+                    else:
+                        tmp_lines.append(line)
+                    for _line in tmp_lines:
                         # special judge of progress bar data when data in the same line
                         if not any([i in _line for i in dup_keys_list]) and len(_line.strip()):
                             tmp += _line + "\n"
@@ -659,9 +668,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 remove_last_line()
             new_text += data["subprocess"]
 
-        if self.rife_thread is not None and len(self.rife_thread.get_main_error()):
-            main_error = self.rife_thread.get_main_error()
-            new_text += f"\nLAST ERROR MSG in OLS:\n{main_error}"
+        main_error = self.rife_thread.get_main_error()
+        if self.rife_thread is not None and len(main_error):
+            new_text += f"\n[LAST ERROR MSG in OLS]:\n{main_error}"
 
         for line in new_text.splitlines():
             line = html.escape(line)
@@ -718,9 +727,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if appPref.value("use_clear_inputs", False, type=bool):
                 self.InputFileName.clear()
             self.function_enable_inputfilename_connection()
-
+        #
         self.OptionCheck.moveCursor(QTextCursor.End)
-        self.OptionCheck.moveCursor(QTextCursor.Left)
+        self.OptionCheck.moveCursor(QTextCursor.StartOfLine)
 
     def settings_change_lang(self, lang: str):
         logger.debug(f"Translate To Lang = {lang}")
@@ -918,7 +927,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SaveAudioChecker.setChecked(appData.value("is_save_audio", True, type=bool))
         self.FastDenoiseChecker.setChecked(appData.value("use_fast_denoise", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
-        self.QuickExtractChecker.setChecked(appData.value("is_quick_extract", True, type=bool))
+        self.QuickExtractChecker.setChecked(appData.value("is_quick_extract", False, type=bool))
         self.DeinterlaceChecker.setChecked(appData.value("use_deinterlace", False, type=bool))
 
         """Slowmotion Configuration"""
@@ -2240,7 +2249,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         if self.rife_thread is not None:
+            self.function_show_pending_dialog("Terminating...", _translate("", "强制结束补帧进程")+"...")
             self.rife_thread.kill_proc_exec()
+            self.function_finish_pending_dialog("", True)
             self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
 
     @pyqtSlot(bool)

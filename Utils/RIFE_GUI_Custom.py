@@ -25,6 +25,9 @@ class SVFITranslator(QTranslator):
         try:
             lang = locale.getdefaultlocale()[0].split('_')[0]
             lang_file = self.get_lang_file(lang)
+            if not os.path.exists(lang_file):
+                """Nor En or Cn, set default to en"""
+                lang_file = self.get_lang_file('en')
             self.load(lang_file)
         except Exception as e:
             print(e)
