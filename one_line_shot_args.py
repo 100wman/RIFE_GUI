@@ -4,7 +4,6 @@ import datetime
 import math
 import os
 import re
-import shlex
 import sys
 import threading
 import time
@@ -19,9 +18,9 @@ import tqdm
 from Utils.LicenseModule import EULAWriter
 from Utils.StaticParameters import appDir, SupportFormat
 from Utils.utils import ArgumentManager, DefaultConfigParser, Tools, VideoInfoProcessor, \
-    OverTimeReminderBearer, ImageRead, ImageWrite, TransitionDetection_ST, \
-    VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, utils_overtime_reminder_bearer, \
-    SuperResolutionBase, overtime_reminder_deco
+    ImageRead, ImageWrite, TransitionDetection_ST, \
+    VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, \
+    SuperResolutionBase, overtime_reminder_deco, OverTimeReminderTask
 from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
 from steamworks import STEAMWORKS
 from steamworks.exceptions import GenericSteamException
@@ -299,7 +298,6 @@ class IOFlow(threading.Thread):
         self.logger = __logger
         self.initiation_event = threading.Event()
         self.initiation_event.clear()
-        self.reminder_bearer = OverTimeReminderBearer()
         self._kill = False
         self.task_done = False
 
@@ -346,7 +344,6 @@ class IOFlow(threading.Thread):
 
     def kill(self):
         self._kill = True
-        self.reminder_bearer.terminate_all()
 
     def _task_done(self):
         self.task_done = True
@@ -399,8 +396,11 @@ class ReadFlow(IOFlow):
         logger.info("Resuming Video Frames...")
 
         """Get Frames to interpolate"""
-        reminder_id = self.reminder_bearer.generate_reminder(300, logger, "Decode Input",
-                                                             "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 30 minutes for 4K input when performing resume of workflow")
+        # TODO Optimize this since progress bar started after reading initiation is complete
+        _over_time_reminder_task = OverTimeReminderTask(10, "Decode Input",
+                                                        "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 10 minutes for 4K input when performing resume of workflow")
+        self.ARGS.put_overtime_task(_over_time_reminder_task)
+
         videogen = self.__generate_frame_reader(start_frame).nextFrame()
         videogen_check = None
         if dedup:
@@ -408,7 +408,8 @@ class ReadFlow(IOFlow):
         videogen_available_check = self.__generate_frame_reader(start_frame, frame_check=True).nextFrame()
 
         check_img1 = self.__crop(Tools.gen_next(videogen_available_check))
-        self.reminder_bearer.terminate_reminder(reminder_id)
+        _over_time_reminder_task.deactive()
+
         videogen_available_check.close()
         if check_img1 is None:
             main_error = OSError(
@@ -1521,8 +1522,8 @@ class RenderFlow(IOFlow):
         return False
 
     # @profile
-    @overtime_reminder_deco(300, logger, "Concat Chunks",
-                            "This is normal for long footage more than 30 chunks, please wait patiently until concat is done")
+    @overtime_reminder_deco(120, "Concat Chunks",
+                            "This is normal for long footage concat which more than 30 chunks, please wait patiently until concat is done")
     def concat_all(self):
         """
         Concat all the chunks
@@ -1614,7 +1615,7 @@ class RenderFlow(IOFlow):
         if self.ARGS.is_output_only:
             self.__del_existed_chunks()
 
-        if self.validation_flow is ValidationFlow:
+        if self.validation_flow is not None:
             self.validation_flow.steam_update_achv(concat_filepath)
 
     def check_concat_result(self):
@@ -1690,13 +1691,14 @@ class RenderFlow(IOFlow):
 
                 if self.ARGS.use_fast_denoise:
                     frame = cv2.fastNlMeansDenoising(frame)
+                _over_time_reminder_task = OverTimeReminderTask(15, "Encoder",
+                                                                "Low Encoding speed detected (>15s per image), Please check your encode settings to avoid performance issues")
+                self.ARGS.put_overtime_task(_over_time_reminder_task)
 
-                reminder_id = self.reminder_bearer.generate_reminder(30, logger, "Encoder",
-                                                                     "Low Encoding speed detected, Please check your encode settings to avoid performance issues")
                 if frame is not None:
                     frame_written = True
                     frame_writer.writeFrame(frame)
-                self.reminder_bearer.terminate_reminder(reminder_id)
+                _over_time_reminder_task.deactive()
 
                 chunk_frame_cnt += 1
                 self.ARGS.task_info.update({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
@@ -1849,9 +1851,11 @@ class SuperResolutionFlow(IOFlow):
                     img0 = task["img0"]
                     img1 = task["img1"]
                     ori_img0 = None
-                    reminder_id = self.reminder_bearer.generate_reminder(60, logger,
-                                                                         "Super Resolution",
-                                                                         "Low Super Resolution speed detected, Please consider lower your output settings to enhance speed")
+                    _over_time_reminder_task = OverTimeReminderTask(60,
+                                                                    "Super Resolution",
+                                                                    "Low Super Resolution speed detected (>60s per image), Please consider lower your output settings to enhance speed")
+                    self.ARGS.put_overtime_task(_over_time_reminder_task)
+
                     sr_process_time = time.time()
                     # if img0 is not None:
                     #     ori_img0 = img0.copy()
@@ -1873,7 +1877,7 @@ class SuperResolutionFlow(IOFlow):
                                                 'sr_task_acquire_time': task_acquire_time,
                                                 'sr_process_time': sr_process_time,
                                                 'sr_queue_len': self._input_queue.qsize()})
-                    self.reminder_bearer.terminate_reminder(reminder_id)
+                    _over_time_reminder_task.deactive()
                 self._output_queue.put(task)
         except Exception as e:
             logger.critical("Super Resolution Thread Panicked")
@@ -1896,6 +1900,18 @@ class ProgressUpdateFlow(IOFlow):
     def update_start_frame(self, start_frame: int):
         self.start_frame = start_frame
 
+    def proceed_overtime_reminder_task(self):
+        if self.ARGS.overtime_reminder_queue.empty():
+            return
+        _over_time_reminder_task = self.ARGS.get_overtime_task()
+        # assert type(_over_time_reminder_task) is OverTimeReminderTask, "[OverTimeReminderProcess]: Not Match Type"
+        if _over_time_reminder_task.is_active():
+            if _over_time_reminder_task.is_overdue():
+                function_name, interval, function_warning = _over_time_reminder_task.get_msgs()
+                self.logger.warning(f"Function [{function_name}] exceeds {interval} seconds, {function_warning}")
+            else:
+                self.ARGS.put_overtime_task(_over_time_reminder_task)
+
     def run(self):
         """
         Start Progress Update Bar
@@ -1911,6 +1927,7 @@ class ProgressUpdateFlow(IOFlow):
         while True:
             if self._kill or self.ARGS.get_main_error() is not None:
                 break
+            self.proceed_overtime_reminder_task()
             task_status = self.ARGS.task_info  # render status quo
             if self.ARGS.render_only or self.ARGS.extract_only:
                 now_frame = task_status['render']
@@ -1970,7 +1987,6 @@ class InterpWorkFlow:
         self.vfi_core = VideoFrameInterpolationBase(self.ARGS)
 
         """Set 'Global' Reminder"""
-        self.reminder_bearer = OverTimeReminderBearer()
 
     def feed_to_render(self, frames_list: list, is_end=False):
         """
@@ -2081,8 +2097,6 @@ class InterpWorkFlow:
                     f"Duration: {datetime.datetime.now() - self.run_all_time}")
         logger.info("Please Note That Commercial Use of SVFI's Output is Strictly PROHIBITED, "
                     "Check EULA for more details")
-        self.reminder_bearer.terminate_all()
-        utils_overtime_reminder_bearer.terminate_all()
         pass
 
     def task_failed(self):
@@ -2090,8 +2104,6 @@ class InterpWorkFlow:
         self.render_flow.kill()
         self.sr_flow.kill()
         self.update_progress_flow.kill()
-        self.reminder_bearer.terminate_all()
-        utils_overtime_reminder_bearer.terminate_all()
         logger.error(f"\n\n\nProgram Failed at {datetime.datetime.now()}: "
                      f"Duration: {datetime.datetime.now() - self.run_all_time}")
         if self.ARGS.get_main_error():
@@ -2132,6 +2144,7 @@ class InterpWorkFlow:
         """Load RIFE Model"""
         self.check_interp_prerequisite()
         self.read_flow.start()
+        self.render_flow.update_validation_flow(self.validation_flow)
         self.render_flow.start()
         self.update_progress_flow.start()
 
@@ -2186,9 +2199,9 @@ class InterpWorkFlow:
                     mix_list = Tools.get_mixed_scenes(img0, img1, n + 1)
                     frames_list.extend(mix_list)
                 else:
-                    reminder_id = self.reminder_bearer.generate_reminder(60, logger,
-                                                                         "Video Frame Interpolation",
-                                                                         "Low interpolate speed detected, Please consider lower your output settings to enhance speed")
+                    _over_time_reminder_task = OverTimeReminderTask(60, "Video Frame Interpolation",
+                                                                    "Low interpolate speed detected (>60s per pair), Please consider lower your output settings to enhance speed")
+                    self.ARGS.put_overtime_task(_over_time_reminder_task)
                     if n > 0:
                         if n > PURE_SCENE_THRESHOLD and Tools.check_pure_img(img0):
                             """It's Pure Img Sequence, Copy img0"""
@@ -2199,7 +2212,7 @@ class InterpWorkFlow:
                             frames_list.extend(interp_list)
                     if add_scene:  # [AA BBB CC DDD] E
                         frames_list.append(img1)
-                    self.reminder_bearer.terminate_reminder(reminder_id)
+                    _over_time_reminder_task.deactive()
 
                 feed_list = list()
                 for i in frames_list:

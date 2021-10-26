@@ -78,22 +78,22 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.10"
+    gui_version = "3.7.11"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.5"
+    ols_version = "7.2.6"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Fix Zombie Process (Fix Main thread held up unexpectedly
-    - Fix UI info display (string parse)
-    - Fix Internationalization file location
-    - Fix Quick Extract to Default 
-    - Fix Release Dependencies, remove "skvideo"
+    - Optimize OverTime Task Reminder
+    - Fix Steam Achievement Update failure
+    - Fix TTA Disorder in input frame sequence
     """
 
     path_len_limit = 230
+    overtime_reminder_queue = Queue()
+    overtime_reminder_ids = dict()
 
     def __init__(self, args: dict):
         self.app_dir = args.get("app_dir", appDir)
@@ -216,6 +216,14 @@ class ArgumentManager:
         self.extract_only = args.get("extract_only", False)
         self.render_only = args.get("render_only", False)
         self.version = args.get("version", "0.0.0 beta")
+
+    @staticmethod
+    def put_overtime_task(_over_time_reminder_task):
+        ArgumentManager.overtime_reminder_queue.put(_over_time_reminder_task)
+
+    @staticmethod
+    def get_overtime_task():
+        return ArgumentManager.overtime_reminder_queue.get()
 
 
 class Tools:
@@ -463,9 +471,9 @@ class Tools:
                     continue
                 current_hint = '"' in command or "'" in command
                 if hint and current_hint:
-                    result.append(current+command)
+                    result.append(current + command)
                     current = ""
-                    hint=False
+                    hint = False
                 elif (current_hint and not hint) or (not current_hint and hint):
                     current += command + " "
                     hint = current_hint
@@ -1603,16 +1611,35 @@ class OvertimeReminder(threading.Thread):
         self.terminated = True
 
 
-utils_overtime_reminder_bearer = OverTimeReminderBearer()
+class OverTimeReminderTask:
+    def __init__(self, interval: float, function_name, function_warning):
+        self.start_time = time.time()
+        self.interval = interval
+        self.function_name = function_name
+        self.function_warning = function_warning
+        self._is_active = True
+
+    def is_overdue(self):
+        return time.time() - self.start_time > self.interval
+
+    def is_active(self):
+        return self._is_active
+
+    def get_msgs(self):
+        return self.function_name, self.interval, self.function_warning
+
+    def deactive(self):
+        self._is_active = False
 
 
-def overtime_reminder_deco(interval: int, logger=None, msg_1="Function Type", msg_2="Function Warning"):
+def overtime_reminder_deco(interval: int, msg_1="Function Type", msg_2="Function Warning"):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # reminder_id = utils_overtime_reminder_bearer.generate_reminder(interval, logger, msg_1, msg_2)
+            _over_time_reminder_task = OverTimeReminderTask(interval, msg_1, msg_2)
+            ArgumentManager.put_overtime_task(_over_time_reminder_task)
             result = func(*args, **kwargs)
-            # utils_overtime_reminder_bearer.terminate_reminder(reminder_id)
+            _over_time_reminder_task.deactive()
             return result
 
         return wrapper
