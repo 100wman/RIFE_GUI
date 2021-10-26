@@ -278,8 +278,8 @@ class SvfiRealESR:
         pass
 
     # @profile
-    @overtime_reminder_deco(300, logger, "RealESR",
-                            "Low Super-Resolution speed detected, Please Consider tweak tilesize to enhance speed")
+    @overtime_reminder_deco(100, "RealESR",
+                            "Low Super-Resolution speed (>100s per image) detected, Please Consider tweak tilesize or lower output resolution to enhance speed")
     def svfi_process(self, img):
         if self.scale > 1:
             cur_scale = 1

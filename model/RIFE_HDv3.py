@@ -89,12 +89,12 @@ class Model:
         elif self.tta == 2:  # mid_vector
             mid = self.TTA_FRAME(img0, img1, 1, scale)
             LX = self.TTA_FRAME(img0, mid, iter_time, scale)
-            RX = self.TTA_FRAME(img1, mid, iter_time, scale)
+            RX = self.TTA_FRAME(mid, img1, iter_time, scale)
             return self.TTA_FRAME(LX, RX, 1, scale)
         elif self.tta == 3:  # mix_vector
             mid = self.TTA_FRAME(img0, img1, 1, scale)
             LX = self.TTA_FRAME(img0, mid, iter_time, scale)
-            RX = self.TTA_FRAME(img1, mid, iter_time, scale)
+            RX = self.TTA_FRAME(mid, img1, iter_time, scale)
             m1 = self.TTA_FRAME(LX, RX, 1, scale)
             LX = self.TTA_FRAME(img0, img1, iter_time, scale)
             RX = self.TTA_FRAME(img1, img0, iter_time, scale)

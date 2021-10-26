@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from Utils.utils import overtime_reminder_deco, Tools
 from Utils.StaticParameters import appDir
+from Utils.utils import overtime_reminder_deco, Tools
 from ncnn.sr.realSR.realsr_ncnn_vulkan import RealSR
 from ncnn.sr.waifu2x.waifu2x_ncnn_vulkan import Waifu2x
 
@@ -24,7 +24,7 @@ class SvfiWaifu(Waifu2x):
                          tilesize=0, )
         self.resize_param = resize
 
-    @overtime_reminder_deco(300, logger, "RealSR",
+    @overtime_reminder_deco(100, "RealSR",
                             "Low Super-Resolution speed detected, Please Consider lower your output resolution to enhance speed")
     def svfi_process(self, img):
         image = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -45,7 +45,7 @@ class SvfiRealSR(RealSR):
                          tilesize=0, )
         self.resize_param = resize
 
-    @overtime_reminder_deco(300, logger, "RealSR",
+    @overtime_reminder_deco(100, "RealSR",
                             "Low Super-Resolution speed detected, Please Consider lower your output resolution to enhance speed")
     def svfi_process(self, img):
         image = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
