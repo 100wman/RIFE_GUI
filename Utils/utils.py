@@ -78,17 +78,16 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.11"
+    gui_version = "3.7.12"
     version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.6"
+    ols_version = "7.2.7"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Optimize OverTime Task Reminder
-    - Fix Steam Achievement Update failure
-    - Fix TTA Disorder in input frame sequence
+    - Update State Tips
+    - Update 10bit ffmpeg output pixel format to yuv420p10le
     """
 
     path_len_limit = 230
@@ -216,6 +215,10 @@ class ArgumentManager:
         self.extract_only = args.get("extract_only", False)
         self.render_only = args.get("render_only", False)
         self.version = args.get("version", "0.0.0 beta")
+
+    @staticmethod
+    def is_empty_overtime_task_queue():
+        return ArgumentManager.overtime_reminder_queue.empty()
 
     @staticmethod
     def put_overtime_task(_over_time_reminder_task):

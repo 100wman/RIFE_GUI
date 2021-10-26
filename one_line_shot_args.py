@@ -25,6 +25,9 @@ from skvideo.io import FFmpegWriter, FFmpegReader, EnccWriter, SVTWriter
 from steamworks import STEAMWORKS
 from steamworks.exceptions import GenericSteamException
 
+print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
+
+"""Validation Module Initiation"""
 if ArgumentManager.is_steam:
     from Utils.LicenseModule import SteamValidation as ValidationModule
 
@@ -35,31 +38,29 @@ if ArgumentManager.is_steam:
 else:
     from Utils.LicenseModule import RetailValidation as ValidationModule
 
-print(f"INFO - ONE LINE SHOT ARGS {ArgumentManager.ols_version} {datetime.date.today()}")
-
 """设置环境路径"""
 os.chdir(appDir)
 sys.path.append(appDir)
 
 """Parse Args"""
-parser = argparse.ArgumentParser(prog="#### SVFI CLI tool by Jeanna ####",
-                                 description='Interpolation for long video/imgs footage')
-basic_parser = parser.add_argument_group(title="Basic Settings, Necessary")
-basic_parser.add_argument('-i', '--input', dest='input', type=str, required=True,
-                          help="原视频/图片序列文件夹路径")
-basic_parser.add_argument("-c", '--config', dest='config', type=str, required=True, help="配置文件路径")
-basic_parser.add_argument("-t", '--task-id', dest='task_id', type=str, required=True, help="任务id")
-basic_parser.add_argument('--concat-only', dest='concat_only', action='store_true', help='只执行合并已有区块操作')
-basic_parser.add_argument('--extract-only', dest='extract_only', action='store_true', help='只执行拆帧操作')
-basic_parser.add_argument('--render-only', dest='render_only', action='store_true', help='只执行渲染操作')
+global_args_parser = argparse.ArgumentParser(prog="#### SVFI CLI tool by Jeanna ####",
+                                             description='Interpolation for long video/imgs footage')
+global_basic_parser = global_args_parser.add_argument_group(title="Basic Settings, Necessary")
+global_basic_parser.add_argument('-i', '--input', dest='input', type=str, required=True,
+                                 help="原视频/图片序列文件夹路径")
+global_basic_parser.add_argument("-c", '--config', dest='config', type=str, required=True, help="配置文件路径")
+global_basic_parser.add_argument("-t", '--task-id', dest='task_id', type=str, required=True, help="任务id")
+global_basic_parser.add_argument('--concat-only', dest='concat_only', action='store_true', help='只执行合并已有区块操作')
+global_basic_parser.add_argument('--extract-only', dest='extract_only', action='store_true', help='只执行拆帧操作')
+global_basic_parser.add_argument('--render-only', dest='render_only', action='store_true', help='只执行渲染操作')
 
 """Clean Args"""
-args_read = parser.parse_args()
+global_args_read = global_args_parser.parse_args()
 global_config_parser = DefaultConfigParser(allow_no_value=True)  # 把SVFI GUI传来的参数格式化
-global_config_parser.read(args_read.config, encoding='utf-8')
+global_config_parser.read(global_args_read.config, encoding='utf-8')
 global_config_parser_items = dict(global_config_parser.items("General"))
 global_args = Tools.clean_parsed_config(global_config_parser_items)
-global_args.update(vars(args_read))  # update -i -o -c，将命令行参数更新到config生成的字典
+global_args.update(vars(global_args_read))  # update -i -o -c，将命令行参数更新到config生成的字典
 
 """Set Global Logger"""
 logger = Tools.get_logger('TMP', '')
@@ -106,7 +107,7 @@ class TaskArgumentManager(ArgumentManager):
 
         """Check Initiation Info"""
         logger.info(
-            f"Check Interpolation Source: "
+            f"Check Input Source: "
             f"FPS: {self.input_fps} -> {self.target_fps}, FRAMES_CNT: {self.all_frames_cnt}, "
             f"INTERP_TIMES: {self.interp_times}, "
             f"HDR: {self.hdr_mode}, FRAME_SIZE: {self.frame_size}, QUEUE_LEN: {self.frames_queue_len}, "
@@ -134,22 +135,22 @@ class TaskArgumentManager(ArgumentManager):
         if not self.is_img_input:  # 输入不是文件夹，使用检测到的帧率
             self.input_fps = self.video_info_instance.fps
         elif not self.input_fps:  # 输入是文件夹，使用用户的输入帧率; 用户有毒，未发现有效的输入帧率
-            raise OSError("Not Find FPS, Input File is not valid")
+            raise OSError("Not Find Input FPS, Input File is not valid")
         if self.render_only:
             self.target_fps = self.input_fps
-            logger.info(f"Render only, target fps change to input fps: {self.target_fps}")
+            logger.info(f"Render only, target fps is changed to input fps: {self.target_fps}")
         else:
             if not self.target_fps:  # 未找到用户的输出帧率
                 self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
             if self.is_img_input or not len(self.video_info_instance.audio_info):  # 图片序列输入，不保留音频（也无音频可保留
-                logger.warning("Image Sequence input or Video does not contain audio, audio concat set to false")
+                logger.warning("Image Sequence input found or Video does not contain audio, will not mux audio")
                 self.is_save_audio = False
 
         """Set interpolation exp related to hdr mode"""
         self.interp_times = round(self.target_fps / self.input_fps)
         if self.hdr_mode == 3 or self.hdr_mode == 2:
             self.target_fps = self.interp_times * self.input_fps
-            logger.info(f"DoVi or Valid HDR10+ Metadata Detected, change target fps to {self.target_fps}")
+            logger.info(f"DoVi or HDR10+ Content Detected, target fps is changed to {self.target_fps}")
 
     def __update_task_queue_size_by_memory(self):
         """Guess Memory and Fix Resolution"""
@@ -164,9 +165,9 @@ class TaskArgumentManager(ArgumentManager):
         if not self.use_manual_buffer:
             self.frames_queue_len = int(max(10.0, self.frames_queue_len))
         self.dup_skip_limit = int(0.5 * self.input_fps) + 1  # 当前跳过的帧计数超过这个值，将结束当前判断循环
-        logger.info(f"Free MEM: {free_mem / 1024:.1f}G, "
-                    f"Update QLen to {self.frames_queue_len}, "
-                    f"dup_skip_limit to {self.dup_skip_limit}")
+        logger.info(f"Free RAM: {free_mem / 1024:.1f}G, "
+                    f"Update Task Queue Len:  {self.frames_queue_len}, "
+                    f"Duplicate Frames Cnt Upper Limit: {self.dup_skip_limit}")
 
     def __update_frame_size(self):
         """规整化输出输入分辨率"""
@@ -181,7 +182,8 @@ class TaskArgumentManager(ArgumentManager):
 
     def __update_hdr_mode(self):
         if self.hdr_mode == 0:  # Auto
-            logger.info(f"Auto HDR Mode, Set HDR mode to {self.video_info_instance.hdr_mode}")
+            hdr_mode_map = {-1: "-", 0: "-", 1: "Standard BT2020", 2: "HDR10+", 3: "Dolby Vision", 4: "HLG", }
+            logger.info(f"Auto Sets HDR mode to {hdr_mode_map.get(self.video_info_instance.hdr_mode, '-')}")
             self.hdr_mode = self.video_info_instance.hdr_mode
             # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
             # hdr_check_status indicates the final process mode for (hdr) input
@@ -192,7 +194,7 @@ class TaskArgumentManager(ArgumentManager):
 
     def __validate_io_path(self):
         if not len(self.input):
-            raise OSError("Input Path is empty")
+            raise OSError("Input Path is empty, Program will not proceed")
         if not len(self.output_dir):
             """未填写输出文件夹"""
             self.output_dir = os.path.dirname(self.input)
@@ -208,7 +210,7 @@ class TaskArgumentManager(ArgumentManager):
         if self.extract_only and self.output_ext not in SupportFormat.img_outputs:
             self.is_img_output = True
             self.output_ext = ".png"
-            logger.warning("Auto change output extension to png")
+            logger.warning("Output extension is changed to .png")
 
         """Check Img IO status"""
         if self.is_img_output:
@@ -221,7 +223,7 @@ class TaskArgumentManager(ArgumentManager):
         """Set Global Logger"""
         global logger
         logger = Tools.get_logger("CLI", self.project_dir, debug=self.debug)
-        logger.info(f"Initial New Interpolation Project: project_dir: %s, INPUT_FILEPATH: %s", self.project_dir,
+        logger.info(f"Initial New Interpolation Project: PROJECT DIR: %s, INPUT FILEPATH: %s", self.project_dir,
                     self.input)
 
     def update_task_info(self, update_dict: dict):
@@ -398,7 +400,7 @@ class ReadFlow(IOFlow):
         """Get Frames to interpolate"""
         # TODO Optimize this since progress bar started after reading initiation is complete
         _over_time_reminder_task = OverTimeReminderTask(10, "Decode Input",
-                                                        "Please consider terminate current process manually, check input arguments and restart. It's normal to wait for at least 10 minutes for 4K input when performing resume of workflow")
+                                                        "Decoding takes too long, Please consider to terminate the program, and check input's parameters and restart. It's normal to wait for at least 10 minutes when it's 4K input at performing resume of workflow")
         self.ARGS.put_overtime_task(_over_time_reminder_task)
 
         videogen = self.__generate_frame_reader(start_frame).nextFrame()
@@ -413,9 +415,9 @@ class ReadFlow(IOFlow):
         videogen_available_check.close()
         if check_img1 is None:
             main_error = OSError(
-                f"Input file is not available: {self.ARGS.input}, is img input: {self.ARGS.is_img_input},"
-                f"Please Check Your Input Settings"
-                f"(Start Chunk, Start Frame, Start Point, Start Frame)")
+                f"Input file is not available: {self.ARGS.input}, is img input?: {self.ARGS.is_img_input},"
+                f"Please Check Your Input Parameters: "
+                f"Start Chunk, Start Frame, Start Point, Start Frame")
             self.ARGS.save_main_error(main_error)
             raise main_error
         return chunk_cnt, start_frame, videogen, videogen_check
@@ -434,7 +436,7 @@ class ReadFlow(IOFlow):
             img_reader = ImageRead(logger, folder=self.ARGS.input, start_frame=self.ARGS.interp_start,
                                    exp=self.ARGS.rife_exp, resize=resize_param, )
             self.ARGS.all_frames_cnt = img_reader.get_frames_cnt()
-            logger.info(f"Img Input, update frames count to {self.ARGS.all_frames_cnt}")
+            logger.info(f"This is Img Input, update frames count to {self.ARGS.all_frames_cnt}")
             return img_reader
 
         """If input is a video"""
@@ -468,7 +470,7 @@ class ReadFlow(IOFlow):
                 clip_fps = self.ARGS.target_fps
                 self.ARGS.all_frames_cnt = round(clip_duration.total_seconds() * clip_fps)
                 logger.info(
-                    f"Update Input Range: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, "
+                    f"Update Input Section: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, "
                     f"all_frames_cnt -> {self.ARGS.all_frames_cnt}")
             else:
                 if '-ss' in input_dict:
@@ -476,9 +478,7 @@ class ReadFlow(IOFlow):
                 if '-to' in input_dict:
                     input_dict.pop('-to')
                 logger.warning(
-                    f"Invalid Input Section, change to original course")
-        else:
-            logger.info(f"Input Time Section is original course")
+                    f"Invalid Input Section, changed to original section")
 
         output_dict = {"-map": "0:v:0", "-vframes": str(10 ** 10),
                        "-sws_flags": "+bicubic+full_chroma_int+accurate_rnd",
@@ -524,10 +524,11 @@ class ReadFlow(IOFlow):
 
     def __run_rest(self, run_time: float):
         rest_exp = 3600
+        # TODO Check here
         if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
                 time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
             logger.info(
-                f"\n\n INFO - Exceed Run Interval {self.ARGS.multi_task_rest_interval} hour. Time to Rest for 5 minutes!")
+                f"\n\nINFO - Time to Rest for 5 minutes! Rest for every {self.ARGS.multi_task_rest_interval} hour. ")
             time.sleep(600)
             return time.time()
         return run_time
@@ -676,7 +677,7 @@ class ReadFlow(IOFlow):
 
         if init:
             pbar.close()
-            logger.info("Start Remove First Batch of Duplicated Frames")
+            logger.info("Start Removing First Batch of Duplicated Frames")
 
         max_epoch = self.ARGS.remove_dup_mode  # 一直去除到一拍N，N为max_epoch，默认去除一拍二
         opt = []  # 已经被标记，识别的帧
@@ -732,9 +733,9 @@ class ReadFlow(IOFlow):
         :return:
         """
 
-        logger.info("Activate Remove Duplicate Frames Mode")
+        logger.info("Activate Duplicate Frames Removal Mode")
         chunk_cnt, now_frame_key, videogen, videogen_check = self.__input_check(dedup=True)
-        logger.info("Loaded Input Frames")
+        logger.info("Input Frames loaded")
         is_end = False
 
         """Start Process"""
@@ -746,7 +747,7 @@ class ReadFlow(IOFlow):
                 break
 
             if self._kill or self.ARGS.get_main_error() is not None:
-                logger.debug("Reader Thread Killed")
+                logger.debug("Reader Thread Exit")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -847,7 +848,7 @@ class ReadFlow(IOFlow):
         logger.info("Activate Any FPS Mode")
         chunk_cnt, now_frame, videogen, videogen_check = self.__input_check(dedup=True)
         img1 = self.__crop(Tools.gen_next(videogen))
-        logger.info("Loaded Input Frames")
+        logger.info("Input Frames loaded")
         is_end = False
 
         """Update Interp Mode Info"""
@@ -865,7 +866,7 @@ class ReadFlow(IOFlow):
                 break
 
             if self._kill or self.ARGS.get_main_error() is not None:
-                logger.debug("Reader Thread Killed")
+                logger.debug("Reader Thread Exit")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -1096,23 +1097,23 @@ class RenderFlow(IOFlow):
         """Output Video"""
         input_dict = {"-vsync": "cfr"}
 
-        output_dict = {"-r": f"{self.ARGS.target_fps}", "-preset:v": self.ARGS.render_encoder_preset,
+        output_dict = {"-r": f"{self.ARGS.target_fps:.3f}", "-preset:v": self.ARGS.render_encoder_preset,
                        "-metadata": f'title="Powered By SVFI {self.ARGS.version}"'}
 
         output_dict.update(self._get_color_info_dict())
 
         if not self.ARGS.is_img_input:
-            input_dict.update({"-r": f"{self.ARGS.target_fps}"})
+            input_dict.update({"-r": f"{self.ARGS.target_fps:.3f}"})
         else:
             """Img Input"""
-            input_dict.update({"-r": f"{self.ARGS.input_fps * self.ARGS.interp_times}"})
+            input_dict.update({"-r": f"{self.ARGS.input_fps * self.ARGS.interp_times:.3f}"})
 
         """Slow motion design"""
         if self.ARGS.is_render_slow_motion:
             if self.ARGS.render_slow_motion_fps:
-                input_dict.update({"-r": f"{self.ARGS.render_slow_motion_fps}"})
+                input_dict.update({"-r": f"{self.ARGS.render_slow_motion_fps:.3f}"})
             else:
-                input_dict.update({"-r": f"{self.ARGS.target_fps}"})
+                input_dict.update({"-r": f"{self.ARGS.target_fps:.3f}"})
             output_dict.pop("-r")
 
         vf_args = "copy"  # debug
@@ -1132,7 +1133,7 @@ class RenderFlow(IOFlow):
                                         "-x264-params": params_libx264s["8bit"]})
                 else:
                     """10bit"""
-                    output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "high10",
+                    output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "high10",
                                         "-x264-params": params_libx264s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x264-params": params_libx264s["fast"]})
@@ -1148,7 +1149,7 @@ class RenderFlow(IOFlow):
                                         "-x265-params": params_libx265s["8bit"]})
                 else:
                     """10bit"""
-                    output_dict.update({"-pix_fmt": "yuv420p10", "-profile:v": "main10",
+                    output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "main10",
                                         "-x265-params": params_libx265s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x265-params": params_libx265s["fast"]})
@@ -1410,14 +1411,14 @@ class RenderFlow(IOFlow):
         if self.ARGS.use_manual_encode_thread and self.ARGS.render_encoder == "CPU":
             output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
 
-        logger.debug(f"writer: {output_dict}, {input_dict}")
+        logger.debug(f"render system parameters: {output_dict}, {input_dict}")
 
         """Customize FFmpeg Render Parameters"""
         ffmpeg_customized_command = {}
         if type(self.ARGS.render_ffmpeg_customized) is str and len(self.ARGS.render_ffmpeg_customized):
             for param, arg in Tools.get_custom_cli_params(self.ARGS.render_ffmpeg_customized).items():
                 ffmpeg_customized_command.update({param: arg})
-        logger.debug(f"render custom parameters: {ffmpeg_customized_command}")
+        logger.debug(f"render detected custom parameters: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
         if self.ARGS.render_encoder in ["NVENCC", "QSVENCC"]:
             return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
@@ -1440,7 +1441,7 @@ class RenderFlow(IOFlow):
         if os.path.exists(chunk_from_path):
             os.rename(chunk_from_path, chunk_desc_path)
         else:
-            logger.warning(f"Rename Chunk Not find {chunk_from_path}")
+            logger.warning(f"Renamed Chunk Not found: {chunk_from_path}")
 
     def __check_audio_concat(self, chunk_tmp_path: str, fail_signal=0):
         """Check Input file ext"""
@@ -1453,15 +1454,15 @@ class RenderFlow(IOFlow):
         ffmpeg_command = f'{self.__ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
                          f'{Tools.fillQuotation(concat_filepath)} -y'
 
-        logger.info("Start Audio Concat Test")
+        logger.info("Start Audio Mux Test")
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            logger.warning(f"Audio Concat Test found unavailable audio codec for output extension "
-                           f"{self.ARGS.output_ext}, audio codec changed to aac 640kbps")
+            logger.warning(f"Audio Mux Test found unavailable audio codec for output extension: "
+                           f"{self.ARGS.output_ext}, audio codec is changed to AAC 640kbps")
             self.is_audio_failed_concat = True
         else:
-            logger.info("Audio Concat Test Success")
+            logger.info("Audio Mux Test Succeeds")
             os.remove(concat_filepath)
 
     def get_output_path(self):
@@ -1517,7 +1518,7 @@ class RenderFlow(IOFlow):
     def concat_when_default_fail(self):
         if not self.ARGS.is_encode_audio:
             self.ARGS.is_encode_audio = True
-            logger.warning("Force Audio to be Encoded into AAC 640kbps to avoid concat error")
+            logger.warning("Audio will be Encoded into AAC 640kbps to avoid mux error")
             return True
         return False
 
@@ -1532,20 +1533,20 @@ class RenderFlow(IOFlow):
 
         os.chdir(self.ARGS.project_dir)
         concat_path = os.path.join(self.ARGS.project_dir, "concat.ini")
-        logger.info("Final Round Finished, Start Concating")
+        logger.info("Final Interpolation Round is Finished, Start Concating")
         concat_list = list()
 
         for f in os.listdir(self.ARGS.project_dir):
             if re.match("chunk-\d+-\d+-\d+", f):
                 concat_list.append(os.path.join(self.ARGS.project_dir, f))
             else:
-                logger.debug(f"concat escape {f}")
+                logger.debug(f"Concat escape {f}")
 
         concat_list.sort(key=lambda x: int(os.path.basename(x).split('-')[2]))  # sort as start-frame
 
         if not len(concat_path):
             raise OSError(
-                f"Could not find any chunks, the chunks could have already been concatenated or removed, "
+                f"Could not find any chunks in your output project folder, the chunks could have already been concatenated or removed, "
                 f"please check your output folder.")
 
         if os.path.exists(concat_path):
@@ -1595,19 +1596,19 @@ class RenderFlow(IOFlow):
                 logger.warning("Retry Concat after FFmpeg failed")
                 self.concat_all()
             else:
-                logger.info("Failed To Concat Video")
+                logger.info("Failed To Concat Chunks, all chunks will be preserved")
                 self.ARGS.save_main_error(e)
                 raise e
 
-        logger.info(f"Concat {len(concat_list)} files to {os.path.basename(concat_filepath)}")
+        logger.info(f"{len(concat_list)} files concatenated to {os.path.basename(concat_filepath)}")
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
             if self.concat_when_default_fail():
-                logger.warning("Retry Concat after Output File Detection failed")
+                logger.warning("Retry Concat after Output File Validity Check failed")
                 self.concat_all()
             else:
                 main_error = FileExistsError(
                     f"Concat Error with output extension {output_ext}, empty output detected, Please Check Your Output Extension!!!\n"
-                    "e.g. mkv input should match .mkv as output extension to avoid possible concat issues")
+                    "WARNING - e.g. mkv input should match .mkv as output extension to avoid possible muxing issues")
                 self.ARGS.save_main_error(main_error)
                 raise main_error
         if self.ARGS.hdr_mode == 3:
@@ -1621,7 +1622,7 @@ class RenderFlow(IOFlow):
     def check_concat_result(self):
         concat_filepath, output_ext = self.get_output_path()
         if os.path.exists(concat_filepath):
-            logger.warning("Mission Already Finished, "
+            logger.warning("Project with same task_id is already finished, "
                            "Jump to Dolby Vision Check")
             if self.ARGS.hdr_mode == 3:
                 """Dolby Vision"""
@@ -1672,7 +1673,7 @@ class RenderFlow(IOFlow):
                 if self._kill or not self.wait_for_input():
                     if frame_written:
                         frame_writer.close()
-                    logger.debug("Render thread killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
+                    logger.debug("Render thread exit")  # 主线程已结束，这里的锁其实没用，调试用的
                     frame_writer.close()
                     is_end = True
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
@@ -1774,8 +1775,8 @@ class SuperResolutionFlow(IOFlow):
                                                                  half=self.ARGS.use_realesr_fp16,
                                                                  resize=resize_param)
             logger.info(
-                f"Load SuperResolutionModule at {self.ARGS.use_sr_algo}, "
-                f"Model at {self.ARGS.use_sr_model}, scale_times = {sr_scale}")
+                f"Load Super Resolution Module at {self.ARGS.use_sr_algo}, "
+                f"Model at {self.ARGS.use_sr_model}, scale_times = output resolution / transfer resolution = {sr_scale}")
         except ImportError:
             logger.error(
                 f"Import SR Module failed\n"
@@ -1837,7 +1838,7 @@ class SuperResolutionFlow(IOFlow):
             while True:
                 task_acquire_time = time.time()
                 if self._kill or not self.wait_for_input():
-                    logger.debug("Super Resolution thread killed, break")
+                    logger.debug("Super Resolution thread exit")
                     break
                 task = self._input_queue.get()
                 task_acquire_time = time.time() - task_acquire_time
@@ -1901,7 +1902,7 @@ class ProgressUpdateFlow(IOFlow):
         self.start_frame = start_frame
 
     def proceed_overtime_reminder_task(self):
-        if self.ARGS.overtime_reminder_queue.empty():
+        if self.ARGS.is_empty_overtime_task_queue():
             return
         _over_time_reminder_task = self.ARGS.get_overtime_task()
         # assert type(_over_time_reminder_task) is OverTimeReminderTask, "[OverTimeReminderProcess]: Not Match Type"
@@ -2014,7 +2015,7 @@ class InterpWorkFlow:
         :return:
         """
         if self.ARGS.use_sr:
-            logger.info("Waiting for SR Module VRAM Check Lock")
+            logger.debug("Waiting for SR Module VRAM Check Lock")
             self.sr_flow.acquire_vram_check_lock()
         try:
             if self.ARGS.resize_width and self.ARGS.resize_height:
@@ -2022,15 +2023,15 @@ class InterpWorkFlow:
             else:
                 w, h = self.ARGS.frame_size
 
-            logger.info(f"Start VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
+            logger.info(f"Start RIFE VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
                                    np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
-            logger.info(f"VRAM Test Success, Resume of workflow ahead")
+            logger.info(f"RIFE VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
         except Exception as e:
-            logger.error("VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
+            logger.error("RIFE VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
                 limit=ArgumentManager.traceback_limit))
             raise e
 
@@ -2159,7 +2160,7 @@ class InterpWorkFlow:
             while True:
                 task_acquire_time = time.time()
                 if not self.wait_for_input():
-                    logger.debug("Main thread about to be killed, break")  # 主线程已结束，这里的锁其实没用，调试用的
+                    logger.debug("Main thread about to exit")
                     break
                 task = self.rife_task_queue.get(timeout=3600)
                 task_acquire_time = time.time() - task_acquire_time
@@ -2254,20 +2255,20 @@ class InterpWorkFlow:
         pass
 
 
-GLOBAL_ARGS = TaskArgumentManager(global_args)
+global_task_args_manager = TaskArgumentManager(global_args)
 
 """设置可见的gpu"""
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-if int(GLOBAL_ARGS.rife_cuda_cnt) != 0 and GLOBAL_ARGS.use_rife_multi_cards:
-    cuda_devices = [str(i) for i in range(GLOBAL_ARGS.rife_cuda_cnt)]
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(cuda_devices)}"
+if int(global_task_args_manager.rife_cuda_cnt) != 0 and global_task_args_manager.use_rife_multi_cards:
+    global_cuda_devices = [str(i) for i in range(global_task_args_manager.rife_cuda_cnt)]
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{','.join(global_cuda_devices)}"
 else:
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{GLOBAL_ARGS.use_specific_gpu}"
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{global_task_args_manager.use_specific_gpu}"
 
 """强制使用CPU"""
-if GLOBAL_ARGS.force_cpu:
+if global_task_args_manager.force_cpu:
     os.environ["CUDA_VISIBLE_DEVICES"] = f""
 
-global_workflow = InterpWorkFlow(GLOBAL_ARGS)
+global_workflow = InterpWorkFlow(global_task_args_manager)
 global_workflow.run()
 sys.exit(0)
