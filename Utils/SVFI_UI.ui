@@ -2073,11 +2073,6 @@
                             </item>
                             <item>
                              <property name="text">
-                              <string>SVT</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
                               <string>NVENCC</string>
                              </property>
                             </item>
@@ -2120,12 +2115,12 @@
                                </item>
                                <item>
                                 <property name="text">
-                                 <string>None</string>
+                                 <string>Standard BT2020</string>
                                 </property>
                                </item>
                                <item>
                                 <property name="text">
-                                 <string>HDR10</string>
+                                 <string>HDR10+</string>
                                 </property>
                                </item>
                                <item>
