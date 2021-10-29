@@ -136,6 +136,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         self.ExpertModeChecker.setChecked(appPref.value("expert", False, type=bool))
         self.PreviewArgsModeChecker.setChecked(appPref.value("is_preview_args", False, type=bool))
         self.RudeExitModeChecker.setChecked(appPref.value("is_rude_exit", True, type=bool))
+        self.DisableDedupRenderChecker.setChecked(appPref.value("is_no_dedup_render", True, type=bool))
         self.QuietModeChecker.setChecked(appPref.value("is_gui_quiet", False, type=bool))
         self.WinOnTopChecker.setChecked(appPref.value("is_windows_ontop", False, type=bool))
         self.OneWayModeChecker.setChecked(appPref.value("use_clear_inputs", False, type=bool))
@@ -154,6 +155,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         appPref.setValue("expert", self.ExpertModeChecker.isChecked())
         appPref.setValue("is_preview_args", self.PreviewArgsModeChecker.isChecked())
         appPref.setValue("is_rude_exit", self.RudeExitModeChecker.isChecked())
+        appPref.setValue("is_no_dedup_render", self.DisableDedupRenderChecker.isChecked())
         appPref.setValue("is_gui_quiet", self.QuietModeChecker.isChecked())
         appPref.setValue("is_windows_ontop", self.WinOnTopChecker.isChecked())
         appPref.setValue("use_clear_inputs", self.OneWayModeChecker.isChecked())
@@ -714,6 +716,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 complete_msg += f"{_msg1}{returncode}\n{_msg2}"
                 error_handle()
                 generate_error_log()
+                self.on_PauseProcess_clicked(reset=True)
                 self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
             if not self.DebugChecker.isChecked():
                 self.function_send_msg(_translate('', "任务完成"), complete_msg, 2)
@@ -774,7 +777,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         for m in ST_RmMode:
             self.DupRmMode.addItem(m)
 
-        ST_HwaccelMode = ['CPU', 'QSV']
+        ST_HwaccelMode = ['CPU', 'NVENC', 'QSV']
         try:
             self.HwaccelSelector.disconnect()
         except:
@@ -802,23 +805,25 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SrField.setVisible(False)
 
         self.RenderSettingsGroup.setEnabled(False)
-        self.UseMultiCardsChecker.setVisible(False)
+        self.UseMultiCardsChecker.setEnabled(False)
         self.TtaModeSelector.setEnabled(False)
         self.TtaIterTimesSelector.setEnabled(False)
         self.TtaModeLabel.setEnabled(False)
         self.EvictFlickerChecker.setEnabled(False)
         self.AutoInterpScaleChecker.setEnabled(False)
         self.ReverseChecker.setEnabled(False)
-        self.ProAdLabel_1.setVisible(True)
 
         self.DeinterlaceChecker.setEnabled(False)
-        self.FastDenoiseChecker.setVisible(False)
-        self.EncodeThreadField.setVisible(False)
+        self.FastDenoiseChecker.setEnabled(False)
+        self.EncodeThreadField.setEnabled(False)
         self.HwaccelPresetLabel.setVisible(False)
         self.HwaccelPresetSelector.setVisible(False)
 
         self.GifBox.setEnabled(False)
         self.SettingsPresetBox.setEnabled(False)
+
+        self.StartExtractButton.setVisible(False)
+        self.StartRenderButton.setVisible(False)
 
         self.DebugChecker.setVisible(False)
 
@@ -2121,8 +2126,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_HwaccelSelector_currentTextChanged(self):
         logger.debug("Switch To HWACCEL Mode: %s" % self.HwaccelSelector.currentText())
         check = self.HwaccelSelector.currentText() == "NVENC"
-        self.HwaccelPresetLabel.setVisible(check)
-        self.HwaccelPresetSelector.setVisible(check)
+        if not self.is_free:
+            self.HwaccelPresetLabel.setVisible(check)
+            self.HwaccelPresetSelector.setVisible(check)
         encoders = EncodePresetAssemply.encoder[self.HwaccelSelector.currentText()]
         try:
             self.EncoderSelector.disconnect()
@@ -2252,13 +2258,17 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_show_pending_dialog("Terminating...", _translate("", "强制结束补帧进程")+"...")
             self.rife_thread.kill_proc_exec()
             self.function_finish_pending_dialog("", True)
+            self.on_PauseProcess_clicked(reset=True)
             self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
 
     @pyqtSlot(bool)
-    def on_PauseProcess_clicked(self):
+    def on_PauseProcess_clicked(self, _=False, reset=False):
         """
         :return:
         """
+        if reset:
+            self.PauseProcess.setText(_translate('', "暂停补帧！"))
+            return
         if self.rife_thread is not None:
             self.rife_thread.pause_proc_exec()
             if not self.pause:

@@ -84,6 +84,7 @@ class TaskArgumentManager(ArgumentManager):
                           "rife_now_frame": 0,
                           "recent_scene": 0, "scene_cnt": 0,
                           "decode_process_time": 0,
+                          "render_process_time": 0,
                           "rife_task_acquire_time": 0,
                           "rife_process_time": 0,
                           "rife_queue_len": 0,
@@ -533,6 +534,9 @@ class ReadFlow(IOFlow):
             return time.time()
         return run_time
 
+    def update_decode_process_time(self, decode_time):
+        self.ARGS.update_task_info({'decode_process_time': decode_time})
+
     def remove_duplicate_frames(self, videogen_check: FFmpegReader.nextFrame, init=False) -> (list, list, dict):
         """
         获得新除重预处理帧数序列
@@ -726,8 +730,63 @@ class ReadFlow(IOFlow):
         check_frame_list = [i for i in check_frame_list if i > -1]
         return check_frame_list, scene_frame_list, check_frame_data
 
+    def _no_dedup_run(self):
+        """
+        Extract Frames Without any dedup(or scene detection)
+        :return:
+        """
+
+        logger.info("Activate Any FPS Mode without Dedup(or scene detection)")
+        chunk_cnt, now_frame, videogen, _ = self.__input_check(dedup=False)
+        img1 = self.__crop(Tools.gen_next(videogen))
+        logger.info("Input Frames loaded")
+        is_end = False
+        """Start Process"""
+        run_time = time.time()
+        self._release_initiation()
+        while True:
+            if is_end:
+                break
+
+            if self._kill or self.ARGS.get_main_error() is not None:
+                logger.debug("Reader Thread Exit")
+                break
+
+            run_time = self.__run_rest(run_time)
+            decode_time = time.time()
+            img0 = img1
+            img1 = self.__crop(Tools.gen_next(videogen))
+
+            now_frame += 1
+
+            # Decode Review, should be annoted
+            # title = f"decode:"
+            # comp_stack = cv2.resize(img0, (2880, 1620))
+            # # comp_stack = img0
+            # cv2.imshow(title, cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB))
+            # cv2.moveWindow(title, 0, 0)
+            # cv2.resizeWindow(title, 2880, 1620)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+
+            if img1 is None:
+                is_end = True
+                self.__feed_to_rife(now_frame, img0, img0, n=0, is_end=is_end)
+                self.update_decode_process_time(time.time() - decode_time)
+                break
+            self.__feed_to_rife(now_frame, img0, img0, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
+            self.scene_detection.update_scene_status(now_frame, "normal")
+            self.update_decode_process_time(time.time() - decode_time)
+
+            self.ARGS.update_task_info({"read_now_frame": now_frame})
+            self.update_scene_status()
+            pass
+
+        self._output_queue.put(None)  # bad way to end
+        videogen.close()
+
     # @profile
-    def rife_run(self):
+    def _dedup_1xn_run(self):
         """
         Go through all procedures to produce interpolation result in dedup mode
         :return:
@@ -835,18 +894,15 @@ class ReadFlow(IOFlow):
         videogen.close()
         videogen_check.close()
 
-    def update_decode_process_time(self, decode_time):
-        self.ARGS.update_task_info({'decode_process_time': decode_time})
-
     # @profile
-    def rife_run_any_fps(self):
+    def _dedup_any_fps_run(self):
         """
         Go through all procedures to produce interpolation result in any fps mode(from a fps to b fps)
         :return:
         """
 
         logger.info("Activate Any FPS Mode")
-        chunk_cnt, now_frame, videogen, videogen_check = self.__input_check(dedup=True)
+        chunk_cnt, now_frame, videogen, _ = self.__input_check(dedup=False)
         img1 = self.__crop(Tools.gen_next(videogen))
         logger.info("Input Frames loaded")
         is_end = False
@@ -949,7 +1005,6 @@ class ReadFlow(IOFlow):
 
         self._output_queue.put(None)  # bad way to end
         videogen.close()
-        videogen_check.close()
 
     def __feed_to_rife(self, now_frame: int, img0, img1, n=0, exp=0, is_end=False, add_scene=False, ):
         """
@@ -964,7 +1019,7 @@ class ReadFlow(IOFlow):
         :return:
         """
         scale = self.ARGS.rife_scale
-        if self.ARGS.use_rife_auto_scale:
+        if self.ARGS.use_rife_auto_scale and not self.ARGS.render_only and not self.ARGS.extract_only:
             """使用动态光流"""
             if img0 is None or img1 is None:
                 scale = 1.0
@@ -985,10 +1040,12 @@ class ReadFlow(IOFlow):
 
     def run(self):
         try:
-            if self.ARGS.remove_dup_mode in [0, 1]:
-                self.rife_run_any_fps()
+            if self.ARGS.render_only and self.ARGS.is_no_dedup_render:
+                self._no_dedup_run()
+            elif self.ARGS.remove_dup_mode in [0, 1]:
+                self._dedup_any_fps_run()
             else:  # 1, 2 => 去重一拍二或一拍三
-                self.rife_run()
+                self._dedup_1xn_run()
             self._task_done()
         except Exception as e:
             logger.critical("Read Thread Panicked")
@@ -1036,32 +1093,32 @@ class RenderFlow(IOFlow):
         """
         hdr10plus_metadata_path = self.__hdr10_metadata_processer.get_hdr10plus_metadata_path_at_point(start_frame)
         params_libx265s = {
-            "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:"
-                    "rdoq-level=0:me=2:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:"
-                    "min-keyint=1:rc-lookahead=25:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
-                    "crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1",
-            "8bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
-                    "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
-                    "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
-                    "qcomp=0.65:deblock=-1:sao=0",
-            "10bit": "high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:"
-                     "strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:"
-                     "rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
-                     "deblock=-1:sao=0",
-            "hdr10": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
-                     'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
-                     'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                     'deblock=-1:sao=0:'
+            "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=2:"
+                    "subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:"
+                    "rc-lookahead=15:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
+                    "deblock=-1:sao=0:repeat-headers=1:info=0",
+            "8bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
+                    "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
+                    "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
+                    "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1:info=0",
+            "10bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
+                     "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
+                     "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
+                     "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1:info=0",
+            "hdr10": 'high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:'
+                     'limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:'
+                     'open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
+                     'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:'
                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                     'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                     'max-cll="1000,100":hdr10-opt=1:repeat-headers=1',
-            "hdr10+": 'high-tier=0:ref=3:rd=3:rect=0:amp=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:subme=5:weightb=1:'
-                      'strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:keyint=250:min-keyint=1:'
-                      'rc-lookahead=50:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:'
-                      'deblock=-1:sao=0:'
+                     'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
+                     "max-cll=1000,100:hdr10-opt=1:repeat-headers=1:info=0",
+            "hdr10+": 'high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:'
+                      'limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:'
+                      'open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
+                      'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:'
                       'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                      'master-display="G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)":'
-                      f'max-cll="1000,100":dhdr10-info="{hdr10plus_metadata_path}"'
+                      'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
+                      f"max-cll=1000,100:dhdr10-info='{hdr10plus_metadata_path}'"
         }
 
         params_libx264s = {
@@ -1081,8 +1138,6 @@ class RenderFlow(IOFlow):
                      "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
                      "cll='1000,100'"
         }
-
-        # TODO ASCII can not decode, max cll not recognized by libx265, FFmpeg Writer Command been hidden, parse string with [ which is not in progress info is foolish
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
@@ -1137,9 +1192,10 @@ class RenderFlow(IOFlow):
                                         "-x264-params": params_libx264s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x264-params": params_libx264s["fast"]})
-                if self.ARGS.hdr_mode == 2:
+                if self.ARGS.hdr_mode == 1:
                     """HDR10"""
                     output_dict.update({"-x264-params": params_libx264s["hdr10"]})
+
                 if self.ARGS.use_render_encoder_default_preset:
                     output_dict.pop('-x264-params')
             elif "H265" in self.ARGS.render_encode_format:
@@ -1153,13 +1209,22 @@ class RenderFlow(IOFlow):
                                         "-x265-params": params_libx265s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x265-params": params_libx265s["fast"]})
-                if self.ARGS.hdr_mode == 2:
+                if self.ARGS.hdr_mode in [1, 2]:
                     """HDR10"""
                     output_dict.update({"-x265-params": params_libx265s["hdr10"]})
                     if os.path.exists(hdr10plus_metadata_path):
                         output_dict.update({"-x265-params": params_libx265s["hdr10+"]})
                 if self.ARGS.use_render_encoder_default_preset:
                     output_dict.pop('-x265-params')
+            elif "AV1" in self.ARGS.render_encode_format:
+                encoder_preset_map = {"slow": "4", "ultrafast": "8", "fast": "7", "medium": "6", "veryslow": "3", }
+                output_dict.update({"-c:v": "libsvtav1",
+                                    "-preset:v": encoder_preset_map[self.ARGS.render_encoder_preset]})
+                if "8bit" in self.ARGS.render_encode_format:
+                    output_dict.update({"-pix_fmt": "yuv420p"})
+                else:
+                    """10bit"""
+                    output_dict.update({"-pix_fmt": "yuv420p10le"})
             else:
                 """ProRes"""
                 if "-preset:v" in output_dict:
@@ -1171,15 +1236,15 @@ class RenderFlow(IOFlow):
                     output_dict.update({"-pix_fmt": "yuv444p10le"})
 
         elif self.ARGS.render_encoder == "NVENC":
-            output_dict.update({"-pix_fmt": "yuv420p"})
+            output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main", "-rc:v": "constqp"})
             if "10bit" in self.ARGS.render_encode_format:
-                output_dict.update({"-pix_fmt": "yuv420p10le"})
+                output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "main10"})
                 pass
             if "H264" in self.ARGS.render_encode_format:
                 output_dict.update(
-                    {f"-g": f"{int(self.ARGS.target_fps * 3)}", "-c:v": "h264_nvenc", "-rc:v": "vbr_hq", })
+                    {f"-g": f"{int(self.ARGS.target_fps * 3)}", "-c:v": "h264_nvenc", })
             elif "H265" in self.ARGS.render_encode_format:
-                output_dict.update({"-c:v": "hevc_nvenc", "-rc:v": "vbr_hq",
+                output_dict.update({"-c:v": "hevc_nvenc",
                                     f"-g": f"{int(self.ARGS.target_fps * 3)}", })
 
             if self.ARGS.render_encoder_preset != "loseless":
@@ -1233,7 +1298,7 @@ class RenderFlow(IOFlow):
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "-b": "5"})
 
-            if self.ARGS.hdr_mode == 2:
+            if self.ARGS.hdr_mode in [1,2]:
                 """HDR10"""
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10",
@@ -1283,7 +1348,7 @@ class RenderFlow(IOFlow):
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64", })
-            if self.ARGS.hdr_mode == 2:
+            if self.ARGS.hdr_mode in [1,2]:
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64",
@@ -1378,7 +1443,10 @@ class RenderFlow(IOFlow):
             if self.ARGS.render_crf and self.ARGS.use_crf:
                 encoder = self.ARGS.render_encoder
                 if encoder == "CPU":
-                    output_dict.update({"-crf": str(self.ARGS.render_crf)})
+                    if 'AV1' in self.ARGS.render_encode_format:
+                        output_dict.update({"-qp": str(self.ARGS.render_crf)})
+                    else:
+                        output_dict.update({"-crf": str(self.ARGS.render_crf)})
                 elif encoder == "NVENC":
                     output_dict.update({"-cq:v": str(self.ARGS.render_crf)})
                 elif encoder == "QSV":
@@ -1403,7 +1471,12 @@ class RenderFlow(IOFlow):
                         """AV1"""
                         output_dict.update({"--tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
                 else:
-                    """FFMPEG"""
+                    """CPU"""
+                    # TODO wait ffmpeg to improve vbr mode for AV1
+                    # if 'AV1' in self.ARGS.render_encode_format:
+                    #     output_dict.update({"-rc:v": "vbr"})
+                    if 'NVENC' in self.ARGS.render_encoder:
+                        output_dict.update({"-rc:v": f'vbr'})
                     output_dict.update({"-b:v": f'{self.ARGS.render_bitrate}M'})
                 if self.ARGS.render_encoder == "QSV":
                     output_dict.update({"-maxrate": "200M"})
@@ -1666,7 +1739,6 @@ class RenderFlow(IOFlow):
         try:
             frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )  # get frame renderer
             now_frame = start_frame
-            is_end = False
             frame_written = False
             self._release_initiation()
             while True:
@@ -1675,7 +1747,6 @@ class RenderFlow(IOFlow):
                         frame_writer.close()
                     logger.debug("Render thread exit")  # 主线程已结束，这里的锁其实没用，调试用的
                     frame_writer.close()
-                    is_end = True
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
 
@@ -1683,7 +1754,6 @@ class RenderFlow(IOFlow):
                 if frame_data is None:
                     if frame_written:
                         frame_writer.close()
-                    is_end = True
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
 
@@ -1696,9 +1766,23 @@ class RenderFlow(IOFlow):
                                                                 "Low Encoding speed detected (>15s per image), Please check your encode settings to avoid performance issues")
                 self.ARGS.put_overtime_task(_over_time_reminder_task)
 
+                render_process_time = time.time()
+
+                # Write Review, should be annoted
+                # title = f"render:"
+                # comp_stack = cv2.resize(frame, (1440, 819))
+                # # comp_stack = img0
+                # cv2.imshow(title, cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB))
+                # cv2.moveWindow(title, 0, 0)
+                # cv2.resizeWindow(title,1440, 819 )
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+
                 if frame is not None:
                     frame_written = True
                     frame_writer.writeFrame(frame)
+                render_process_time = time.time() - render_process_time
+                self.ARGS.update_task_info({'render_process_time': render_process_time})
                 _over_time_reminder_task.deactive()
 
                 chunk_frame_cnt += 1
@@ -1713,8 +1797,6 @@ class RenderFlow(IOFlow):
                     chunk_cnt += 1
                     start_frame = now_frame + 1
                     _assign_last_n_frames = 0
-                    # if self.ARGS.all_frames_cnt - (chunk_frame_cnt - 1) < self.ARGS.render_gap:
-                    #     _assign_last_n_frames = self.ARGS.all_frames_cnt - (chunk_frame_cnt - 1)
                     frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, _assign_last_n_frames)
             if not self.ARGS.is_no_concat and not self.ARGS.is_img_output \
                     and not self._kill and self.ARGS.get_main_error() is None:
@@ -1851,22 +1933,12 @@ class SuperResolutionFlow(IOFlow):
                     now_frame = task["now_frame"]
                     img0 = task["img0"]
                     img1 = task["img1"]
-                    ori_img0 = None
                     _over_time_reminder_task = OverTimeReminderTask(60,
                                                                     "Super Resolution",
                                                                     "Low Super Resolution speed detected (>60s per image), Please consider lower your output settings to enhance speed")
                     self.ARGS.put_overtime_task(_over_time_reminder_task)
 
                     sr_process_time = time.time()
-                    # if img0 is not None:
-                    #     ori_img0 = img0.copy()
-                    #     img0 = self.sr_module.svfi_process(img0)
-                    # sr_process_time = time.time() - sr_process_time
-                    # if img1 is not None:
-                    #     if ori_img0 is not None and np.all(img0 == img1):
-                    #         img1 = img0.copy()  # img0 already sr, make a copy
-                    #     else:
-                    #         img1 = self.sr_module.svfi_process(img1)
                     if img0 is not None:
                         img0 = self.sr_module.svfi_process(img0)
                     sr_process_time = time.time() - sr_process_time
@@ -1930,21 +2002,23 @@ class ProgressUpdateFlow(IOFlow):
                 break
             self.proceed_overtime_reminder_task()
             task_status = self.ARGS.task_info  # render status quo
+            postfix_dict = {"R": f"{task_status['render']}",
+                            "C": f"{task_status['read_now_frame']}",
+                            "RPT": f"{task_status['decode_process_time']:.2f}s",
+                            "WPT": f"{task_status['render_process_time']:.2f}s"}
             if self.ARGS.render_only or self.ARGS.extract_only:
                 now_frame = task_status['render']
                 pbar_description = f"Process at Frame {now_frame}"
-                postfix_dict = {"R": f"{task_status['render']}", "C": f"{task_status['read_now_frame']}", }
             else:
                 now_frame = task_status['rife_now_frame']
                 pbar_description = f"Process at Chunk {task_status['chunk_cnt']:0>3d}"
-                postfix_dict = {"R": f"{task_status['render']}",
-                                "C": f"{now_frame}",
-                                "S": f"{task_status['recent_scene']}",
-                                "SC": f"{task_status['scene_cnt']}",
-                                "RPT": f"{task_status['decode_process_time']:.2f}s",
-                                "TAT": f"{task_status['rife_task_acquire_time']:.2f}s",
-                                "PT": f"{task_status['rife_process_time']:.2f}s",
-                                "QL": f"{task_status['rife_queue_len']}"}
+                postfix_dict.update({
+                    "C": f"{now_frame}",
+                    "S": f"{task_status['recent_scene']}",
+                    "SC": f"{task_status['scene_cnt']}",
+                    "TAT": f"{task_status['rife_task_acquire_time']:.2f}s",
+                    "PT": f"{task_status['rife_process_time']:.2f}s",
+                    "QL": f"{task_status['rife_queue_len']}"})
             if self.ARGS.use_sr:
                 postfix_dict.update({'SR': f"{task_status['sr_now_frame']}",
                                      'SRTAT': f"{task_status['sr_task_acquire_time']:.2f}s",

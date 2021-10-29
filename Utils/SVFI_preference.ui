@@ -192,7 +192,7 @@
              <string>开启专家模式</string>
             </property>
             <property name="checked">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -202,7 +202,17 @@
              <string>鲁莽的退出</string>
             </property>
             <property name="checked">
-             <bool>false</bool>
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QCheckBox" name="DisableDedupRenderChecker">
+            <property name="text">
+             <string>无去重压制</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>

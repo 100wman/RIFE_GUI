@@ -26,13 +26,15 @@ class EncodePresetAssemply:
             "H264,10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
             "H265,8bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
             "H265,10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
+            "AV1,8bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
+            "AV1,10bit": ["slow", "ultrafast", "fast", "medium", "veryslow"],
             "ProRes,422": ["hq", "4444", "4444xq"],
             "ProRes,444": ["hq", "4444", "4444xq"],
         },
         "NVENC":
-            {"H264,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
-             "H265,8bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"],
-             "H265,10bit": ["slow", "medium", "fast", "hq", "bd", "llhq", "loseless"], },
+            {"H264,8bit": ["slow", "fast", "hq", "bd", "llhq", "loseless", "p7"],
+             "H265,8bit": ["slow", "fast", "hq", "bd", "llhq", "loseless", "p7"],
+             "H265,10bit": ["slow", "fast", "hq", "bd", "llhq", "loseless", "p7"], },
         "NVENCC":
             {"H264,8bit": ["default", "performance", "quality"],
              "H265,8bit": ["default", "performance", "quality"],

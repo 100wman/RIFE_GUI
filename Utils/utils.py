@@ -74,20 +74,25 @@ class ArgumentManager:
     professional_qq = 1054016374
 
     """Release Version Control"""
-    is_steam = True
+    is_steam = False
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.12"
-    version_tag = f"{gui_version}-beta " \
+    gui_version = "3.7.13"
+    version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.7"
+    ols_version = "7.2.8"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Update State Tips
-    - Update 10bit ffmpeg output pixel format to yuv420p10le
+    - Add SVT-AV1 Encoder(ffmpeg base)
+    - Remove SVT Encoder
+    - Optimize HDR related encode parameters
+    - Optimize Progress Bar Parameters Display, add WPT as Write Process Time
+    - Optimize Default Settings(Expert mode, hard exit, etc)
+    - Prove that Color banding is caused by encode, CPU h265 slow only, but banding still exists
+    - Unlock NVENC for Community Version
     """
 
     path_len_limit = 230
@@ -204,9 +209,10 @@ class ArgumentManager:
         self.multi_task_rest_interval = args.get("multi_task_rest_interval", 1)
         self.after_mission = args.get("after_mission", False)
         self.force_cpu = args.get("force_cpu", False)
-        self.expert_mode = args.get("expert_mode", False)
+        self.expert_mode = args.get("expert_mode", True)
         self.preview_args = args.get("preview_args", False)
-        self.is_rude_exit = args.get("is_rude_exit", False)
+        self.is_rude_exit = args.get("is_rude_exit", True)
+        self.is_no_dedup_render = args.get("is_no_dedup_render", True)
         self.pos = args.get("pos", "")
         self.size = args.get("size", "")
 

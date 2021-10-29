@@ -10,7 +10,6 @@ import time
 #   os.add_dll_directory(os.getcwd()) # Required since Python 3.8
 
 from steamworks import STEAMWORKS # Import main STEAMWORKS class
-
 """
 In this example, we'll set up a basic achievement. We'll assume your game is Spacewar. 
 Initialise Steamworks as seen in the basic example first. 
@@ -19,7 +18,7 @@ steamworks = STEAMWORKS(1692080)
 
 
 steamworks.initialize()
-
+# steamworks.Screenshots.TriggerScreenshot()
 """
 The Interstellar achievement needs stats. Get those as seen in the stats example first. 
 """
@@ -32,6 +31,9 @@ else:
 """
 Now that that's done, we can get the stats we want. 
 """
+
+
+steamworks.Screenshots.AddScreenshotToLibrary("E:\Library\Documents\cat.jpg", "", 1012, 1263)
 
 distance_travelled = steamworks.UserStats.GetStatFloat('STAT_FLOAT_FINISHED_MINUTE')
 won_games = steamworks.UserStats.GetStatInt('STAT_INT_FINISHED_CNT')
