@@ -482,7 +482,7 @@ class ReadFlow(IOFlow):
                     f"Invalid Input Section, changed to original section")
 
         output_dict = {"-map": "0:v:0", "-vframes": str(10 ** 10),
-                       "-sws_flags": "+bicubic+full_chroma_int+accurate_rnd",
+                       "-sws_flags": "lanczos",
                        }  # use read frames cnt to avoid ffprobe, fuck
 
         output_dict.update(self._get_color_info_dict())
@@ -513,10 +513,13 @@ class ReadFlow(IOFlow):
                     output_dict.update({"-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
         """Quick Extraction"""
-        if not self.ARGS.is_quick_extract:
-            vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
-
-        vf_args += f",minterpolate=fps={self.ARGS.target_fps}:mi_mode=dup"
+        if not self.ARGS.is_quick_extract and not frame_check:
+            # vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
+            if self.ARGS.hdr_mode <= 0:
+                """Only BT709 could zscale,,, to avoid banding"""
+                vf_args += f",zscale=min=709:m=709,format=yuv444p10le,format=rgb48be,format=rgb24"
+            output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd",})
+        vf_args += f",minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
 
         """Update video filters"""
         output_dict["-vf"] = vf_args

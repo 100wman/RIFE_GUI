@@ -605,8 +605,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                                        _translate('', "你的显存不够啦！去清一下后台占用显存的程序，或者去'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型~"), )
                 self.current_failed = True
                 return
-            elif "cudnn" in now_text.lower() and "fail" in now_text.lower():
+            elif "cudnn" in now_text and "fail" in now_text:
                 self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx"), )
+                self.current_failed = True
+                return
+            elif 'error: unable to allocate' in now_text:
+                self.function_send_msg("Memory Failed", _translate('', "申请内存失败，请关闭后台程序或增加虚拟内存"), )
                 self.current_failed = True
                 return
             elif "concat test error" in now_text or "concat error" in now_text:
@@ -621,7 +625,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.function_send_msg("NCNN Import Failed", _translate('', "你的A卡不支持NCNN-RIFE补帧，请更换设备"), )
                 self.current_failed = True
                 return
-            elif "Steam Validation Failed" in now_text:
+            elif "steam validation failed" in now_text:
                 self.function_send_msg("Steam Validation Failed",
                                        _translate('', "Steam验证失败，请确保软件联网并退出Steam重试；如有疑问详询开发人员"), )
                 self.current_failed = True
