@@ -34,7 +34,7 @@ QSplashScreen {
 """
 splash.setStyleSheet(splash_qss)
 splash.show()  # 显示启动界面
-splash.showMessage("Breaching Video Card...", Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
+splash.showMessage("Breaching Graphic Card...", Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
 app.processEvents()
 
 import comtypes.client as cc

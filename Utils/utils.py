@@ -74,25 +74,20 @@ class ArgumentManager:
     professional_qq = 1054016374
 
     """Release Version Control"""
-    is_steam = False
+    is_steam = True
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.13"
+    gui_version = "3.7.14"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.8"
+    ols_version = "7.2.9"
     """ 发布前改动以上参数即可 """
 
     f"""
     Update Log
-    - Add SVT-AV1 Encoder(ffmpeg base)
-    - Remove SVT Encoder
-    - Optimize HDR related encode parameters
-    - Optimize Progress Bar Parameters Display, add WPT as Write Process Time
-    - Optimize Default Settings(Expert mode, hard exit, etc)
-    - Prove that Color banding is caused by encode, CPU h265 slow only, but banding still exists
-    - Unlock NVENC for Community Version
+    - Optimize HDR, Non-Quick Extract Mode related encode parameters
+    - Add Error Operation Hint
     """
 
     path_len_limit = 230
