@@ -396,7 +396,7 @@ class ReadFlow(IOFlow):
         """
         _debug = False
         chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-        logger.info("Resuming Video Frames...")
+        self.logger.info("Resuming Video Frames...")
 
         """Get Frames to interpolate"""
         # TODO Optimize this since progress bar started after reading initiation is complete
@@ -434,10 +434,10 @@ class ReadFlow(IOFlow):
             if self.ARGS.use_sr:
                 resize_param = self.ARGS.transfer_param
 
-            img_reader = ImageRead(logger, folder=self.ARGS.input, start_frame=self.ARGS.interp_start,
+            img_reader = ImageRead(self.logger, folder=self.ARGS.input, start_frame=self.ARGS.interp_start,
                                    exp=self.ARGS.rife_exp, resize=resize_param, )
             self.ARGS.all_frames_cnt = img_reader.get_frames_cnt()
-            logger.info(f"This is Img Input, update frames count to {self.ARGS.all_frames_cnt}")
+            self.logger.info(f"This is Img Input, update frames count to {self.ARGS.all_frames_cnt}")
             return img_reader
 
         """If input is a video"""
@@ -470,7 +470,7 @@ class ReadFlow(IOFlow):
                 clip_duration = end_point - start_point
                 clip_fps = self.ARGS.target_fps
                 self.ARGS.all_frames_cnt = round(clip_duration.total_seconds() * clip_fps)
-                logger.info(
+                self.logger.info(
                     f"Update Input Section: in {self.ARGS.input_start_point} -> out {self.ARGS.input_end_point}, "
                     f"all_frames_cnt -> {self.ARGS.all_frames_cnt}")
             else:
@@ -478,7 +478,7 @@ class ReadFlow(IOFlow):
                     input_dict.pop('-ss')
                 if '-to' in input_dict:
                     input_dict.pop('-to')
-                logger.warning(
+                self.logger.warning(
                     f"Invalid Input Section, changed to original section")
 
         output_dict = {"-map": "0:v:0", "-vframes": str(10 ** 10),
@@ -518,12 +518,12 @@ class ReadFlow(IOFlow):
             if self.ARGS.hdr_mode <= 0:
                 """Only BT709 could zscale,,, to avoid banding"""
                 vf_args += f",zscale=min=709:m=709,format=yuv444p10le,format=rgb48be,format=rgb24"
-            output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd",})
+            output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
         vf_args += f",minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
 
         """Update video filters"""
         output_dict["-vf"] = vf_args
-        logger.debug(f"reader: {input_dict} {output_dict}")
+        self.logger.debug(f"reader: {input_dict} {output_dict}")
         return FFmpegReader(filename=self.ARGS.input, inputdict=input_dict, outputdict=output_dict)
 
     def __run_rest(self, run_time: float):
@@ -531,7 +531,7 @@ class ReadFlow(IOFlow):
         # TODO Check here
         if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
                 time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
-            logger.info(
+            self.logger.info(
                 f"\n\nINFO - Time to Rest for 5 minutes! Rest for every {self.ARGS.multi_task_rest_interval} hour. ")
             time.sleep(600)
             return time.time()
@@ -639,7 +639,7 @@ class ReadFlow(IOFlow):
         scene_frame_list = list()  # 转场图片帧数序列,key,和check_frame_list同步
         check_frame_data = dict()  # 用于判断的采样图片数据
         if init:
-            logger.info("Initiating Duplicated Frames Removal Process...This might take some time")
+            self.logger.info("Initiating Duplicated Frames Removal Process...This might take some time")
             pbar = tqdm.tqdm(total=check_queue_size, unit="frames")
         else:
             pbar = None
@@ -684,7 +684,7 @@ class ReadFlow(IOFlow):
 
         if init:
             pbar.close()
-            logger.info("Start Removing First Batch of Duplicated Frames")
+            self.logger.info("Start Removing First Batch of Duplicated Frames")
 
         max_epoch = self.ARGS.remove_dup_mode  # 一直去除到一拍N，N为max_epoch，默认去除一拍二
         opt = []  # 已经被标记，识别的帧
@@ -715,7 +715,7 @@ class ReadFlow(IOFlow):
                         i += queue_size - 3
                     i += 1
             except:
-                logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+                self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             for x in Current:
                 if x not in opt:  # 优化:该轮一拍N不可能出现在上一轮中
                     for t in range(queue_size - 3):
@@ -739,10 +739,10 @@ class ReadFlow(IOFlow):
         :return:
         """
 
-        logger.info("Activate Any FPS Mode without Dedup(or scene detection)")
+        self.logger.info("Activate Any FPS Mode without Dedup(or scene detection)")
         chunk_cnt, now_frame, videogen, _ = self.__input_check(dedup=False)
         img1 = self.__crop(Tools.gen_next(videogen))
-        logger.info("Input Frames loaded")
+        self.logger.info("Input Frames loaded")
         is_end = False
         """Start Process"""
         run_time = time.time()
@@ -752,7 +752,7 @@ class ReadFlow(IOFlow):
                 break
 
             if self._kill or self.ARGS.get_main_error() is not None:
-                logger.debug("Reader Thread Exit")
+                self.logger.debug("Reader Thread Exit")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -795,9 +795,9 @@ class ReadFlow(IOFlow):
         :return:
         """
 
-        logger.info("Activate Duplicate Frames Removal Mode")
+        self.logger.info("Activate Duplicate Frames Removal Mode")
         chunk_cnt, now_frame_key, videogen, videogen_check = self.__input_check(dedup=True)
-        logger.info("Input Frames loaded")
+        self.logger.info("Input Frames loaded")
         is_end = False
 
         """Start Process"""
@@ -809,7 +809,7 @@ class ReadFlow(IOFlow):
                 break
 
             if self._kill or self.ARGS.get_main_error() is not None:
-                logger.debug("Reader Thread Exit")
+                self.logger.debug("Reader Thread Exit")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -904,10 +904,10 @@ class ReadFlow(IOFlow):
         :return:
         """
 
-        logger.info("Activate Any FPS Mode")
+        self.logger.info("Activate Any FPS Mode")
         chunk_cnt, now_frame, videogen, _ = self.__input_check(dedup=False)
         img1 = self.__crop(Tools.gen_next(videogen))
-        logger.info("Input Frames loaded")
+        self.logger.info("Input Frames loaded")
         is_end = False
 
         """Update Interp Mode Info"""
@@ -925,7 +925,7 @@ class ReadFlow(IOFlow):
                 break
 
             if self._kill or self.ARGS.get_main_error() is not None:
-                logger.debug("Reader Thread Exit")
+                self.logger.debug("Reader Thread Exit")
                 break
 
             run_time = self.__run_rest(run_time)
@@ -1029,6 +1029,13 @@ class ReadFlow(IOFlow):
             else:
                 scale = self.vfi_core.get_auto_scale(img0, img1)
 
+        if self.ARGS.rife_interp_before_resize and img0 is not None and img1 is not None:
+            h, w, _ = img0.shape
+            resize = (self.ARGS.rife_interp_before_resize,
+                      int(h / w * self.ARGS.rife_interp_before_resize))
+            img0 = cv2.resize(img0, resize, interpolation=cv2.INTER_LANCZOS4)
+            img1 = cv2.resize(img1, resize, interpolation=cv2.INTER_LANCZOS4)
+
         self._output_queue.put(
             {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "scale": scale,
              "is_end": is_end, "add_scene": add_scene})
@@ -1051,8 +1058,8 @@ class ReadFlow(IOFlow):
                 self._dedup_1xn_run()
             self._task_done()
         except Exception as e:
-            logger.critical("Read Thread Panicked")
-            logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self.logger.critical("Read Thread Panicked")
+            self.logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self.ARGS.save_main_error(e)
             return
 
@@ -1062,7 +1069,7 @@ class RenderFlow(IOFlow):
         super().__init__(_args, __logger)
         self.name = 'Render'
         self.__ffmpeg = "ffmpeg"
-        self.__hdr10_metadata_processer = Hdr10PlusProcessor(logger, self.ARGS.project_dir, self.ARGS.render_gap,
+        self.__hdr10_metadata_processer = Hdr10PlusProcessor(self.logger, self.ARGS.project_dir, self.ARGS.render_gap,
                                                              self.ARGS.interp_times,
                                                              self.ARGS.video_info_instance.getInputHdr10PlusMetadata())
         self._input_queue = _reader_queue
@@ -1096,10 +1103,10 @@ class RenderFlow(IOFlow):
         """
         hdr10plus_metadata_path = self.__hdr10_metadata_processer.get_hdr10plus_metadata_path_at_point(start_frame)
         params_libx265s = {
-            "fast": "high-tier=0:ref=2:rd=1:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=2:"
+            "fast": "high-tier=0:ref=2:rd=2:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=1:"
                     "subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:"
-                    "rc-lookahead=15:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:"
-                    "deblock=-1:sao=0:repeat-headers=1:info=0",
+                    "rc-lookahead=15:b-adapt=1:bframes=4:aq-mode=3:aq-strength=0.7:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
+                    "qcomp=0.65:sao=0:repeat-headers=1:info=0",
             "8bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
                     "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
                     "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
@@ -1144,7 +1151,8 @@ class RenderFlow(IOFlow):
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
-            img_io = ImageWrite(logger, folder=self.ARGS.output_dir, start_frame=start_frame, exp=self.ARGS.rife_exp,
+            img_io = ImageWrite(self.logger, folder=self.ARGS.output_dir, start_frame=start_frame,
+                                exp=self.ARGS.rife_exp,
                                 resize=self.ARGS.resize_param, output_ext=self.ARGS.output_ext, )
             return img_io
 
@@ -1301,7 +1309,7 @@ class RenderFlow(IOFlow):
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "-b": "5"})
 
-            if self.ARGS.hdr_mode in [1,2]:
+            if self.ARGS.hdr_mode in [1, 2]:
                 """HDR10"""
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10",
@@ -1351,7 +1359,7 @@ class RenderFlow(IOFlow):
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64", })
-            if self.ARGS.hdr_mode in [1,2]:
+            if self.ARGS.hdr_mode in [1, 2]:
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64",
@@ -1487,14 +1495,14 @@ class RenderFlow(IOFlow):
         if self.ARGS.use_manual_encode_thread and self.ARGS.render_encoder == "CPU":
             output_dict.update({"-threads": f"{self.ARGS.render_encode_thread}"})
 
-        logger.debug(f"render system parameters: {output_dict}, {input_dict}")
+        self.logger.debug(f"render system parameters: {output_dict}, {input_dict}")
 
         """Customize FFmpeg Render Parameters"""
         ffmpeg_customized_command = {}
         if type(self.ARGS.render_ffmpeg_customized) is str and len(self.ARGS.render_ffmpeg_customized):
             for param, arg in Tools.get_custom_cli_params(self.ARGS.render_ffmpeg_customized).items():
                 ffmpeg_customized_command.update({param: arg})
-        logger.debug(f"render detected custom parameters: {ffmpeg_customized_command}")
+        self.logger.debug(f"render detected custom parameters: {ffmpeg_customized_command}")
         output_dict.update(ffmpeg_customized_command)
         if self.ARGS.render_encoder in ["NVENCC", "QSVENCC"]:
             return EnccWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
@@ -1517,7 +1525,7 @@ class RenderFlow(IOFlow):
         if os.path.exists(chunk_from_path):
             os.rename(chunk_from_path, chunk_desc_path)
         else:
-            logger.warning(f"Renamed Chunk Not found: {chunk_from_path}")
+            self.logger.warning(f"Renamed Chunk Not found: {chunk_from_path}")
 
     def __check_audio_concat(self, chunk_tmp_path: str, fail_signal=0):
         """Check Input file ext"""
@@ -1530,15 +1538,15 @@ class RenderFlow(IOFlow):
         ffmpeg_command = f'{self.__ffmpeg} -hide_banner -i "{chunk_tmp_path}" {map_audio} -c:v copy ' \
                          f'{Tools.fillQuotation(concat_filepath)} -y'
 
-        logger.info("Start Audio Mux Test")
+        self.logger.info("Start Audio Mux Test")
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
-            logger.warning(f"Audio Mux Test found unavailable audio codec for output extension: "
-                           f"{self.ARGS.output_ext}, audio codec is changed to AAC 640kbps")
+            self.logger.warning(f"Audio Mux Test found unavailable audio codec for output extension: "
+                                f"{self.ARGS.output_ext}, audio codec is changed to AAC 640kbps")
             self.is_audio_failed_concat = True
         else:
-            logger.info("Audio Mux Test Succeeds")
+            self.logger.info("Audio Mux Test Succeeds")
             os.remove(concat_filepath)
 
     def get_output_path(self):
@@ -1594,7 +1602,7 @@ class RenderFlow(IOFlow):
     def concat_when_default_fail(self):
         if not self.ARGS.is_encode_audio:
             self.ARGS.is_encode_audio = True
-            logger.warning("Audio will be Encoded into AAC 640kbps to avoid mux error")
+            self.logger.warning("Audio will be Encoded into AAC 640kbps to avoid mux error")
             return True
         return False
 
@@ -1609,14 +1617,14 @@ class RenderFlow(IOFlow):
 
         os.chdir(self.ARGS.project_dir)
         concat_path = os.path.join(self.ARGS.project_dir, "concat.ini")
-        logger.info("Final Interpolation Round is Finished, Start Concating")
+        self.logger.info("Final Interpolation Round is Finished, Start Concating")
         concat_list = list()
 
         for f in os.listdir(self.ARGS.project_dir):
             if re.match("chunk-\d+-\d+-\d+", f):
                 concat_list.append(os.path.join(self.ARGS.project_dir, f))
             else:
-                logger.debug(f"Concat escape {f}")
+                self.logger.debug(f"Concat escape {f}")
 
         concat_list.sort(key=lambda x: int(os.path.basename(x).split('-')[2]))  # sort as start-frame
 
@@ -1663,23 +1671,23 @@ class RenderFlow(IOFlow):
                          f'{color_info_str} ' \
                          f'-y'
 
-        logger.debug(f"Concat command: {ffmpeg_command}")
+        self.logger.debug(f"Concat command: {ffmpeg_command}")
         try:
             sp = Tools.popen(ffmpeg_command)
             sp.wait()
         except Exception as e:
             if self.concat_when_default_fail():
-                logger.warning("Retry Concat after FFmpeg failed")
+                self.logger.warning("Retry Concat after FFmpeg failed")
                 self.concat_all()
             else:
-                logger.info("Failed To Concat Chunks, all chunks will be preserved")
+                self.logger.info("Failed To Concat Chunks, all chunks will be preserved")
                 self.ARGS.save_main_error(e)
                 raise e
 
-        logger.info(f"{len(concat_list)} files concatenated to {os.path.basename(concat_filepath)}")
+        self.logger.info(f"{len(concat_list)} files concatenated to {os.path.basename(concat_filepath)}")
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
             if self.concat_when_default_fail():
-                logger.warning("Retry Concat after Output File Validity Check failed")
+                self.logger.warning("Retry Concat after Output File Validity Check failed")
                 self.concat_all()
             else:
                 main_error = FileExistsError(
@@ -1698,8 +1706,8 @@ class RenderFlow(IOFlow):
     def check_concat_result(self):
         concat_filepath, output_ext = self.get_output_path()
         if os.path.exists(concat_filepath):
-            logger.warning("Project with same task_id is already finished, "
-                           "Jump to Dolby Vision Check")
+            self.logger.warning("Project with same task_id is already finished, "
+                                "Jump to Dolby Vision Check")
             if self.ARGS.hdr_mode == 3:
                 """Dolby Vision"""
                 self.__run_dovi(concat_filepath)
@@ -1713,9 +1721,9 @@ class RenderFlow(IOFlow):
             os.remove(os.path.join(self.ARGS.project_dir, f))
 
     def __run_dovi(self, concat_filepath: str):
-        logger.info("Start DOVI Conversion")
+        self.logger.info("Start DOVI Conversion")
         dovi_maker = DoviProcessor(concat_filepath, self.ARGS.input, self.ARGS.project_dir,
-                                   self.ARGS.interp_times, logger)
+                                   self.ARGS.interp_times, self.logger)
         dovi_maker.run()
 
     def wait_for_input(self):
@@ -1748,7 +1756,7 @@ class RenderFlow(IOFlow):
                 if self._kill or not self.wait_for_input():
                     if frame_written:
                         frame_writer.close()
-                    logger.debug("Render thread exit")  # 主线程已结束，这里的锁其实没用，调试用的
+                    self.logger.debug("Render thread exit")  # 主线程已结束，这里的锁其实没用，调试用的
                     frame_writer.close()
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
@@ -1807,8 +1815,8 @@ class RenderFlow(IOFlow):
                 self.concat_all()
 
         except Exception as e:
-            logger.critical("Render Thread Panicked")
-            logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self.logger.critical("Render Thread Panicked")
+            self.logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self.ARGS.save_main_error(e)
             return
 
@@ -1859,11 +1867,11 @@ class SuperResolutionFlow(IOFlow):
                                                                  scale=sr_scale, tile=self.ARGS.sr_tilesize,
                                                                  half=self.ARGS.use_realesr_fp16,
                                                                  resize=resize_param)
-            logger.info(
+            self.logger.info(
                 f"Load Super Resolution Module at {self.ARGS.use_sr_algo}, "
                 f"Model at {self.ARGS.use_sr_model}, scale_times = output resolution / transfer resolution = {sr_scale}")
         except ImportError:
-            logger.error(
+            self.logger.error(
                 f"Import SR Module failed\n"
                 f"{traceback.format_exc(limit=ArgumentManager.traceback_limit)}")
             self._release_vram_check_lock()
@@ -1889,16 +1897,16 @@ class SuperResolutionFlow(IOFlow):
             else:
                 w, h = self.ARGS.frame_size
 
-            logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
+            self.logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
 
             test_img0 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
             self.sr_module.svfi_process(test_img0)
-            logger.info(f"SR VRAM Test Success")
+            self.logger.info(f"SR VRAM Test Success")
             self._release_vram_check_lock()
             del test_img0
         except Exception as e:
-            logger.error("SR VRAM Check Failed, PLS Lower your transfer resolution or tilesize for RealESR\n" +
-                         traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self.logger.error("SR VRAM Check Failed, PLS Lower your transfer resolution or tilesize for RealESR\n" +
+                              traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self._release_vram_check_lock()
             raise e
 
@@ -1923,7 +1931,7 @@ class SuperResolutionFlow(IOFlow):
             while True:
                 task_acquire_time = time.time()
                 if self._kill or not self.wait_for_input():
-                    logger.debug("Super Resolution thread exit")
+                    self.logger.debug("Super Resolution thread exit")
                     break
                 task = self._input_queue.get()
                 task_acquire_time = time.time() - task_acquire_time
@@ -1956,8 +1964,8 @@ class SuperResolutionFlow(IOFlow):
                     _over_time_reminder_task.deactive()
                 self._output_queue.put(task)
         except Exception as e:
-            logger.critical("Super Resolution Thread Panicked")
-            logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+            self.logger.critical("Super Resolution Thread Panicked")
+            self.logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self._output_queue.put(None)
             self.ARGS.save_main_error(e)
             self._release_vram_check_lock()
@@ -2100,7 +2108,11 @@ class InterpWorkFlow:
             else:
                 w, h = self.ARGS.frame_size
 
-            logger.info(f"Start RIFE VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
+            if self.ARGS.rife_interp_before_resize:
+                ratio = h / w
+                w, h = self.ARGS.rife_interp_before_resize, int(ratio * self.ARGS.rife_interp_before_resize)
+
+            logger.info(f"Start Interpolation VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
                                    np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
@@ -2141,22 +2153,28 @@ class InterpWorkFlow:
     def check_interp_prerequisite(self):
         if self.ARGS.render_only or self.ARGS.extract_only or self.ARGS.concat_only:
             return
-        if self.ARGS.use_ncnn:
-            self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
-            from Utils import inference_rife_ncnn as inference
+
+        if 'abme' in self.ARGS.rife_model_name.lower():
+            from ABME import inference_abme as inference
+            self.vfi_core = inference.ABMEInterpolation(self.ARGS)
+            logger.warning("ABME Interpolation Module Loaded, Note that this is alpha only")
         else:
-            try:
-                # raise Exception("Load Torch Failed Test")
-                from Utils import inference_rife as inference
-            except Exception:
-                logger.warning("Import Torch Failed, use NCNN-RIFE instead")
-                logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
-                self.ARGS.use_ncnn = True
-                self.ARGS.rife_model = "rife-v2"
-                self.ARGS.rife_model_name = "rife-v2"
+            if self.ARGS.use_ncnn:
+                self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
                 from Utils import inference_rife_ncnn as inference
-        """Update RIFE Core"""
-        self.vfi_core = inference.RifeInterpolation(self.ARGS)
+            else:
+                try:
+                    # raise Exception("Load Torch Failed Test")
+                    from Utils import inference_rife as inference
+                except Exception:
+                    logger.warning("Import Torch Failed, use NCNN-RIFE instead")
+                    logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
+                    self.ARGS.use_ncnn = True
+                    self.ARGS.rife_model = "rife-v2"
+                    self.ARGS.rife_model_name = "rife-v2"
+                    from Utils import inference_rife_ncnn as inference
+            """Update RIFE Core"""
+            self.vfi_core = inference.RifeInterpolation(self.ARGS)
         self.vfi_core.initiate_algorithm(self.ARGS)
 
         if not self.ARGS.use_ncnn:

@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
+# from line_profiler_pycharm import profile
 
 
 class XVFInet(nn.Module):
@@ -34,7 +35,7 @@ class XVFInet(nn.Module):
 
 		# print("The lowest scale depth for training (S_trn): ", self.args.S_trn)
 		print("The lowest scale depth for test (S_tst): ", self.args.S_tst)
-
+	# @profile
 	def forward(self, x, t_value, is_training=True):
 		'''
 		x shape : [B,C,T,H,W]
@@ -57,6 +58,7 @@ class XVFInet(nn.Module):
 		for level in range(self.args.S_tst, 0, -1): ## self.args.S_tst, self.args.S_tst-1, ..., 1. level 0 is not included
 			flow_l = self.vfinet(x, feat_x_list[level], flow_l, t_value, level=level, is_training=False)
 		out_l = self.vfinet(x, feat_x_list[0], flow_l, t_value, level=0, is_training=False)
+		# del feat_x, feat_x_list, flow_l, x
 		return out_l
 
 
@@ -118,7 +120,7 @@ class VFInet(nn.Module):
 		
 		self.refine_unet = RefineUNet(args)
 		self.lrelu = nn.ReLU()
-
+	# @profile
 	def forward(self, x, feat_x, flow_l_prev, t_value, level, is_training):
 		'''
 		x shape : [B,C,T,H,W]
@@ -218,7 +220,7 @@ class VFInet(nn.Module):
 				return out_l, flow_l
 			else: # level==0
 				return out_l, flow_l, flow_refine_l[:, 0:4, :, :], occ_0_l
-
+	# @profile
 	def bwarp(self, x, flo):
 		'''
 		x: [B, C, H, W] (im2)
@@ -249,7 +251,7 @@ class VFInet(nn.Module):
 		mask = mask.masked_fill_(mask > 0, 1)
 
 		return output * mask
-
+	# @profile
 	def fwarp(self, img, flo):
 
 		"""
@@ -299,7 +301,7 @@ class VFInet(nn.Module):
 
 		return imgw, o
 
-
+	# @profile
 	def z_fwarp(self, img, flo, z):
 		"""
 			-img: image (N, C, H, W)
@@ -415,7 +417,7 @@ class RefineUNet(nn.Module):
 		self.dec1 = nn.Conv2d(4*self.nf + 2*self.nf, 2*self.nf, [3, 3], 1, [1, 1]) ## input concatenated with enc2
 		self.dec2 = nn.Conv2d(2*self.nf + self.nf, self.nf, [3, 3], 1, [1, 1]) ## input concatenated with enc1
 		self.dec3 = nn.Conv2d(self.nf, 1+args.img_ch, [3, 3], 1, [1, 1]) ## input added with warped image
-
+	# @profile
 	def forward(self, concat):
 		enc1 = self.lrelu(self.enc1(concat))
 		enc2 = self.lrelu(self.enc2(enc1))
@@ -446,6 +448,7 @@ class ResBlock2D_3D(nn.Module):
 		self.conv3x3_1 = nn.Conv3d(self.nf, self.nf, [1,3,3], 1, [0,1,1])
 		self.conv3x3_2 = nn.Conv3d(self.nf, self.nf, [1,3,3], 1, [0,1,1])
 		self.lrelu = nn.ReLU()
+	# @profile
 
 	def forward(self, x):
 		'''
@@ -468,6 +471,7 @@ class RResBlock2D_3D(nn.Module):
 		self.resblock2 = ResBlock2D_3D(self.args)
 		if T_reduce_flag:
 			self.reduceT_conv = nn.Conv3d(self.nf, self.nf, [3,1,1], 1, [0,0,0])
+	# @profile
 
 	def forward(self, x):
 		'''

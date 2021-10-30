@@ -742,7 +742,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>400</width>
+                    <width>401</width>
                     <height>735</height>
                    </rect>
                   </property>
@@ -804,14 +804,14 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>3</number>
+                      <number>4</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
+                        <width>383</width>
                         <height>406</height>
                        </rect>
                       </property>
@@ -1089,7 +1089,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
+                        <width>383</width>
                         <height>406</height>
                        </rect>
                       </property>
@@ -1362,7 +1362,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>365</width>
+                        <width>366</width>
                         <height>476</height>
                        </rect>
                       </property>
@@ -1839,7 +1839,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>378</width>
+                        <width>381</width>
                         <height>599</height>
                        </rect>
                       </property>
@@ -2458,7 +2458,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>365</width>
+                        <width>366</width>
                         <height>514</height>
                        </rect>
                       </property>
@@ -2543,12 +2543,18 @@
                            </widget>
                           </item>
                           <item row="7" column="1">
-                           <widget class="MySpinBox" name="AutoInterpScalePredictSizeSelector">
+                           <widget class="MySpinBox" name="InterpBeforeResizeSelector">
                             <property name="minimum">
-                             <number>1</number>
+                             <number>100</number>
+                            </property>
+                            <property name="maximum">
+                             <number>10000</number>
+                            </property>
+                            <property name="singleStep">
+                             <number>50</number>
                             </property>
                             <property name="value">
-                             <number>1</number>
+                             <number>1000</number>
                             </property>
                            </widget>
                           </item>
@@ -2832,7 +2838,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
+                        <width>383</width>
                         <height>406</height>
                        </rect>
                       </property>
@@ -2921,7 +2927,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
+                        <width>383</width>
                         <height>406</height>
                        </rect>
                       </property>
