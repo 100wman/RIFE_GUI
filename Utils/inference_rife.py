@@ -20,7 +20,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         self.ARGS = __args
 
         self.use_auto_scale = self.ARGS.use_rife_auto_scale
-        self.auto_scale_predict_size = self.ARGS.rife_auto_scale_predict_size
+        # self.auto_scale_predict_size = self.ARGS.rife_auto_scale_predict_size
         self.device = None
         self.device_count = torch.cuda.device_count()
         self.model = None

@@ -27,6 +27,7 @@ import psutil
 from sklearn import linear_model
 
 from Utils.StaticParameters import appDir, SupportFormat
+from Utils.xvfi_isolated_test.utils import ArgumentManager
 from skvideo.utils import check_output
 
 
@@ -78,16 +79,18 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.14"
-    version_tag = f"{gui_version} " \
+    gui_version = "3.7.15"
+    version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.9"
+    ols_version = "7.2.10"
     """ 发布前改动以上参数即可 """
 
-    f"""
+    update_log = f"""
+    {version_tag}
     Update Log
-    - Optimize HDR, Non-Quick Extract Mode related encode parameters
-    - Add Error Operation Hint
+    - Add ABME interpolation module for alpha
+    - Update libx265 encode parameters for fast encode 
+    - Organize Structure for XVFI
     """
 
     path_len_limit = 230
@@ -195,7 +198,7 @@ class ArgumentManager:
         self.is_rife_reverse = args.get("is_rife_reverse", False)
         self.use_specific_gpu = args.get("use_specific_gpu", 0)  # !
         self.use_rife_auto_scale = args.get("use_rife_auto_scale", False)
-        self.rife_auto_scale_predict_size = args.get("rife_auto_scale_predict_size", 64)
+        self.rife_interp_before_resize = args.get("rife_interp_before_resize", 0)
         self.use_rife_forward_ensemble = args.get("use_rife_forward_ensemble", False)
         self.use_rife_multi_cards = args.get("use_rife_multi_cards", False)
 
