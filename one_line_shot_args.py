@@ -1029,12 +1029,12 @@ class ReadFlow(IOFlow):
             else:
                 scale = self.vfi_core.get_auto_scale(img0, img1)
 
-        if self.ARGS.rife_interp_before_resize and img0 is not None and img1 is not None:
-            h, w, _ = img0.shape
-            resize = (self.ARGS.rife_interp_before_resize,
-                      int(h / w * self.ARGS.rife_interp_before_resize))
-            img0 = cv2.resize(img0, resize, interpolation=cv2.INTER_LANCZOS4)
-            img1 = cv2.resize(img1, resize, interpolation=cv2.INTER_LANCZOS4)
+        # if self.ARGS.rife_interp_before_resize and img0 is not None and img1 is not None:
+        #     h, w, _ = img0.shape
+        #     resize = (self.ARGS.rife_interp_before_resize,
+        #               int(h / w * self.ARGS.rife_interp_before_resize))
+        #     img0 = cv2.resize(img0, resize, interpolation=cv2.INTER_LANCZOS4)
+        #     img1 = cv2.resize(img1, resize, interpolation=cv2.INTER_LANCZOS4)
 
         self._output_queue.put(
             {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "scale": scale,
@@ -1425,7 +1425,6 @@ class RenderFlow(IOFlow):
 
             if '-s' in output_dict:
                 _output_dict.update({'-s': output_dict['-s']})
-            # TODO 10bit support for SVT encoders
             # if "10bit" in self.ARGS.render_encoder:
             #     _output_dict.update({"-bit-depth": "10"})
             # else:
@@ -1483,7 +1482,6 @@ class RenderFlow(IOFlow):
                         output_dict.update({"--tbr": f'{int(self.ARGS.render_bitrate * 1024)}'})
                 else:
                     """CPU"""
-                    # TODO wait ffmpeg to improve vbr mode for AV1
                     # if 'AV1' in self.ARGS.render_encode_format:
                     #     output_dict.update({"-rc:v": "vbr"})
                     if 'NVENC' in self.ARGS.render_encoder:
@@ -2108,19 +2106,19 @@ class InterpWorkFlow:
             else:
                 w, h = self.ARGS.frame_size
 
-            if self.ARGS.rife_interp_before_resize:
-                ratio = h / w
-                w, h = self.ARGS.rife_interp_before_resize, int(ratio * self.ARGS.rife_interp_before_resize)
+            # if self.ARGS.rife_interp_before_resize:
+            #     ratio = h / w
+            #     w, h = self.ARGS.rife_interp_before_resize, int(ratio * self.ARGS.rife_interp_before_resize)
 
             logger.info(f"Start Interpolation VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
                                    np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
-            logger.info(f"RIFE VRAM Test Success, Resume of workflow ahead")
+            logger.info(f"Interpolation VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
         except Exception as e:
-            logger.error("RIFE VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
+            logger.error("Interpolation VRAM Check Failed, PLS Lower your presets\n" + traceback.format_exc(
                 limit=ArgumentManager.traceback_limit))
             raise e
 
@@ -2155,27 +2153,43 @@ class InterpWorkFlow:
             return
 
         if 'abme' in self.ARGS.rife_model_name.lower():
+            _over_time_reminder_task = OverTimeReminderTask(15, "ABME VFI Module Load Failed",
+                                                            "Import Cracked(>15s so far), Please terminate the process and check your CUDA version according to the manual")
+            self.ARGS.put_overtime_task(_over_time_reminder_task)
             from ABME import inference_abme as inference
             self.vfi_core = inference.ABMEInterpolation(self.ARGS)
             logger.warning("ABME Interpolation Module Loaded, Note that this is alpha only")
+            _over_time_reminder_task.deactive()
+        elif 'xvfi' in self.ARGS.rife_model_name.lower():
+            _over_time_reminder_task = OverTimeReminderTask(15, "XVFI Module Load Failed",
+                                                            "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
+            self.ARGS.put_overtime_task(_over_time_reminder_task)
+            from XVFI import inference_xvfi as inference
+            self.vfi_core = inference.XVFInterpolation(self.ARGS)
+            logger.warning("XVFI Interpolation Module Loaded, Note that this is alpha only")
+            _over_time_reminder_task.deactive()
         else:
+            _over_time_reminder_task = OverTimeReminderTask(15, "RIFE VFI Module Load Failed",
+                                                            "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
+            self.ARGS.put_overtime_task(_over_time_reminder_task)
             if self.ARGS.use_ncnn:
                 self.ARGS.rife_model_name = os.path.basename(self.ARGS.rife_model)
-                from Utils import inference_rife_ncnn as inference
+                from RIFE import inference_rife_ncnn as inference
             else:
                 try:
                     # raise Exception("Load Torch Failed Test")
-                    from Utils import inference_rife as inference
+                    from RIFE import inference_rife as inference
                 except Exception:
                     logger.warning("Import Torch Failed, use NCNN-RIFE instead")
                     logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
                     self.ARGS.use_ncnn = True
                     self.ARGS.rife_model = "rife-v2"
                     self.ARGS.rife_model_name = "rife-v2"
-                    from Utils import inference_rife_ncnn as inference
+                    from RIFE import inference_rife_ncnn as inference
             """Update RIFE Core"""
             self.vfi_core = inference.RifeInterpolation(self.ARGS)
-        self.vfi_core.initiate_algorithm(self.ARGS)
+            _over_time_reminder_task.deactive()
+        self.vfi_core.initiate_algorithm()
 
         if not self.ARGS.use_ncnn:
             self.vram_test()
@@ -2234,24 +2248,25 @@ class InterpWorkFlow:
             self.task_finish()
             return
 
-        """Get SR - Read Flow Task Thread"""
-        self.sr_flow.start()
-
-        """Load RIFE Model"""
-        self.check_interp_prerequisite()
-        self.read_flow.start()
-        self.render_flow.update_validation_flow(self.validation_flow)
-        self.render_flow.start()
-        self.update_progress_flow.start()
-
-        PURE_SCENE_THRESHOLD = 30
-
-        self.check_outside_error()
-        self.read_flow.acquire_initiation_clock()
-        self.render_flow.acquire_initiation_clock()
-        self.update_progress_flow.acquire_initiation_clock()
-
+        """Start Process"""
         try:
+            """Get SR - Read Flow Task Thread"""
+            self.sr_flow.start()
+
+            """Load RIFE Model"""
+            self.read_flow.start()
+            self.update_progress_flow.start()
+            self.check_interp_prerequisite()
+            self.render_flow.update_validation_flow(self.validation_flow)
+            self.render_flow.start()
+
+            PURE_SCENE_THRESHOLD = 30
+
+            self.check_outside_error()
+            self.read_flow.acquire_initiation_clock()
+            self.render_flow.acquire_initiation_clock()
+            self.update_progress_flow.acquire_initiation_clock()
+
             while True:
                 task_acquire_time = time.time()
                 if not self.wait_for_input():

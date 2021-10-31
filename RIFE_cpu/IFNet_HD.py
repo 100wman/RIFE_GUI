@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from model_cpu import warp
+from RIFE_cpu.warplayer import warp
 
 
 device = torch.device("cpu")

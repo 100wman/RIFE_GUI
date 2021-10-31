@@ -13,9 +13,9 @@ class DynFilter(nn.Module):
         filter_localexpand_np = np.reshape(np.eye(np.prod(kernel_size), np.prod(kernel_size)),
                                            (np.prod(kernel_size), 1, kernel_size[0], kernel_size[1]))
         if DDP:
-            self.register_buffer('filter_localexpand', torch.FloatTensor(filter_localexpand_np))  # for DDP model
+            self.register_buffer('filter_localexpand', torch.FloatTensor(filter_localexpand_np))  # for DDP RIFE
         else:
-            self.filter_localexpand = torch.FloatTensor(filter_localexpand_np).cuda()  # for single model
+            self.filter_localexpand = torch.FloatTensor(filter_localexpand_np).cuda()  # for single RIFE
 
     def forward(self, x, filter):
         x_localexpand = []

@@ -1,10 +1,10 @@
 from torch.optim import AdamW
 import torch.optim as optim
 import itertools
-from model_cpu import warp
+from RIFE_cpu import warp
 from torch.nn.parallel import DistributedDataParallel as DDP
-from model_cpu.IFNet_HDv2 import *
-from model_cpu.loss import *
+from RIFE_cpu.IFNet_HDv2 import *
+from RIFE_cpu.loss import *
 
 device = torch.device("cpu")
 

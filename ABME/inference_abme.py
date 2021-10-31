@@ -41,7 +41,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
         self.SynNet = SynthesisNet(False)
 
     # @profile
-    def initiate_algorithm(self, __args=None):
+    def initiate_algorithm(self):
         if self.initiated:
             return
         if not torch.cuda.is_available():
@@ -76,17 +76,10 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
         # self.SynNet.eval()
         self.initiated = True
 
-    # @profile
-    def __make_n_inference(self, img1, img2, scale, n):
-        # resize_param = (1280, 720)  # 1080 / 1.5
+    def __inference(self, img1, img2):
         frame1 = img1
         frame3 = img2
         ori_w, ori_h, _ = frame1.shape
-        # if self.ARGS.rife_interp_before_resize:
-        #     resize_param = (self.ARGS.rife_interp_before_resize,
-        #                     int(ori_h / ori_w * self.ARGS.rife_interp_before_resize))  # 804 / 1.2
-        #     frame1 = cv2.resize(frame1, resize_param, interpolation=cv2.INTER_LANCZOS4)
-        #     frame3 = cv2.resize(frame3, resize_param, interpolation=cv2.INTER_LANCZOS4)
         with torch.no_grad():
             # if self.ARGS.use_rife_fp16:
             #     frame1 = TF.to_tensor(frame1).half()
@@ -162,15 +155,19 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
 
             mid = result.squeeze().mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
             del result
-            # mid = cv2.resize(mid, (ori_w, ori_h), interpolation=cv2.INTER_LANCZOS4)
-            if n == 1:
-                return [mid]
-            first_half = self.__make_n_inference(img1, mid, scale, n=n // 2)
-            second_half = self.__make_n_inference(mid, img2, scale, n=n // 2)
-            if n % 2:
-                return [*first_half, mid, *second_half]
-            else:
-                return [*first_half, *second_half]
+            return mid
+
+    # @profile
+    def __make_n_inference(self, img1, img2, scale, n):
+        mid = self.__inference(img1, img2)
+        if n == 1:
+            return [mid]
+        first_half = self.__make_n_inference(img1, mid, scale, n=n // 2)
+        second_half = self.__make_n_inference(mid, img2, scale, n=n // 2)
+        if n % 2:
+            return [*first_half, mid, *second_half]
+        else:
+            return [*first_half, *second_half]
 
     def generate_n_interp(self, img0, img1, n, scale, debug=False):
         if debug:

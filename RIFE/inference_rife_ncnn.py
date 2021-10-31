@@ -30,7 +30,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         self.tta = self.ARGS.rife_tta_mode
         self.model_path = ""
 
-    def initiate_algorithm(self, __args=None):
+    def initiate_algorithm(self):
         if self.initiated:
             return
         self.initiated = True

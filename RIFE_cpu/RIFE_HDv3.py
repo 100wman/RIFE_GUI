@@ -1,6 +1,14 @@
+import torch
+import torch.nn as nn
+import numpy as np
+from torch.optim import AdamW
+import torch.optim as optim
+import itertools
+from RIFE.warplayer import warp
 from torch.nn.parallel import DistributedDataParallel as DDP
-
-from model.IFNet_HDv2 import *
+from train_log.IFNet_HDv3 import *
+import torch.nn.functional as F
+from RIFE.loss import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -20,13 +28,11 @@ def deconv(in_planes, out_planes, kernel_size=4, stride=2, padding=1):
         nn.PReLU(out_planes)
     )
 
-
 def conv_woact(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=1):
     return nn.Sequential(
         nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride,
                   padding=padding, dilation=dilation, bias=True),
     )
-
 
 class Conv2(nn.Module):
     def __init__(self, in_planes, out_planes, stride=2):
@@ -39,18 +45,16 @@ class Conv2(nn.Module):
         x = self.conv2(x)
         return x
 
-
 c = 32
-
 
 class ContextNet(nn.Module):
     def __init__(self):
         super(ContextNet, self).__init__()
         self.conv0 = Conv2(3, c)
         self.conv1 = Conv2(c, c)
-        self.conv2 = Conv2(c, 2 * c)
-        self.conv3 = Conv2(2 * c, 4 * c)
-        self.conv4 = Conv2(4 * c, 8 * c)
+        self.conv2 = Conv2(c, 2*c)
+        self.conv3 = Conv2(2*c, 4*c)
+        self.conv4 = Conv2(4*c, 8*c)
 
     def forward(self, x, flow):
         x = self.conv0(x)
@@ -76,14 +80,14 @@ class FusionNet(nn.Module):
     def __init__(self):
         super(FusionNet, self).__init__()
         self.conv0 = Conv2(10, c)
-        self.down0 = Conv2(c, 2 * c)
-        self.down1 = Conv2(4 * c, 4 * c)
-        self.down2 = Conv2(8 * c, 8 * c)
-        self.down3 = Conv2(16 * c, 16 * c)
-        self.up0 = deconv(32 * c, 8 * c)
-        self.up1 = deconv(16 * c, 4 * c)
-        self.up2 = deconv(8 * c, 2 * c)
-        self.up3 = deconv(4 * c, c)
+        self.down0 = Conv2(c, 2*c)
+        self.down1 = Conv2(4*c, 4*c)
+        self.down2 = Conv2(8*c, 8*c)
+        self.down3 = Conv2(16*c, 16*c)
+        self.up0 = deconv(32*c, 8*c)
+        self.up1 = deconv(16*c, 4*c)
+        self.up2 = deconv(8*c, 2*c)
+        self.up3 = deconv(4*c, c)
         self.conv = nn.ConvTranspose2d(c, 4, 4, 2, 1)
 
     def forward(self, img0, img1, flow, c0, c1, flow_gt):
@@ -108,26 +112,32 @@ class FusionNet(nn.Module):
 
 
 class Model:
-    def __init__(self, use_multi_cards=False, forward_ensemble=False, tta=0, local_rank=-1):
-        self.forward_ensemble = forward_ensemble
-        self.tta = tta
-        self.use_multi_cards = use_multi_cards
-        if self.use_multi_cards:
-            self.flownet = nn.DataParallel(IFNet())
-            self.contextnet = nn.DataParallel(ContextNet())
-            self.fusionnet = nn.DataParallel(FusionNet())
-        else:
-            self.flownet = IFNet()
-            self.contextnet = ContextNet()
-            self.fusionnet = FusionNet()
+    def __init__(self, local_rank=-1):
+        self.flownet = IFNet()
+        self.contextnet = ContextNet()
+        self.fusionnet = FusionNet()
         self.device()
+        self.optimG = AdamW(itertools.chain(
+            self.flownet.parameters(),
+            self.contextnet.parameters(),
+            self.fusionnet.parameters()), lr=1e-6, weight_decay=1e-5)
+        self.schedulerG = optim.lr_scheduler.CyclicLR(
+            self.optimG, base_lr=1e-6, max_lr=1e-3, step_size_up=8000, cycle_momentum=False)
+        self.epe = EPE()
+        self.ter = Ternary()
+        self.sobel = SOBEL()
         if local_rank != -1:
             self.flownet = DDP(self.flownet, device_ids=[
-                local_rank], output_device=local_rank)
+                               local_rank], output_device=local_rank)
             self.contextnet = DDP(self.contextnet, device_ids=[
-                local_rank], output_device=local_rank)
+                                  local_rank], output_device=local_rank)
             self.fusionnet = DDP(self.fusionnet, device_ids=[
-                local_rank], output_device=local_rank)
+                                 local_rank], output_device=local_rank)
+
+    def train(self):
+        self.flownet.train()
+        self.contextnet.train()
+        self.fusionnet.train()
 
     def eval(self):
         self.flownet.eval()
@@ -149,7 +159,6 @@ class Model:
                 }
             else:
                 return param
-
         if rank <= 0:
             self.flownet.load_state_dict(
                 convert(torch.load('{}/flownet.pkl'.format(path), map_location=device)))
@@ -183,53 +192,56 @@ class Model:
         else:
             return pred
 
-    def calculate_flow(self, img0, img1, scale):
+    def inference(self, img0, img1, scale=1.0):
         imgs = torch.cat((img0, img1), 1)
-        flow, _ = self.flownet(imgs, scale)
-        if self.forward_ensemble:
-            pass
-        return flow, imgs
+        scale_list = [4, 2, 1]
+        flow, _ = self.flownet(imgs, scale_list, scale=scale)
+        res = self.predict(imgs, flow, training=False)
+        return res
 
-    def calculate_prediction(self, img0, img1, scale):
-        flow, imgs = self.calculate_flow(img0, img1, scale)
-        prediction = self.predict(imgs, flow, training=False)
-        return prediction
-
-    def TTA_FRAME(self, img0, img1, iter_time=2, scale=1.0):
-        if iter_time != 0:
-            img0 = self.calculate_prediction(img0, img1, scale)
-            return self.TTA_FRAME(img0, img1, iter_time=iter_time - 1, scale=scale)
+    def update(self, imgs, gt, learning_rate=0, mul=1, training=True, flow_gt=None):
+        for param_group in self.optimG.param_groups:
+            param_group['lr'] = learning_rate
+        if training:
+            self.train()
         else:
-            return img0
-
-    def inference(self, img0, img1, scale=1.0, iter_time=2):
-        if self.tta == 0:
-            return self.TTA_FRAME(img0, img1, 1, scale)
-        elif self.tta == 1:  # side_vector
-            LX = self.TTA_FRAME(img0, img1, iter_time, scale)
-            RX = self.TTA_FRAME(img1, img0, iter_time, scale)
-            return self.TTA_FRAME(LX, RX, 1, scale)
-        elif self.tta == 2:  # mid_vector
-            mid = self.TTA_FRAME(img0, img1, 1, scale)
-            LX = self.TTA_FRAME(img0, mid, iter_time, scale)
-            RX = self.TTA_FRAME(mid, img1, iter_time, scale)
-            return self.TTA_FRAME(LX, RX, 1, scale)
-        elif self.tta == 3:  # mix_vector
-            mid = self.TTA_FRAME(img0, img1, 1, scale)
-            LX = self.TTA_FRAME(img0, mid, iter_time, scale)
-            RX = self.TTA_FRAME(mid, img1, iter_time, scale)
-            m1 = self.TTA_FRAME(LX, RX, 1, scale)
-            LX = self.TTA_FRAME(img0, img1, iter_time, scale)
-            RX = self.TTA_FRAME(img1, img0, iter_time, scale)
-            m2 = self.TTA_FRAME(LX, RX, 1, scale)
-            return self.TTA_FRAME(m1, m2, 1, scale)
+            self.eval()
+        flow, flow_list = self.flownet(imgs)
+        pred, mask, merged_img, warped_img0, warped_img1, warped_img0_gt, warped_img1_gt = self.predict(
+            imgs, flow, flow_gt=flow_gt)
+        loss_ter = self.ter(pred, gt).mean()
+        if training:
+            with torch.no_grad():
+                loss_flow = torch.abs(warped_img0_gt - gt).mean()
+                loss_mask = torch.abs(
+                    merged_img - gt).sum(1, True).float().detach()
+                loss_mask = F.interpolate(loss_mask, scale_factor=0.5, mode="bilinear",
+                                          align_corners=False).detach()
+                flow_gt = (F.interpolate(flow_gt, scale_factor=0.5, mode="bilinear",
+                                         align_corners=False) * 0.5).detach()
+            loss_cons = 0
+            for i in range(4):
+                loss_cons += self.epe(flow_list[i][:, :2], flow_gt[:, :2], 1)
+                loss_cons += self.epe(flow_list[i][:, 2:4], flow_gt[:, 2:4], 1)
+            loss_cons = loss_cons.mean() * 0.01
+        else:
+            loss_cons = torch.tensor([0])
+            loss_flow = torch.abs(warped_img0 - gt).mean()
+            loss_mask = 1
+        loss_l1 = (((pred - gt) ** 2 + 1e-6) ** 0.5).mean()
+        if training:
+            self.optimG.zero_grad()
+            loss_G = loss_l1 + loss_cons + loss_ter
+            loss_G.backward()
+            self.optimG.step()
+        return pred, merged_img, flow, loss_l1, loss_flow, loss_cons, loss_ter, loss_mask
 
 
 if __name__ == '__main__':
-    _img0 = torch.zeros(1, 3, 256, 256).float().to(device)
-    _img1 = torch.tensor(np.random.normal(
-        0, 1, (1, 3, 256, 256))).float().to(device)
-    _imgs = torch.cat((_img0, _img1), 1)
-    model = Model(True, True, 3)
+    img0 = torch.zeros(3, 3, 256, 256).float().to(device)
+    img1 = torch.tensor(np.random.normal(
+        0, 1, (3, 3, 256, 256))).float().to(device)
+    imgs = torch.cat((img0, img1), 1)
+    model = Model()
     model.eval()
-    print(model.inference(_img0, _img1).shape)
+    print(model.inference(imgs).shape)

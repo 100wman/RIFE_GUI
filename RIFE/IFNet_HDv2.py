@@ -1,9 +1,11 @@
 import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from model_cpu import warp
+from RIFE.warplayer import warp
 
-device = torch.device("cpu")
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def conv_wo_act(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=1):
     return nn.Sequential(
@@ -64,17 +66,17 @@ class IFNet(nn.Module):
             x = F.interpolate(x, scale_factor=scale, mode="bilinear", align_corners=False)
         flow0 = self.block0(x)
         F1 = flow0
-        F1_large = F.interpolate(F1, scale_factor=2.0, mode="bilinear", align_corners=False, recompute_scale_factor=False) * 2.0
+        F1_large = F.interpolate(F1, scale_factor=2.0, mode="bilinear", align_corners=False) * 2.0
         warped_img0 = warp(x[:, :3], F1_large[:, :2])
         warped_img1 = warp(x[:, 3:], F1_large[:, 2:4])
         flow1 = self.block1(torch.cat((warped_img0, warped_img1, F1_large), 1))
         F2 = (flow0 + flow1)
-        F2_large = F.interpolate(F2, scale_factor=2.0, mode="bilinear", align_corners=False, recompute_scale_factor=False) * 2.0
+        F2_large = F.interpolate(F2, scale_factor=2.0, mode="bilinear", align_corners=False) * 2.0
         warped_img0 = warp(x[:, :3], F2_large[:, :2])
         warped_img1 = warp(x[:, 3:], F2_large[:, 2:4])
         flow2 = self.block2(torch.cat((warped_img0, warped_img1, F2_large), 1))
         F3 = (flow0 + flow1 + flow2)
-        F3_large = F.interpolate(F3, scale_factor=2.0, mode="bilinear", align_corners=False, recompute_scale_factor=False) * 2.0
+        F3_large = F.interpolate(F3, scale_factor=2.0, mode="bilinear", align_corners=False) * 2.0
         warped_img0 = warp(x[:, :3], F3_large[:, :2])
         warped_img1 = warp(x[:, 3:], F3_large[:, 2:4])
         flow3 = self.block3(torch.cat((warped_img0, warped_img1, F3_large), 1))
@@ -82,3 +84,12 @@ class IFNet(nn.Module):
         if scale != 1.0:
             F4 = F.interpolate(F4, scale_factor=1 / scale, mode="bilinear", align_corners=False) / scale
         return F4, [F1, F2, F3, F4]
+
+if __name__ == '__main__':
+    img0 = torch.zeros(3, 3, 256, 256).float().to(device)
+    img1 = torch.tensor(np.random.normal(
+        0, 1, (3, 3, 256, 256))).float().to(device)
+    imgs = torch.cat((img0, img1), 1)
+    flownet = IFNet()
+    flow, _ = flownet(imgs)
+    print(flow.shape)

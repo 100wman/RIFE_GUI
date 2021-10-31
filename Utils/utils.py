@@ -27,7 +27,6 @@ import psutil
 from sklearn import linear_model
 
 from Utils.StaticParameters import appDir, SupportFormat
-from Utils.xvfi_isolated_test.utils import ArgumentManager
 from skvideo.utils import check_output
 
 
@@ -79,18 +78,19 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.15"
+    gui_version = "3.8.0"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.2.10"
+    ols_version = "7.3.0"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add ABME interpolation module for alpha
-    - Update libx265 encode parameters for fast encode 
-    - Organize Structure for XVFI
+    - Add XVFI Interpolation
+    - Optimize Utils Structure to shorten compilation time
+    - Optimize Options for ABME and XVFI(disable certain options)
+    - 
     """
 
     path_len_limit = 230

@@ -76,6 +76,7 @@ class UiAboutDialog(QDialog, SVFI_about.Ui_Dialog):
         _app.installTranslator(translator)  # 重新翻译主界面
         self.retranslateUi(self)
 
+
 class UiPreviewArgsDialog(QDialog, SVFI_preview_args.Ui_Dialog):
     def __init__(self, parent=None):
         super(UiPreviewArgsDialog, self).__init__(parent)
@@ -644,7 +645,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if 'torchvision' not in now_text:
                 self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
 
-        dup_keys_list = ["Process at", "frame=", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
+        dup_keys_list = ["Process at", "0frames", "frame=", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
                          "AppID", "SteamInternal", "torchvision"]
 
         data = data_subprocess
@@ -757,8 +758,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.LoadCurrentSettings.setVisible(False)
         self.ShortCutGroup.setVisible(False)
         self.LockWHChecker.setVisible(False)
-        # self.AutoInterpScaleReminder.setVisible(False)
-        # self.InterpBeforeResizeSelector.setVisible(False)
+        self.AutoInterpScaleReminder.setVisible(False)
+        self.InterpBeforeResizeSelector.setVisible(False)
         self.AiSrMode.setVisible(False)
         self.SrModeLabel.setVisible(False)
         self.FastDenoiseChecker.setVisible(False)
@@ -1963,6 +1964,25 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.on_ExpSelecter_currentTextChanged()
 
     @pyqtSlot(str)
+    def on_ModuleSelector_currentTextChanged(self):
+        current_model = self.ModuleSelector.currentText()
+        """
+        000 = XVFI, ABME, RIFE
+        """
+        current_model_index = 0b001  # default is RIFE
+        if 'abme' in current_model.lower():
+            current_model_index = 0b010
+        elif 'xvfi' in current_model.lower():
+            current_model_index = 0b100
+        self.InterpScaleSelector.setEnabled(0b001 & current_model_index)
+        self.InterpScaleReminder.setEnabled(0b001 & current_model_index)
+        self.TtaModeZone.setEnabled(0b001 & current_model_index)
+        self.UseMultiCardsChecker.setEnabled(0b001 & current_model_index)
+        self.ForwardEnsembleChecker.setEnabled(0b001 & current_model_index)
+        self.AutoInterpScaleChecker.setEnabled(0b001 & current_model_index)
+        pass
+
+    @pyqtSlot(str)
     def on_SettingsPresetsInputs_currentTextChanged(self):
         if self.SettingsPresetsInputs.currentIndex() == 1:
             self.SettingsPresetsFluency.setEnabled(False)
@@ -2262,7 +2282,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         if self.rife_thread is not None:
-            self.function_show_pending_dialog("Terminating...", _translate("", "强制结束补帧进程")+"...")
+            self.function_show_pending_dialog("Terminating...", _translate("", "强制结束补帧进程") + "...")
             self.rife_thread.kill_proc_exec()
             self.function_finish_pending_dialog("", True)
             self.on_PauseProcess_clicked(reset=True)
