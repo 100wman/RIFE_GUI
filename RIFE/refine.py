@@ -1,5 +1,5 @@
-from model.warplayer import warp
-from model.loss import *
+from RIFE.warplayer import warp
+from RIFE.loss import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

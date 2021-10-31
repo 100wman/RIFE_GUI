@@ -7,8 +7,8 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 
-from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
 from Utils.StaticParameters import appDir
+from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
 
 warnings.filterwarnings("ignore")
 
@@ -29,7 +29,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         self.tta_mode = self.ARGS.rife_tta_mode
         self.tta_iter = self.ARGS.rife_tta_iter
 
-    def initiate_algorithm(self, __args=None):
+    def initiate_algorithm(self):
         if self.initiated:
             return
 
@@ -59,14 +59,14 @@ class RifeInterpolation(VideoFrameInterpolationBase):
             self.model_path = self.ARGS.rife_model
 
         try:
-            from model.RIFE_HDv2 import Model
+            from RIFE.RIFE_HDv2 import Model
             model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
                           forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
             model.load_model(self.model_path, -1 if not self.ARGS.use_rife_multi_cards else 0)
             self.model_version = 2
             print("INFO - Loaded v2.x HD model.")
         except:
-            from model.RIFE_HDv3 import Model
+            from RIFE.RIFE_HDv3 import Model
             model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
                           forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
             model.load_model(self.model_path, -1)
@@ -131,7 +131,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         """
 
         try:
-            img_torch = torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(0)
+            img_torch = torch.from_numpy(img).to(self.device, non_blocking=True).permute(2, 0, 1).unsqueeze(0)
             if self.ARGS.use_rife_fp16:
                 img_torch = img_torch.half() / 255.
             else:
@@ -167,9 +167,11 @@ class RifeInterpolation(VideoFrameInterpolationBase):
     def _get_auto_scale_to_tensor(self, *imgs):
         if self.ARGS.use_rife_fp16:  # 是否为半精度
             return [
-                torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(0).half() / 255.
+                torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(
+                    0).half() / 255.
                 for img in imgs]
-        return [torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(0).float() / 255.
+        return [torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(
+            0).float() / 255.
                 for img in imgs]
 
     def get_auto_scale(self, i0, i1):
@@ -177,7 +179,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         max_distance = 0
         select_scale = 0.5
         for scale in scale_range:
-            pwh = int(32/scale)
+            pwh = int(32 / scale)
             t0 = cv2.resize(i0, (pwh, pwh))
             t1 = cv2.resize(i1, (pwh, pwh))
             I0, I1 = self._get_auto_scale_to_tensor(t0, t1)

@@ -1,16 +1,18 @@
 from __future__ import division
-import os, glob, sys, torch, shutil, random, math, time, cv2
-import numpy as np
-import torch.utils.data as data
-import torch.nn as nn
-import pandas as pd
-import torch.nn.functional as F
+
+import glob
+import os
+import random
+import shutil
 from datetime import datetime
-from torch.nn import init
+
+import cv2
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.utils.data as data
 # from skimage. import compare_ssim
-from skimage.metrics import structural_similarity
-from torch.autograd import Variable
-from torchvision import models
+from torch.nn import init
 
 
 class save_manager():
@@ -518,217 +520,6 @@ class ProgressMeter(object):
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
 
 
-def metrics_evaluation_X_Test(pred_save_path, test_data_path, metrics_types, flow_flag=False, multiple=8, server=None):
-    """
-        pred_save_path = './test_img_dir/XVFInet_exp1/epoch_00099' when 'args.epochs=100'
-        test_data_path = ex) 'F:/Jihyong/4K_1000fps_dataset/VIC_4K_1000FPS/X_TEST'
-            format: -type1
-                        -scene1
-                            :
-                        -scene5
-                    -type2
-                            :
-                    -type3
-                        :
-                        -scene5
-        "metrics_types": ["PSNR", "SSIM", "LPIPS", "tOF", "tLP100"]
-        "flow_flag": option for saving motion visualization
-        "final_test_type": ['first_interval', 1, 2, 3, 4]
-        "multiple": x4, x8, x16, x32 for interpolation
-     """
-
-    pred_framesPath = []
-    for type_folder in sorted(glob.glob(os.path.join(pred_save_path, '*/'))):  # [type1,type2,type3,...]
-        for scene_folder in sorted(glob.glob(type_folder + '*/')):  # [scene1,scene2,..]
-            scene_framesPath = []
-            for frame_path in sorted(glob.glob(scene_folder + '*.png')):
-                scene_framesPath.append(frame_path)
-            pred_framesPath.append(scene_framesPath)
-    if len(pred_framesPath) == 0:
-        raise (RuntimeError("Found 0 files in " + pred_save_path + "\n"))
-
-    # GT_framesPath = make_2D_dataset_X_Test(test_data_path, multiple, t_step_size=32)
-    # pred_framesPath = make_2D_dataset_X_Test(pred_save_path, multiple, t_step_size=32)
-
-    # ex) pred_save_path: './test_img_dir/XVFInet_exp1/epoch_00099' when 'args.epochs=100'
-    # ex) framesPath: [['./VIC_4K_1000FPS/VIC_Test/Fast/003_TEST_Fast/00000.png',...], ..., []] 2D List, len=30
-    # ex) scenesFolder: ['Fast/003_TEST_Fast',...]
-
-    keys = metrics_types
-    len_dict = dict.fromkeys(keys, 0)
-    Total_avg_dict = dict.fromkeys(["TotalAvg_" + _ for _ in keys], 0)
-    Type1_dict = dict.fromkeys(["Type1Avg_" + _ for _ in keys], 0)
-    Type2_dict = dict.fromkeys(["Type2Avg_" + _ for _ in keys], 0)
-    Type3_dict = dict.fromkeys(["Type3Avg_" + _ for _ in keys], 0)
-
-    # LPIPSnet = dm.DistModel()
-    # LPIPSnet.initialize(model='net-lin', net='alex', use_gpu=True)
-
-    total_list_dict = {}
-    key_str = 'Metrics -->'
-    for key_i in keys:
-        total_list_dict[key_i] = []
-        key_str += ' ' + str(key_i)
-    key_str += ' will be measured.'
-    print(key_str)
-
-    for scene_idx, scene_folder in enumerate(pred_framesPath):
-        per_scene_list_dict = {}
-        for key_i in keys:
-            per_scene_list_dict[key_i] = []
-        pred_candidate = pred_framesPath[scene_idx]  # get all frames in pred_framesPath
-        # GT_candidate = GT_framesPath[scene_idx]  # get 4800 frames
-        # num_pred_frame_per_folder = len(pred_candidate)
-
-        # save_path = os.path.join(pred_save_path, pred_scenesFolder[scene_idx])
-        save_path = scene_folder[0]
-        # './test_img_dir/XVFInet_exp1/epoch_00099/type1/scene1'
-
-        # excluding both frame0 and frame1 (multiple of 32 indices)
-        for frameIndex, pred_frame in enumerate(pred_candidate):
-            # if server==87:
-            # GTinterFrameIdx = pred_frame.split('/')[-1]  # ex) 8, when multiple = 4, # 87 server
-            # else:
-            # GTinterFrameIdx = pred_frame.split('\\')[-1]  # ex) 8, when multiple = 4
-            # if not (GTinterFrameIdx % 32) == 0:
-            if frameIndex > 0 and frameIndex < multiple:
-                """ only compute predicted frames (excluding multiples of 32 indices), ex) 8, 16, 24, 40, 48, 56, ... """
-                output_img = cv2.imread(pred_frame).astype(np.float32)  # BGR, [0,255]
-                target_img = cv2.imread(pred_frame.replace(pred_save_path, test_data_path)).astype(
-                    np.float32)  # BGR, [0,255]
-                pred_frame_split = pred_frame.split('/')
-                msg = "[x%d] frame %s, " % (
-                multiple, os.path.join(pred_frame_split[-3], pred_frame_split[-2], pred_frame_split[-1]))  # per frame
-
-                if "tOF" in keys:  # tOF
-                    # if (GTinterFrameIdx % 32) == int(32/multiple):
-                    # if (frameIndex % multiple) == 1:
-                    if frameIndex == 1:
-                        # when first predicted frame in each interval
-                        pre_out_grey = cv2.cvtColor(cv2.imread(pred_candidate[0]).astype(np.float32),
-                                                    cv2.COLOR_BGR2GRAY)  #### CAUTION BRG
-                        # pre_tar_grey = cv2.cvtColor(cv2.imread(pred_candidate[0].replace(pred_save_path, test_data_path)), cv2.COLOR_BGR2GRAY)  #### CAUTION BRG
-                        pre_tar_grey = pre_out_grey  #### CAUTION BRG
-
-                    # if not H_match_flag or not W_match_flag:
-                    #    pre_tar_grey = pre_tar_grey[:new_t_H, :new_t_W, :]
-
-                    # pre_tar_grey = pre_out_grey
-
-                    output_grey = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
-                    target_grey = cv2.cvtColor(target_img, cv2.COLOR_BGR2GRAY)
-
-                    target_OF = cv2.calcOpticalFlowFarneback(pre_tar_grey, target_grey, None, 0.5, 3, 15, 3, 5, 1.2, 0)
-                    output_OF = cv2.calcOpticalFlowFarneback(pre_out_grey, output_grey, None, 0.5, 3, 15, 3, 5, 1.2, 0)
-                    # target_OF, ofy, ofx = crop_8x8(target_OF) #check for size reason
-                    # output_OF, ofy, ofx = crop_8x8(output_OF)
-                    OF_diff = np.absolute(target_OF - output_OF)
-                    if flow_flag:
-                        """ motion visualization """
-                        flow_path = save_path + '_tOF_flow'
-                        check_folder(flow_path)
-                        # './test_img_dir/XVFInet_exp1/epoch_00099/Fast/003_TEST_Fast_tOF_flow'
-                        tOFpath = os.path.join(flow_path, "tOF_flow_%05d.png" % (GTinterFrameIdx))
-                        # ex) "./test_img_dir/epoch_005/Fast/003_TEST_Fast/00008_tOF" when start_idx=0, multiple=4, frameIndex=0
-                        hsv = np.zeros_like(output_img)  # check for size reason
-                        hsv[..., 1] = 255
-                        mag, ang = cv2.cartToPolar(OF_diff[..., 0], OF_diff[..., 1])
-                        # print("tar max %02.6f, min %02.6f, avg %02.6f" % (mag.max(), mag.min(), mag.mean()))
-                        maxV = 0.4
-                        mag = np.clip(mag, 0.0, maxV) / maxV
-                        hsv[..., 0] = ang * 180 / np.pi / 2
-                        hsv[..., 2] = mag * 255.0  #
-                        bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-                        cv2.imwrite(tOFpath, bgr)
-                        print("png for motion visualization has been saved in [%s]" %
-                              (flow_path))
-                    OF_diff_tmp = np.sqrt(np.sum(OF_diff * OF_diff, axis=-1)).mean()  # l1 vector norm
-                    # OF_diff, ofy, ofx = crop_8x8(OF_diff)
-                    total_list_dict["tOF"].append(OF_diff_tmp)
-                    per_scene_list_dict["tOF"].append(OF_diff_tmp)
-                    msg += "tOF %02.2f, " % (total_list_dict["tOF"][-1])
-
-                    pre_out_grey = output_grey
-                    pre_tar_grey = target_grey
-
-                # target_img, ofy, ofx = crop_8x8(target_img)
-                # output_img, ofy, ofx = crop_8x8(output_img)
-
-                if "PSNR" in keys:  # psnr
-                    psnr_tmp = psnr(target_img, output_img)
-                    total_list_dict["PSNR"].append(psnr_tmp)
-                    per_scene_list_dict["PSNR"].append(psnr_tmp)
-                    msg += "PSNR %02.2f" % (total_list_dict["PSNR"][-1])
-
-                if "SSIM" in keys:  # ssim
-                    ssim_tmp = ssim_bgr(target_img, output_img)
-                    total_list_dict["SSIM"].append(ssim_tmp)
-                    per_scene_list_dict["SSIM"].append(ssim_tmp)
-
-                    msg += ", SSIM %02.2f" % (total_list_dict["SSIM"][-1])
-
-                # msg += ", crop (%d, %d)" % (ofy, ofx) # per frame (not scene)
-                print(msg)
-
-        """ after finishing one scene """
-        per_scene_pd_dict = {}  # per scene
-        for cur_key in keys:
-            # save_path = './test_img_dir/XVFInet_exp1/epoch_00099/Fast/003_TEST_Fast'
-            num_data = cur_key + "_[x%d]_[%s]" % (multiple, save_path.split('/')[-2])  # '003_TEST_Fast'
-            # num_data => ex) PSNR_[x8]_[041_TEST_Fast]
-            """ per scene """
-            per_scene_cur_list = np.float32(per_scene_list_dict[cur_key])
-            per_scene_pd_dict[num_data] = pd.Series(per_scene_cur_list)  # dictionary
-            per_scene_num_data_sum = per_scene_cur_list.sum()
-            per_scene_num_data_len = per_scene_cur_list.shape[0]
-            per_scene_num_data_mean = per_scene_num_data_sum / per_scene_num_data_len
-            """ accumulation """
-            cur_list = np.float32(total_list_dict[cur_key])
-            num_data_sum = cur_list.sum()
-            num_data_len = cur_list.shape[0]  # accum
-            num_data_mean = num_data_sum / num_data_len
-            print(" %s, (per scene) max %02.4f, min %02.4f, avg %02.4f" %
-                  (num_data, per_scene_cur_list.max(), per_scene_cur_list.min(), per_scene_num_data_mean))  #
-
-            Total_avg_dict["TotalAvg_" + cur_key] = num_data_mean  # accum, update every iteration.
-
-            len_dict[cur_key] = num_data_len  # accum, update every iteration.
-
-            # folder_dict["FolderAvg_" + cur_key] += num_data_mean
-            if scene_idx < 5:
-                Type1_dict["Type1Avg_" + cur_key] += per_scene_num_data_mean
-            elif (scene_idx >= 5) and (scene_idx < 10):
-                Type2_dict["Type2Avg_" + cur_key] += per_scene_num_data_mean
-            elif (scene_idx >= 10) and (scene_idx < 15):
-                Type3_dict["Type3Avg_" + cur_key] += per_scene_num_data_mean
-
-        mode = 'w' if scene_idx == 0 else 'a'
-
-        total_csv_path = os.path.join(pred_save_path, "total_metrics.csv")
-        # ex) pred_save_path: './test_img_dir/XVFInet_exp1/epoch_00099' when 'args.epochs=100'
-        pd.DataFrame(per_scene_pd_dict).to_csv(total_csv_path, mode=mode)
-
-    """ combining all results after looping all scenes. """
-    for key in keys:
-        Total_avg_dict["TotalAvg_" + key] = pd.Series(
-            np.float32(Total_avg_dict["TotalAvg_" + key]))  # replace key (update)
-        Type1_dict["Type1Avg_" + key] = pd.Series(np.float32(Type1_dict["Type1Avg_" + key] / 5))  # replace key (update)
-        Type2_dict["Type2Avg_" + key] = pd.Series(np.float32(Type2_dict["Type2Avg_" + key] / 5))  # replace key (update)
-        Type3_dict["Type3Avg_" + key] = pd.Series(np.float32(Type3_dict["Type3Avg_" + key] / 5))  # replace key (update)
-
-        print("%s, total frames %d, total avg %02.4f, Type1 avg %02.4f, Type2 avg %02.4f, Type3 avg %02.4f" %
-              (key, len_dict[key], Total_avg_dict["TotalAvg_" + key],
-               Type1_dict["Type1Avg_" + key], Type2_dict["Type2Avg_" + key], Type3_dict["Type3Avg_" + key]))
-
-    pd.DataFrame(Total_avg_dict).to_csv(total_csv_path, mode='a')
-    pd.DataFrame(Type1_dict).to_csv(total_csv_path, mode='a')
-    pd.DataFrame(Type2_dict).to_csv(total_csv_path, mode='a')
-    pd.DataFrame(Type3_dict).to_csv(total_csv_path, mode='a')
-
-    print("csv file of all metrics for all scenes has been saved in [%s]" %
-          (total_csv_path))
-    print("Finished.")
-
 
 def to_uint8(x, vmin, vmax):
     ##### color space transform, originally from https://github.com/yhjo09/VSR-DUF #####
@@ -749,16 +540,6 @@ def psnr(img_true, img_pred):
     if rmse == 0:
         return float('inf')
     return 20 * np.log10(255. / rmse)
-
-
-def ssim_bgr(img_true, img_pred):  ##### SSIM for BGR, not RGB #####
-    """
-    # img format : [h,w,c], BGR
-    """
-    Y_true = _rgb2ycbcr(to_uint8(img_true, 0, 255)[:, :, ::-1], 255)[:, :, 0]
-    Y_pred = _rgb2ycbcr(to_uint8(img_pred, 0, 255)[:, :, ::-1], 255)[:, :, 0]
-    # return compare_ssim(Y_true, Y_pred, data_range=Y_pred.max() - Y_pred.min())
-    return structural_similarity(Y_true, Y_pred, data_range=Y_pred.max() - Y_pred.min())
 
 
 def im2tensor(image, imtype=np.uint8, cent=1., factor=255. / 2.):

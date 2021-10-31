@@ -2,8 +2,8 @@ import time
 
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from model.IFNet_HDv3 import *
-from model.loss import *
+from RIFE.IFNet_HDv3 import *
+from RIFE.loss import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
