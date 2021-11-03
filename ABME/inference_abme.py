@@ -76,6 +76,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
         # self.SynNet.eval()
         self.initiated = True
 
+    # @profile
     def __inference(self, img1, img2):
         frame1 = img1
         frame3 = img2
@@ -159,7 +160,15 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
 
     # @profile
     def __make_n_inference(self, img1, img2, scale, n):
-        mid = self.__inference(img1, img2)
+        if self.is_interlace_inference:
+            pieces_img1 = self.split_input_image(img1)
+            pieces_img2 = self.split_input_image(img2)
+            pieces_mid = list()
+            for piece_img1, piece_img2 in zip(pieces_img1, pieces_img2):
+                pieces_mid.append(self.__inference(piece_img1, piece_img2))
+            mid = self.sew_input_pieces(pieces_mid, *img1.shape)
+        else:
+            mid = self.__inference(img1, img2)
         if n == 1:
             return [mid]
         first_half = self.__make_n_inference(img1, mid, scale, n=n // 2)
@@ -181,7 +190,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
 
 
 if __name__ == "__main__":
-    _abme_arg = ArgumentManager({'rife_interp_before_resize': 800})
+    _abme_arg = ArgumentManager({'rife_interlace_inference': 1})
     _abme_instance = ABMEInterpolation(_abme_arg)
     _abme_instance.initiate_algorithm()
     test_dir = r"D:\60-fps-Project\input or ref\Test\[6]XVFI_input"
@@ -189,9 +198,9 @@ if __name__ == "__main__":
     img_paths = [os.path.join(test_dir, i) for i in os.listdir(test_dir)]
     img_paths = [img_paths[i:i + 2] for i in range(0, len(img_paths), 2)]
     for i, imgs in enumerate(img_paths):
-        resize = (1280, 720)
-        _img0, _img1 = cv2.resize(cv2.imread(imgs[0]), resize), cv2.resize(cv2.imread(imgs[1]), resize)
-        # _img0, _img1 = cv2.imread(imgs[0]), cv2.imread(imgs[1])
+        # resize = (1280, 720)
+        # _img0, _img1 = cv2.resize(cv2.imread(imgs[0]), resize), cv2.resize(cv2.imread(imgs[1]), resize)
+        _img0, _img1 = cv2.imread(imgs[0]), cv2.imread(imgs[1])
         _output = _abme_instance.generate_n_interp(_img0, _img1, 1, 4)
         od = os.path.join(output_dir, f"{i:0>2d}")
         os.makedirs(od, exist_ok=True)

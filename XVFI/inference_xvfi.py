@@ -13,6 +13,7 @@ from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
 from XVFI.XVFInet import XVFInet
 from XVFI.utils import weights_init
 from torch.autograd import Variable
+# from line_profiler_pycharm import profile
 
 
 warnings.filterwarnings("ignore")
@@ -75,7 +76,7 @@ class XVFInterpolation(VideoFrameInterpolationBase):
         self.model_net.eval()
 
     # @profile
-    def __make_n_inference(self, img1, img2, scale, n):
+    def __inference(self, img1, img2, n):
         with torch.no_grad():
             multiple = n + 1
             t = np.linspace((1 / multiple), (1 - (1 / multiple)), (multiple - 1))
@@ -84,9 +85,9 @@ class XVFInterpolation(VideoFrameInterpolationBase):
             for testIndex, t_value in enumerate(t):
                 t_value = torch.tensor(np.expand_dims(np.array([t_value], dtype=np.float32), 0))
                 t_value = Variable(t_value.to(self.device))
-                input_frames = np.array([[img1, img2]])
-                input_frames = torch.from_numpy(input_frames).to(self.device).permute(0, 4, 1, 2,
-                                                                                      3) / 255.  # [1, T, C, H, W]
+                i1 = torch.from_numpy(img1).to(self.device)
+                i2 = torch.from_numpy(img2).to(self.device)
+                input_frames = torch.stack((i1, i2), dim=0).unsqueeze(0).permute(0, 4, 1, 2, 3) / 255.
                 input_frames = Variable(input_frames)
                 B, C, T, H, W = input_frames.size()
                 H_padding = (divide - H % divide) % divide
@@ -100,10 +101,25 @@ class XVFInterpolation(VideoFrameInterpolationBase):
                 pred_frameT = pred_frameT.data.squeeze().float().clamp_(0, 1).permute(1, 2, 0).mul(
                     255.)  # .cpu().numpy()
                 pred_frameT = torch.round(pred_frameT)
-                output_img = pred_frameT.detach().cpu().numpy().astype(np.uint8)
+                output_img = pred_frameT.detach().cpu().numpy()
 
                 output_imgs.append(output_img)
             return output_imgs
+
+    # @profile
+    def __make_n_inference(self, img1, img2, scale, n):
+        if self.is_interlace_inference:
+            pieces_img1 = self.split_input_image(img1)
+            pieces_img2 = self.split_input_image(img2)
+            pieces_mids = list()
+            output_imgs = list()
+            for piece_img1, piece_img2 in zip(pieces_img1, pieces_img2):
+                pieces_mids.append(self.__inference(piece_img1, piece_img2, n))
+            for pieces in zip(*pieces_mids):
+                output_imgs.append(self.sew_input_pieces(pieces, *img1.shape))
+        else:
+            output_imgs = self.__inference(img1, img2, n)
+        return output_imgs
 
     def generate_n_interp(self, img0, img1, n, scale, debug=False):
         if debug:
@@ -121,8 +137,9 @@ if __name__ == "__main__":
     #      "rife_model_name": r"XVFInet_X4K1000FPS_exp1_latest.pt",
     #      })
     _xvfi_arg = ArgumentManager(
-        {"rife_model_dir": r"D:\60-fps-Project\Projects\XVFI\checkpoint_dir\XVFInet_Vimeo_exp1",
-         "rife_model_name": r"XVFInet_Vimeo_exp1_latest.pt",
+        {"rife_model_dir": r"D:\60-fps-Project\Projects\XVFI\checkpoint_dir",
+         "rife_model_name": r"XVFInet_Vimeo_exp1",
+         "rife_interlace_inference": 1
          })
     _xvfi_instance = XVFInterpolation(_xvfi_arg)
     _xvfi_instance.initiate_algorithm()
@@ -131,11 +148,11 @@ if __name__ == "__main__":
     img_paths = [os.path.join(test_dir, i) for i in os.listdir(test_dir)]
     img_paths = [img_paths[i:i + 2] for i in range(0, len(img_paths), 2)]
     for i, imgs in enumerate(img_paths):
-        resize = (2000, 1000)
+        # resize = (2000, 1000)
         h, w, c = cv2.imread(imgs[0]).shape
         original_resolution = (w, h)
-        # _img0, _img1 = cv2.imread(imgs[0]), cv2.imread(imgs[1])
-        _img0, _img1 = cv2.resize(cv2.imread(imgs[0]), resize), cv2.resize(cv2.imread(imgs[1]), resize)
+        _img0, _img1 = cv2.imread(imgs[0]), cv2.imread(imgs[1])
+        # _img0, _img1 = cv2.resize(cv2.imread(imgs[0]), resize), cv2.resize(cv2.imread(imgs[1]), resize)
         _output = _xvfi_instance.generate_n_interp(_img0, _img1, 4, 4)
         od = os.path.join(output_dir, f"{i:0>2d}")
         os.makedirs(od, exist_ok=True)
