@@ -804,15 +804,15 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>4</number>
+                      <number>3</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
-                        <height>406</height>
+                        <width>246</width>
+                        <height>202</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1089,8 +1089,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
-                        <height>406</height>
+                        <width>283</width>
+                        <height>234</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1362,7 +1362,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>365</width>
+                        <width>285</width>
                         <height>476</height>
                        </rect>
                       </property>
@@ -2115,7 +2115,12 @@
                                </item>
                                <item>
                                 <property name="text">
-                                 <string>Standard BT2020</string>
+                                 <string>Custom HDR</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>HDR10</string>
                                 </property>
                                </item>
                                <item>
@@ -2457,7 +2462,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-25</y>
+                        <y>0</y>
                         <width>365</width>
                         <height>514</height>
                        </rect>
@@ -2838,8 +2843,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
-                        <height>406</height>
+                        <width>256</width>
+                        <height>152</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2927,8 +2932,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
-                        <height>406</height>
+                        <width>165</width>
+                        <height>373</height>
                        </rect>
                       </property>
                       <attribute name="label">

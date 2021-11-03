@@ -16,7 +16,7 @@ import psutil
 import tqdm
 
 from Utils.LicenseModule import EULAWriter
-from Utils.StaticParameters import appDir, SupportFormat
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE
 from Utils.utils import ArgumentManager, DefaultConfigParser, Tools, VideoInfoProcessor, \
     ImageRead, ImageWrite, TransitionDetection_ST, \
     VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, \
@@ -111,7 +111,7 @@ class TaskArgumentManager(ArgumentManager):
             f"Check Input Source: "
             f"FPS: {self.input_fps} -> {self.target_fps}, FRAMES_CNT: {self.all_frames_cnt}, "
             f"INTERP_TIMES: {self.interp_times}, "
-            f"HDR: {self.hdr_mode}, FRAME_SIZE: {self.frame_size}, QUEUE_LEN: {self.frames_queue_len}, "
+            f"HDR: {self.hdr_mode.name}, FRAME_SIZE: {self.frame_size}, QUEUE_LEN: {self.frames_queue_len}, "
             f"INPUT_EXT: {self.input_ext}, OUTPUT_EXT: {self.output_ext}")
 
         self.main_error = list()
@@ -149,7 +149,7 @@ class TaskArgumentManager(ArgumentManager):
 
         """Set interpolation exp related to hdr mode"""
         self.interp_times = round(self.target_fps / self.input_fps)
-        if self.hdr_mode == 3 or self.hdr_mode == 2:
+        if self.hdr_mode in [HDR_STATE.HDR10_PLUS, HDR_STATE.DOLBY_VISION]:
             self.target_fps = self.interp_times * self.input_fps
             logger.info(f"DoVi or HDR10+ Content Detected, target fps is changed to {self.target_fps}")
 
@@ -182,10 +182,9 @@ class TaskArgumentManager(ArgumentManager):
             raise OSError(f"SVFI can't afford input exceeding {self.max_frame_cnt} frames")
 
     def __update_hdr_mode(self):
-        if self.hdr_mode == 0:  # Auto
-            hdr_mode_map = {-1: "-", 0: "-", 1: "Standard BT2020", 2: "HDR10+", 3: "Dolby Vision", 4: "HLG", }
-            logger.info(f"Auto Sets HDR mode to {hdr_mode_map.get(self.video_info_instance.hdr_mode, '-')}")
+        if self.hdr_mode == HDR_STATE.AUTO:  # Auto
             self.hdr_mode = self.video_info_instance.hdr_mode
+            logger.info(f"Auto Sets HDR mode to {self.hdr_mode.name}")
             # no hdr at -1, 0 checked and None, 1 hdr, 2 hdr10, 3 DV, 4 HLG
             # hdr_check_status indicates the final process mode for (hdr) input
 
@@ -515,7 +514,7 @@ class ReadFlow(IOFlow):
         """Quick Extraction"""
         if not self.ARGS.is_quick_extract and not frame_check:
             # vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
-            if self.ARGS.hdr_mode <= 0:
+            if self.ARGS.hdr_mode == HDR_STATE.NONE:
                 """Only BT709 could zscale,,, to avoid banding"""
                 vf_args += f",zscale=min=709:m=709,format=yuv444p10le,format=rgb48be,format=rgb24"
             output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
@@ -1077,10 +1076,10 @@ class RenderFlow(IOFlow):
         self.validation_flow = None
 
     def __modify_hdr_params(self):
-        if self.ARGS.is_img_input or self.ARGS.hdr_mode == 1:  # img input or ordinary hdr
+        if self.ARGS.is_img_input or self.ARGS.hdr_mode == HDR_STATE.CUSTOM_HDR:  # img input or ordinary hdr
             return
 
-        if self.ARGS.hdr_mode == 2:
+        if self.ARGS.hdr_mode in [HDR_STATE.HDR10, HDR_STATE.HDR10_PLUS]:
             """HDR10"""
             self.ARGS.render_encoder = "CPU"
             if "H265" in self.ARGS.render_encode_format:
@@ -1088,7 +1087,7 @@ class RenderFlow(IOFlow):
             elif "H264" in self.ARGS.render_encode_format:
                 self.ARGS.render_encode_format = "H264, 10bit"
             self.ARGS.render_encoder_preset = "medium"
-        elif self.ARGS.hdr_mode == 4:
+        elif self.ARGS.hdr_mode == HDR_STATE.HLG:
             """HLG"""
             self.ARGS.render_encode_format = "H265, 10bit"
             self.ARGS.render_encoder = "CPU"
@@ -1157,7 +1156,7 @@ class RenderFlow(IOFlow):
             return img_io
 
         """HDR Check"""
-        if self.ARGS.hdr_mode != 0:
+        if self.ARGS.hdr_mode != HDR_STATE.CUSTOM_HDR:
             self.__modify_hdr_params()
 
         """Output Video"""
@@ -1203,7 +1202,7 @@ class RenderFlow(IOFlow):
                                         "-x264-params": params_libx264s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x264-params": params_libx264s["fast"]})
-                if self.ARGS.hdr_mode == 1:
+                if self.ARGS.hdr_mode == HDR_STATE.HDR10:
                     """HDR10"""
                     output_dict.update({"-x264-params": params_libx264s["hdr10"]})
 
@@ -1220,7 +1219,7 @@ class RenderFlow(IOFlow):
                                         "-x265-params": params_libx265s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x265-params": params_libx265s["fast"]})
-                if self.ARGS.hdr_mode in [1, 2]:
+                if self.ARGS.hdr_mode in [HDR_STATE.HDR10, HDR_STATE.HDR10_PLUS]:
                     """HDR10"""
                     output_dict.update({"-x265-params": params_libx265s["hdr10"]})
                     if os.path.exists(hdr10plus_metadata_path):
@@ -1309,7 +1308,7 @@ class RenderFlow(IOFlow):
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "-b": "5"})
 
-            if self.ARGS.hdr_mode in [1, 2]:
+            if self.ARGS.hdr_mode in [HDR_STATE.HDR10, HDR_STATE.HDR10_PLUS]:
                 """HDR10"""
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10",
@@ -1359,7 +1358,7 @@ class RenderFlow(IOFlow):
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64", })
-            if self.ARGS.hdr_mode in [1, 2]:
+            if self.ARGS.hdr_mode in [HDR_STATE.HDR10, HDR_STATE.HDR10_PLUS]:
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64",
@@ -1539,7 +1538,8 @@ class RenderFlow(IOFlow):
         self.logger.info("Start Audio Mux Test")
         sp = Tools.popen(ffmpeg_command)
         sp.wait()
-        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
+        concat_return_code = sp.returncode
+        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath) or concat_return_code:
             self.logger.warning(f"Audio Mux Test found unavailable audio codec for output extension: "
                                 f"{self.ARGS.output_ext}, audio codec is changed to AAC 640kbps")
             self.is_audio_failed_concat = True
@@ -1670,11 +1670,13 @@ class RenderFlow(IOFlow):
                          f'-y'
 
         self.logger.debug(f"Concat command: {ffmpeg_command}")
+        concat_return_code = 0
         try:
             sp = Tools.popen(ffmpeg_command)
             sp.wait()
+            concat_return_code = sp.returncode
         except Exception as e:
-            if self.concat_when_default_fail():
+            if self.concat_when_default_fail():  # audio mux type modified to aac
                 self.logger.warning("Retry Concat after FFmpeg failed")
                 self.concat_all()
             else:
@@ -1683,7 +1685,8 @@ class RenderFlow(IOFlow):
                 raise e
 
         self.logger.info(f"{len(concat_list)} files concatenated to {os.path.basename(concat_filepath)}")
-        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath):
+        if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath) or concat_return_code:
+            # If return code is not 0, then there must be error
             if self.concat_when_default_fail():
                 self.logger.warning("Retry Concat after Output File Validity Check failed")
                 self.concat_all()
@@ -1693,7 +1696,7 @@ class RenderFlow(IOFlow):
                     "WARNING - e.g. mkv input should match .mkv as output extension to avoid possible muxing issues")
                 self.ARGS.save_main_error(main_error)
                 raise main_error
-        if self.ARGS.hdr_mode == 3:
+        if self.ARGS.hdr_mode == HDR_STATE.DOLBY_VISION:
             self.__run_dovi(concat_filepath)
         if self.ARGS.is_output_only:
             self.__del_existed_chunks()
@@ -1706,7 +1709,7 @@ class RenderFlow(IOFlow):
         if os.path.exists(concat_filepath):
             self.logger.warning("Project with same task_id is already finished, "
                                 "Jump to Dolby Vision Check")
-            if self.ARGS.hdr_mode == 3:
+            if self.ARGS.hdr_mode == HDR_STATE.DOLBY_VISION:
                 """Dolby Vision"""
                 self.__run_dovi(concat_filepath)
             else:

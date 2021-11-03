@@ -13,6 +13,17 @@ class TASKBAR_STATE(enum.Enum):
     TBPF_PAUSED = 0x00000008
 
 
+class HDR_STATE(enum.Enum):
+    AUTO = -2
+    NOT_CHECKED = -1
+    NONE = 0
+    CUSTOM_HDR = 1
+    HDR10 = 2
+    HDR10_PLUS = 3
+    DOLBY_VISION = 4
+    HLG = 5
+
+
 class SupportFormat:
     img_inputs = ['.png', '.tif', '.tiff', '.jpg', '.jpeg']
     img_outputs = ['.png', '.tiff', '.jpg']
