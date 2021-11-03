@@ -80,20 +80,28 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         self.model.device()
         self.initiated = True
 
-    def __inference(self, i1, i2, scale):
+    def __inference(self, img1, img2, scale):
+        padding, h, w = self.generate_padding(img1, scale)
+        i1 = self.generate_torch_img(img1, padding)
+        i2 = self.generate_torch_img(img2, padding)
         if self.ARGS.is_rife_reverse:
             mid = self.model.inference(i1, i2, scale, iter_time=self.tta_iter)
         else:
             mid = self.model.inference(i2, i1, scale, iter_time=self.tta_iter)
+        del i1, i2
+        mid = ((mid[0] * 255.).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
         return mid
 
     def __make_n_inference(self, img1, img2, scale, n):
-        padding, h, w = self.generate_padding(img1, scale)
-        i1 = self.generate_torch_img(img1, padding)
-        i2 = self.generate_torch_img(img2, padding)
-        mid = self.__inference(i1, i2, scale)
-        del i1, i2
-        mid = ((mid[0] * 255.).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
+        if self.is_interlace_inference:
+            pieces_img1 = self.split_input_image(img1)
+            pieces_img2 = self.split_input_image(img2)
+            pieces_mid = list()
+            for piece_img1, piece_img2 in zip(pieces_img1, pieces_img2):
+                pieces_mid.append(self.__inference(piece_img1, piece_img2, scale))
+            mid = self.sew_input_pieces(pieces_mid, *img1.shape)
+        else:
+            mid = self.__inference(img1, img2, scale)
         if n == 1:
             return [mid]
         first_half = self.__make_n_inference(img1, mid, scale, n=n // 2)

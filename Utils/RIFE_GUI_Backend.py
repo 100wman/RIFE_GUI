@@ -814,6 +814,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         self.RenderSettingsGroup.setEnabled(False)
         self.UseMultiCardsChecker.setEnabled(False)
+        self.InterlaceInferenceChecker.setEnabled(False)
         self.TtaModeSelector.setEnabled(False)
         self.TtaIterTimesSelector.setEnabled(False)
         self.TtaModeLabel.setEnabled(False)
@@ -990,6 +991,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ncnnInterpThreadCnt.setValue(appData.value("ncnn_thread", 4, type=int))
         self.ncnnSelectGPU.setValue(appData.value("ncnn_gpu", 0, type=int))
         self.UseMultiCardsChecker.setChecked(appData.value("use_rife_multi_cards", False, type=bool))
+        self.InterlaceInferenceChecker.setCurrentIndex(appData.value("rife_interlace_inference", 0, type=int))
 
         # Update RIFE Model
         rife_model_list = []
@@ -1124,6 +1126,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("rife_model_name", self.ModuleSelector.currentText())
         appData.setValue("rife_cuda_cnt", self.rife_cuda_cnt)
         appData.setValue("use_rife_multi_cards", self.UseMultiCardsChecker.isChecked())
+        appData.setValue("rife_interlace_inference", self.InterlaceInferenceChecker.currentIndex())
         appData.setValue("use_specific_gpu", self.DiscreteCardSelector.currentIndex())
         appData.setValue("use_rife_auto_scale", self.AutoInterpScaleChecker.isChecked())
         appData.setValue("rife_interp_before_resize", self.InterpBeforeResizeSelector.value())

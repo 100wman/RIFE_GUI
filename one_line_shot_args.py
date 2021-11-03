@@ -1900,7 +1900,7 @@ class SuperResolutionFlow(IOFlow):
 
             self.logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
 
-            test_img0 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
+            test_img0 = np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8)
             self.sr_module.svfi_process(test_img0)
             self.logger.info(f"SR VRAM Test Success")
             self._release_vram_check_lock()
@@ -2109,14 +2109,10 @@ class InterpWorkFlow:
             else:
                 w, h = self.ARGS.frame_size
 
-            # if self.ARGS.rife_interp_before_resize:
-            #     ratio = h / w
-            #     w, h = self.ARGS.rife_interp_before_resize, int(ratio * self.ARGS.rife_interp_before_resize)
+            logger.info(f"Start VFI VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
 
-            logger.info(f"Start Interpolation VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
-
-            test_img0, test_img1 = np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8), \
-                                   np.random.randint(0, 255, size=(w, h, 3)).astype(np.uint8)
+            test_img0, test_img1 = np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8), \
+                                   np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
             logger.info(f"Interpolation VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1

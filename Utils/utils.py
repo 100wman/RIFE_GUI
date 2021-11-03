@@ -78,17 +78,19 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.1"
+    gui_version = "3.8.2"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.1"
+    ols_version = "7.3.2"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Optimize Structure for HDR Processing
-    - Optimize Audio Mux Routine Check, check return code for invalid mux result
+    - Add Interlace Inference Mode
+    - Fix cv2 RGB2YUV conversion failed on data type
+    - Fix VFI VRAM Test of Fussy ratio test img
+    - Update i18n
     """
 
     path_len_limit = 230
@@ -203,6 +205,7 @@ class ArgumentManager:
         self.rife_interp_before_resize = args.get("rife_interp_before_resize", 0)
         self.use_rife_forward_ensemble = args.get("use_rife_forward_ensemble", False)
         self.use_rife_multi_cards = args.get("use_rife_multi_cards", False)
+        self.rife_interlace_inference = args.get("rife_interlace_inference", 0)
 
         self.debug = args.get("debug", False)
         self.multi_task_rest = args.get("multi_task_rest", False)
@@ -749,7 +752,7 @@ class SuperResolutionBase:
 
 
 class VideoFrameInterpolationBase:
-    def __init__(self, __args):
+    def __init__(self, __args: ArgumentManager):
         self.initiated = False
         self.args = {}
         if __args is not None:
@@ -757,13 +760,48 @@ class VideoFrameInterpolationBase:
             self.args = __args
         else:
             raise NotImplementedError("Args not sent in")
+        
+        self.split_w = 1
+        self.split_h = 1
+        self.is_interlace_inference = self.args.rife_interlace_inference > 0
+        if self.args.rife_interlace_inference == 1:  # w split to 2
+            self.split_w, self.split_h = 2, 1
+        elif self.args.rife_interlace_inference == 2:  # w split to 2, h split to 2
+            self.split_w, self.split_h = 2, 2
+        elif self.args.rife_interlace_inference == 3:  # w split to 4, h split to 2
+            self.split_w, self.split_h = 4, 2
+        elif self.args.rife_interlace_inference == 4:  # w split to 4, h split to 4
+            self.split_w, self.split_h = 4, 4
 
-        self.device = None
-        self.model = None
-        self.model_path = ""
+        if self.args.use_rife_multi_cards:
+            self.split_w, self.split_h = 2, 1  # override previous settings
 
     def initiate_algorithm(self):
         raise NotImplementedError()
+
+    def split_input_image(self, img0):
+        pieces = list()
+        for x in range(self.split_w):
+            for y in range(self.split_h):
+                pieces.append(img0[y::self.split_h, x::self.split_w, :])
+        return pieces
+
+    def sew_input_pieces(self, pieces, h, w, c):
+        """
+
+        :param pieces: list or tuple
+        :param h:
+        :param w:
+        :param c:
+        :return:
+        """
+        background = np.zeros((h, w, c))
+        p_i = 0
+        for x in range(self.split_w):
+            for y in range(self.split_h):
+                background[y::self.split_h, x::self.split_w, :] = pieces[p_i]
+                p_i += 1
+        return background
 
     def generate_n_interp(self, img0, img1, n, scale, debug=False) -> list:
         interp_list = list()

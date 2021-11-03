@@ -211,6 +211,7 @@ class EnccWriter(VideoWriterAbstract):
         assert self._proc is not None  # Check status
 
         try:
+            im = im.astype(np.uint8)
             vid = cv2.cvtColor(im, cv2.COLOR_BGR2YUV_YV12)
             # if self.bit_depth == 10:
             #     vid <<= 2
