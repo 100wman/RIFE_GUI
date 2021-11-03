@@ -856,6 +856,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_ResizeTemplate_currentTextChanged()
         self.on_TtaModeSelector_currentTextChanged()
         self.on_ExpertMode_changed()
+        self.on_ModuleSelector_currentTextChanged()
         self.settings_initiation(item_update=item_update, template_update=False)
         pass
 
@@ -894,11 +895,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             """Basic Configuration"""
             self.OutputFolder.setText(appData.value("output_dir"))
             self.InputFPS.setText(appData.value("input_fps", "0"))
-            self.OutputFPS.setText(appData.value("target_fps", ""))
             self.OutputFPSReminder.setChecked(not appData.value("is_exp_prior", False, type=bool))
             self.InterpExpReminder.setChecked(appData.value("is_exp_prior", True, type=bool))
             self.ExpSelecter.setCurrentText("x" + str(2 ** int(appData.value("rife_exp", "1"))))
-            self.ExtSelector.setCurrentText(appData.value("output_ext", "mp4"))
             self.ImgOutputChecker.setChecked(appData.value("is_img_output", False, type=bool))
             appData.setValue("is_img_input", appData.value("is_img_input", False))
             self.KeepChunksChecker.setChecked(not appData.value("is_output_only", True, type=bool))
@@ -906,9 +905,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.EndPoint.setTime(QTime.fromString(appData.value("input_end_point", "00:00:00"), "HH:mm:ss"))
             self.StartChunk.setValue(appData.value("output_chunk_cnt", -1, type=int))
             self.StartFrame.setValue(appData.value("interp_start", -1, type=int))
-            self.ResumeRiskChecker.setChecked(appData.value("risk_resume_mode", True, type=bool))
+            self.DebugChecker.setChecked(appData.value("debug", False, type=bool))
 
-        self.DebugChecker.setChecked(appData.value("debug", False, type=bool))
+        self.ResumeRiskChecker.setChecked(appData.value("risk_resume_mode", True, type=bool))
+        self.OutputFPS.setText(appData.value("target_fps", ""))
+        self.ExtSelector.setCurrentText(appData.value("output_ext", "mp4"))
 
         """Output Resize Configuration"""
         self.CropHeightSettings.setValue(appData.value("crop_height", 0, type=int))
@@ -2067,6 +2068,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         elif "3840p" in current_template:
             width, height = 7680, 4320
         elif "%" in current_template:
+            # TODO Optimize here by reading h,w from task item instead of here, refactor step
             current_item = self.InputFileName.currentItem()
             if current_item is None:
                 # self.function_send_msg('Select a item first!', _translate('', '未选中输入项'))

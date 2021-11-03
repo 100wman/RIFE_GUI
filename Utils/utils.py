@@ -26,7 +26,7 @@ import numpy as np
 import psutil
 from sklearn import linear_model
 
-from Utils.StaticParameters import appDir, SupportFormat
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE
 from skvideo.utils import check_output
 
 
@@ -78,19 +78,17 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.0"
+    gui_version = "3.8.1"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.0"
+    ols_version = "7.3.1"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add XVFI Interpolation
-    - Optimize Utils Structure to shorten compilation time
-    - Optimize Options for ABME and XVFI(disable certain options)
-    - 
+    - Optimize Structure for HDR Processing
+    - Optimize Audio Mux Routine Check, check return code for invalid mux result
     """
 
     path_len_limit = 230
@@ -174,6 +172,10 @@ class ArgumentManager:
         self.is_encode_audio = args.get("is_encode_audio", False)
         self.is_quick_extract = args.get("is_quick_extract", True)
         self.hdr_mode = args.get("hdr_mode", 0)
+        if self.hdr_mode == 0:  # AUTO
+            self.hdr_mode = HDR_STATE(-2)
+        else:
+            self.hdr_mode = HDR_STATE(self.hdr_mode)
         self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "").strip('"').strip("'")
         self.is_no_concat = args.get("is_no_concat", False)
         self.use_fast_denoise = args.get("use_fast_denoise", False)
@@ -992,7 +994,7 @@ class VideoInfoProcessor:
         self.ffmpeg = "ffmpeg"
         self.ffprobe = "ffprobe"
         self.hdr10_parser = "hdr10plus_parser"
-        self.hdr_mode = -1
+        self.hdr_mode = HDR_STATE.NOT_CHECKED
         self.project_dir = project_dir
         self.color_data_tag = [('color_range', 'tv'),
                                ('color_space', 'bt709'),
@@ -1011,22 +1013,23 @@ class VideoInfoProcessor:
         self.update_info()
 
     def update_hdr_mode(self):
+        self.hdr_mode = HDR_STATE.NONE  # default to be bt709
         if any([i in str(self.video_info) for i in ['dv_profile', 'DOVI']]):
-            self.hdr_mode = 3  # Dolby Vision
+            self.hdr_mode = HDR_STATE.DOLBY_VISION  # Dolby Vision
             self.logger.warning("Dolby Vision Content Detected")
             return
         if "color_transfer" not in self.video_info:
-            self.hdr_mode = 0
             self.logger.warning("Not Find Color Transfer Characteristics")
             return
 
         color_trc = self.video_info["color_transfer"]
         if "smpte2084" in color_trc or "bt2020" in color_trc:
-            self.hdr_mode = 1  # hdr(normal)
+            self.hdr_mode = HDR_STATE.CUSTOM_HDR  # hdr(normal)
             self.logger.warning("HDR Content Detected")
             if any([i in str(self.video_info).lower()]
                    for i in ['mastering-display', "mastering display", "content light level metadata"]):
                 """Could be HDR10+"""
+                self.hdr_mode = HDR_STATE.HDR10
                 self.hdr10plus_metadata_path = os.path.join(self.project_dir, "hdr10plus_metadata.json")
                 check_command = (f'{self.ffmpeg} -loglevel panic -i {Tools.fillQuotation(self.input_file)} -c:v copy '
                                  f'-vbsf hevc_mp4toannexb -f hevc - | '
@@ -1038,10 +1041,10 @@ class VideoInfoProcessor:
                     self.logger.error(traceback.format_exc(limit=ArgumentManager.traceback_limit))
                 if len(self.getInputHdr10PlusMetadata()):
                     self.logger.warning("HDR10+ Content Detected")
-                    self.hdr_mode = 2  # hdr10
+                    self.hdr_mode = HDR_STATE.HDR10_PLUS  # hdr10+
 
         elif "arib-std-b67" in color_trc:
-            self.hdr_mode = 4  # HLG
+            self.hdr_mode = HDR_STATE.HLG  # HLG
             self.logger.warning("HLG Content Detected")
         pass
 
