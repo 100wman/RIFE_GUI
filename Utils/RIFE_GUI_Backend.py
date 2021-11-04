@@ -768,7 +768,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.InterlaceInferenceChecker.setVisible(False)
         self.InterlaceInferenceReminder.setVisible(False)
 
-
     def settings_free_hide(self):
         """
         ST only
@@ -818,14 +817,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SrField.setVisible(False)
 
         self.RenderSettingsGroup.setEnabled(False)
-        self.UseMultiCardsChecker.setEnabled(False)
-        self.InterlaceInferenceChecker.setEnabled(False)
-        self.TtaModeSelector.setEnabled(False)
-        self.TtaIterTimesSelector.setEnabled(False)
-        self.TtaModeLabel.setEnabled(False)
-        self.EvictFlickerChecker.setEnabled(False)
-        self.AutoInterpScaleChecker.setEnabled(False)
-        self.ReverseChecker.setEnabled(False)
+        self.UseMultiCardsChecker.setVisible(False)
+        self.InterlaceInferenceChecker.setVisible(False)
+        self.TtaModeSelector.setVisible(False)
+        self.TtaIterTimesSelector.setVisible(False)
+        self.TtaModeLabel.setVisible(False)
+        self.EvictFlickerChecker.setVisible(False)
+        self.AutoInterpScaleChecker.setVisible(False)
+        self.ReverseChecker.setVisible(False)
 
         self.DeinterlaceChecker.setEnabled(False)
         self.FastDenoiseChecker.setEnabled(False)

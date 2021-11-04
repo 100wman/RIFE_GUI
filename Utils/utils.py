@@ -87,8 +87,7 @@ class ArgumentManager:
     update_log = f"""
     {version_tag}
     Update Log
-    - Add 1/32 for Interlace Inference Mode
-    - Update i18n
+    - Fix Free Hide on VFI settings(set Visible False)
     """
 
     path_len_limit = 230
