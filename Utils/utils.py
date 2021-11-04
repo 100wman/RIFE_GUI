@@ -78,18 +78,16 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.2"
+    gui_version = "3.8.3"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.2"
+    ols_version = "7.3.3"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add Interlace Inference Mode
-    - Fix cv2 RGB2YUV conversion failed on data type
-    - Fix VFI VRAM Test of Fussy ratio test img
+    - Add 1/32 for Interlace Inference Mode
     - Update i18n
     """
 
@@ -772,6 +770,8 @@ class VideoFrameInterpolationBase:
             self.split_w, self.split_h = 4, 2
         elif self.args.rife_interlace_inference == 4:  # w split to 4, h split to 4
             self.split_w, self.split_h = 4, 4
+        elif self.args.rife_interlace_inference == 5:  # w split to 4, h split to 4
+            self.split_w, self.split_h = 8, 4
 
         if self.args.use_rife_multi_cards:
             self.split_w, self.split_h = 2, 1  # override previous settings
