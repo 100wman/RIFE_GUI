@@ -2109,7 +2109,8 @@ class InterpWorkFlow:
             else:
                 w, h = self.ARGS.frame_size
 
-            logger.info(f"Start VFI VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}")
+            logger.info(f"Start VFI VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}, "
+                        f"interlace inference mode: {self.ARGS.rife_interlace_inference}")
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8), \
                                    np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8)
