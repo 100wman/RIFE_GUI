@@ -78,8 +78,8 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.3"
-    version_tag = f"{gui_version}-alpha " \
+    gui_version = "3.7"
+    version_tag = f"{gui_version}-beta " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
     ols_version = "7.3.3"
     """ 发布前改动以上参数即可 """

@@ -764,6 +764,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SrModeLabel.setVisible(False)
         self.FastDenoiseChecker.setVisible(False)
 
+        # Public Beta Test Only
+        self.InterlaceInferenceChecker.setVisible(False)
+        self.InterlaceInferenceReminder.setVisible(False)
+
+
     def settings_free_hide(self):
         """
         ST only
