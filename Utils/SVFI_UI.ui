@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1254</width>
-    <height>857</height>
+    <height>860</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -743,7 +743,7 @@
                     <x>0</x>
                     <y>0</y>
                     <width>400</width>
-                    <height>735</height>
+                    <height>738</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_10">
@@ -811,8 +811,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>246</width>
-                        <height>202</height>
+                        <width>382</width>
+                        <height>409</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1089,8 +1089,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>283</width>
-                        <height>234</height>
+                        <width>382</width>
+                        <height>409</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1362,7 +1362,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>285</width>
+                        <width>365</width>
                         <height>476</height>
                        </rect>
                       </property>
@@ -2672,6 +2672,9 @@
                          <layout class="QGridLayout" name="gridLayout_40">
                           <item row="11" column="0">
                            <widget class="QLabel" name="InterlaceInferenceReminder">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;利用下采样对输入进行间隔补帧，极大减少显存占用（成倍数降低）&lt;/p&gt;&lt;p&gt;会降低补帧速度，并可能导致画面出现轻微的条带状纹理&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
                             <property name="text">
                              <string>交错补帧 (?)</string>
                             </property>
@@ -2881,6 +2884,11 @@
                               <string>1/32</string>
                              </property>
                             </item>
+                            <item>
+                             <property name="text">
+                              <string>1/64</string>
+                             </property>
+                            </item>
                            </widget>
                           </item>
                          </layout>
@@ -2893,8 +2901,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>256</width>
-                        <height>152</height>
+                        <width>382</width>
+                        <height>409</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2982,8 +2990,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>165</width>
-                        <height>373</height>
+                        <width>382</width>
+                        <height>409</height>
                        </rect>
                       </property>
                       <attribute name="label">

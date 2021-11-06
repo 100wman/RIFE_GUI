@@ -101,7 +101,7 @@ class MyListWidgetItem(QWidget):
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
         self.RemoveItemButton.setText("    -    ")
         self.DuplicateItemButton.setText("    +    ")
-        self.iniCheck.setEnabled(False)
+        # self.iniCheck.setEnabled(False)
         self.RemoveItemButton.clicked.connect(self.on_RemoveItemButton_clicked)
         self.DuplicateItemButton.clicked.connect(self.on_DuplicateItemButton_clicked)
         self.TaskIdDisplay.editingFinished.connect(self.on_TaskIdDisplay_editingFinished)
@@ -236,7 +236,7 @@ class MyListWidget(QListWidget):
         """
         try:
             widget = self.itemWidget(item)
-            widget.on_iniCheck_toggled()
+            # widget.on_iniCheck_toggled()
             item_data = widget.get_task_info()
             item_data.update({"row": self.row(item)})
         except AttributeError:

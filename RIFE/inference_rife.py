@@ -64,14 +64,23 @@ class RifeInterpolation(VideoFrameInterpolationBase):
                           forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
             model.load_model(self.model_path, -1 if not self.ARGS.use_rife_multi_cards else 0)
             self.model_version = 2
-            print("INFO - Loaded v2.x HD model.")
+            print("INFO - RIFE v2.x model loaded.")
         except:
-            from RIFE.RIFE_HDv3 import Model
-            model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
-                          forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
-            model.load_model(self.model_path, -1)
-            self.model_version = 3
-            print("INFO - Loaded v3.x HD model.")
+            try:
+                from RIFE.RIFE_HDv3 import Model
+                model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
+                              forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
+                model.load_model(self.model_path, -1)
+                self.model_version = 3
+                print("INFO - RIFE v3.x model loaded.")
+            except:
+                from RIFE.RIFE_v6 import Model
+                model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
+                              forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
+                model.load_model(self.model_path, -1)
+                self.model_version = 6
+                print("INFO - RIFE v6 model loaded.")
+
         first_card = torch.cuda.get_device_properties(0)
         card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
         print(f"INFO - RIFE Using {card_info}")

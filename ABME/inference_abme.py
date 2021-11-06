@@ -90,8 +90,8 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
             #     frame3 = TF.to_tensor(frame3)
             # frame1 = torch.from_numpy(img).to(self.device, non_blocking=True).permute(2,0,1).unsqueeze(0)
             # frame3 = torch.from_numpy(img).to(self.device, non_blocking=True).permute(2,0,1).unsqueeze(0)
-            frame1 = TF.to_tensor(frame1).unsqueeze(0).cuda()
-            frame3 = TF.to_tensor(frame3).unsqueeze(0).cuda()
+            frame1 = TF.to_tensor(frame1).float().unsqueeze(0).cuda()
+            frame3 = TF.to_tensor(frame3).float().unsqueeze(0).cuda()
 
             H = frame1.shape[2]
             W = frame1.shape[3]

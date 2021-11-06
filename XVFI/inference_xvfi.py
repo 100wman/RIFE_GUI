@@ -139,12 +139,12 @@ if __name__ == "__main__":
     _xvfi_arg = ArgumentManager(
         {"rife_model_dir": r"D:\60-fps-Project\Projects\XVFI\checkpoint_dir",
          "rife_model_name": r"XVFInet_Vimeo_exp1",
-         "rife_interlace_inference": 1
+         "rife_interlace_inference": 2
          })
     _xvfi_instance = XVFInterpolation(_xvfi_arg)
     _xvfi_instance.initiate_algorithm()
-    test_dir = r"D:\60-fps-Project\input or ref\Test\[6]XVFI_input"
-    output_dir = r"D:\60-fps-Project\input or ref\Test\[6]XVFI_output"
+    test_dir = r"D:\60-fps-Project\input or ref\Test\[2]Standard-Hard-Case"
+    output_dir = r"D:\60-fps-Project\input or ref\Test\output"
     img_paths = [os.path.join(test_dir, i) for i in os.listdir(test_dir)]
     img_paths = [img_paths[i:i + 2] for i in range(0, len(img_paths), 2)]
     for i, imgs in enumerate(img_paths):
@@ -153,7 +153,7 @@ if __name__ == "__main__":
         original_resolution = (w, h)
         _img0, _img1 = cv2.imread(imgs[0]), cv2.imread(imgs[1])
         # _img0, _img1 = cv2.resize(cv2.imread(imgs[0]), resize), cv2.resize(cv2.imread(imgs[1]), resize)
-        _output = _xvfi_instance.generate_n_interp(_img0, _img1, 4, 4)
+        _output = _xvfi_instance.generate_n_interp(_img0, _img1, 2, 4)
         od = os.path.join(output_dir, f"{i:0>2d}")
         os.makedirs(od, exist_ok=True)
         for ii, img in enumerate(_output):
