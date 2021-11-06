@@ -9,6 +9,8 @@ root = r"D:\60-fps-Project\Projects\RIFE GUI"
 ico_path = os.path.join(root, "svfi-i.ico")
 pack_dir = r"D:\60-fps-Project\Projects\RIFE GUI\release\release_pack"
 steam_dir = r"D:\60-fps-Project\Projects\RIFE GUI\release\sdk\tools\ContentBuilder\content"
+if 'alpha' in ArgumentManager.version_tag:
+    steam_dir += "_alpha"
 
 
 def generate_release():
