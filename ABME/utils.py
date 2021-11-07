@@ -27,13 +27,16 @@ def toc():
     else:
         print("Toc: start time not set")
 
-def warp(x,flo, return_mask=True):
+def warp(x,flo, return_mask=True, fp16=False):
     B, C, H, W = x.size()
     # mesh grid
     xx = torch.arange(0, W).view(1, 1, 1, W).expand(B, 1, H, W)
     yy = torch.arange(0, H).view(1, 1, H, 1).expand(B, 1, H, W)
 
-    grid = torch.cat((xx, yy), 1).float()
+    if fp16:
+        grid = torch.cat((xx, yy), 1).half()
+    else:
+        grid = torch.cat((xx, yy), 1).float()
 
     if x.is_cuda:
         grid = grid.to(x.device)

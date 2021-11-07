@@ -78,23 +78,26 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.4"
+    gui_version = "3.8.5"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.4"
+    ols_version = "7.3.5"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add 1/64 for Interlace Inference Mode
-    - Add RIFE v6 model (unable to load checkpoint at this commit
-    - Fix Unable to select task item due to rebase fault
+    - Add Preview VFI Imgs Mode
+    - Add Half-Precision Mode for ABME VFI
+    - Fix Invalid Crop Function
     """
 
     path_len_limit = 230
     overtime_reminder_queue = Queue()
     overtime_reminder_ids = dict()
+
+    screen_w = 1920
+    screen_h = 1080
 
     def __init__(self, args: dict):
         self.app_dir = args.get("app_dir", appDir)
@@ -224,6 +227,9 @@ class ArgumentManager:
         self.render_only = args.get("render_only", False)
         self.version = args.get("version", "0.0.0 beta")
 
+        """Preview Imgs"""
+        self.is_preview_imgs = args.get("is_preview_imgs", False)
+
     @staticmethod
     def is_empty_overtime_task_queue():
         return ArgumentManager.overtime_reminder_queue.empty()
@@ -235,6 +241,19 @@ class ArgumentManager:
     @staticmethod
     def get_overtime_task():
         return ArgumentManager.overtime_reminder_queue.get()
+
+    @staticmethod
+    def update_screen_size(w: int, h: int):
+        ArgumentManager.screen_h = h
+        ArgumentManager.screen_w = w
+
+    @staticmethod
+    def get_screen_size():
+        """
+
+        :return: h, w
+        """
+        return ArgumentManager.screen_h, ArgumentManager.screen_w
 
 
 class Tools:
@@ -543,8 +562,8 @@ class Tools:
                          'SvtHevcEncApp.exe', 'SvtVp9EncApp.exe', 'SvtAv1EncApp.exe']:
                 try:
                     os.kill(pid, signal.SIGABRT)
-                except PermissionError:
-                    pass
+                except Exception as e:
+                    traceback.print_exc()
                 print(f"Warning: Kill Process before exit: {pname}")
 
     @staticmethod
@@ -1290,6 +1309,7 @@ class TransitionDetection_ST:
                 os.remove(path)
             cv2.imencode('.png', cv2.cvtColor(comp_stack, cv2.COLOR_RGB2BGR))[1].tofile(path)
             return
+            # TODO Preview Add Scene Preview
             cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
             cv2.imshow(title, cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB))
             cv2.moveWindow(title, 500, 500)

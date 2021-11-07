@@ -116,6 +116,9 @@ class TaskArgumentManager(ArgumentManager):
 
         self.main_error = list()
 
+        """Preview"""
+        self.preview_imgs = list()
+
     def __update_io_ext(self):
         """update extension"""
         self.input_ext = os.path.splitext(self.input)[1] if os.path.isfile(self.input) else ""
@@ -237,6 +240,12 @@ class TaskArgumentManager(ArgumentManager):
 
     def save_main_error(self, e: Exception):
         self.main_error.append(e)
+
+    def update_preview_imgs(self, imgs: list):
+        self.preview_imgs = imgs
+
+    def get_preview_imgs(self):
+        return self.preview_imgs
 
 
 class ValidationFlow(ValidationModule):
@@ -378,7 +387,7 @@ class ReadFlow(IOFlow):
         :param img:
         :return:
         """
-        if img is None or not all(self.ARGS.crop_param):
+        if img is None or not any(self.ARGS.crop_param):
             return img
 
         h, w, _ = img.shape
@@ -1982,6 +1991,29 @@ class ProgressUpdateFlow(IOFlow):
         self.start_frame = 0
         self.read_flow = _read_flow
 
+    def __preview_vfi(self, now_frame):
+        if not self.ARGS.is_preview_imgs:
+            time.sleep(0.1)
+            return
+        preview_imgs = self.ARGS.get_preview_imgs()
+        if len(preview_imgs) < 2:
+            time.sleep(0.1)
+            return
+        screen_h, screen_w = self.ARGS.get_screen_size()
+        title = f"SVFI Preview:"
+        comp_stack = np.hstack([preview_imgs[0], preview_imgs[len(preview_imgs) // 2], preview_imgs[-1]])
+
+        preview_w = screen_w
+        stack_h, stack_w, _ = comp_stack.shape
+        preview_h = int(stack_h / stack_w * preview_w)
+        comp_stack = cv2.resize(comp_stack, (preview_w, preview_h)).astype(np.uint8)
+        cv2.putText(comp_stack,
+                    f"{now_frame / self.ARGS.all_frames_cnt * 100:.2f}%",
+                    (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0))
+        comp_stack = cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB)
+        cv2.imshow(title, comp_stack)
+        cv2.waitKey(41)  # 1/24
+
     def update_start_frame(self, start_frame: int):
         self.start_frame = start_frame
 
@@ -2041,7 +2073,8 @@ class ProgressUpdateFlow(IOFlow):
             pbar.set_postfix(postfix_dict)
             pbar.update(now_frame - previous_cnt)
             previous_cnt = now_frame
-            time.sleep(0.2)
+            self.__preview_vfi(now_frame)
+            # time.sleep(0.1)
         pbar.update(abs(self.ARGS.all_frames_cnt - previous_cnt))
         pbar.close()
 
@@ -2340,6 +2373,9 @@ class InterpWorkFlow:
                 process_time = time.time() - process_time
                 self.update_rife_progress(now_frame, task_acquire_time, process_time)
                 self.feed_to_render(feed_list, is_end=is_end)
+                preview_imgs = [feed[1] for feed in feed_list]
+                preview_imgs.append(img1)
+                self.ARGS.update_preview_imgs(preview_imgs)
                 if is_end:
                     break
         except Exception as e:

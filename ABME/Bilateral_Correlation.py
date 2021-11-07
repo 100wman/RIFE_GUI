@@ -5,8 +5,9 @@ import torchvision.transforms.functional as TF
 
 
 class BilateralCorrelation(nn.Module):
-    def __init__(self,md=4):
+    def __init__(self,md=4, fp16=False):
         super(BilateralCorrelation, self).__init__()
+        self.fp16 = fp16
         self.md = md #displacement (default = 4pixels)
         self.grid = torch.ones(1).cuda()
         # default intermediate time step is 0.5 [Half]
@@ -37,7 +38,10 @@ class BilateralCorrelation(nn.Module):
         xx = torch.arange(0, W).view(1, 1, 1, W).expand(self.range, 1, H, W)
         yy = torch.arange(0, H).view(1, 1, H, 1).expand(self.range, 1, H, W)
 
-        grid = torch.cat((xx, yy), 1).float()
+        if self.fp16:
+            grid = torch.cat((xx, yy), 1).half()
+        else:
+            grid = torch.cat((xx, yy), 1).float()
 
         if Input.is_cuda:
             grid = grid.to(Input.device)

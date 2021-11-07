@@ -5,9 +5,9 @@ import torch.nn.functional as F
 
 
 class DynFilter(nn.Module):
-    def __init__(self, kernel_size=(3, 3), padding=1, DDP=False):
+    def __init__(self, kernel_size=(3, 3), padding=1, DDP=False, fp16=False):
         super(DynFilter, self).__init__()
-
+        self.fp16 = fp16
         self.padding = padding
 
         filter_localexpand_np = np.reshape(np.eye(np.prod(kernel_size), np.prod(kernel_size)),
@@ -15,7 +15,10 @@ class DynFilter(nn.Module):
         if DDP:
             self.register_buffer('filter_localexpand', torch.FloatTensor(filter_localexpand_np))  # for DDP RIFE
         else:
-            self.filter_localexpand = torch.FloatTensor(filter_localexpand_np).cuda()  # for single RIFE
+            if self.fp16:
+                self.filter_localexpand = torch.HalfTensor(filter_localexpand_np).cuda()  # for single RIFE
+            else:
+                self.filter_localexpand = torch.FloatTensor(filter_localexpand_np).cuda()  # for single RIFE
 
     def forward(self, x, filter):
         x_localexpand = []
@@ -313,16 +316,16 @@ class GridNet_Refine(nn.Module):
 
 
 class SynthesisNet(nn.Module):
-    def __init__(self, ddp=False):
+    def __init__(self, ddp=False, fp16=False):
         super(SynthesisNet, self).__init__()
-
+        self.fp16 = fp16
         self.ctxNet = Feature_Pyramid()
 
         self.FilterNet = GridNet_Filter(3 * 3 * 4)
 
         self.RefineNet = GridNet_Refine()
 
-        self.Filtering = DynFilter(kernel_size=(3, 3), padding=1, DDP=ddp)
+        self.Filtering = DynFilter(kernel_size=(3, 3), padding=1, DDP=ddp, fp16=self.fp16)
 
     def warp(self, x, flo):
         B, C, H, W = x.size()
@@ -330,7 +333,11 @@ class SynthesisNet(nn.Module):
         xx = torch.arange(0, W).view(1, 1, 1, W).expand(B, 1, H, W)
         yy = torch.arange(0, H).view(1, 1, H, 1).expand(B, 1, H, W)
 
-        grid = torch.cat((xx, yy), 1).float().to(x.device)
+        if self.fp16:
+            grid = torch.cat((xx, yy), 1).half()
+        else:
+            grid = torch.cat((xx, yy), 1).float()
+        grid = grid.to(x.device)
 
         vgrid = torch.autograd.Variable(grid) + flo
 

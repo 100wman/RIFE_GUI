@@ -19,6 +19,7 @@ if hasattr(Qt, 'AA_EnableHighDpiScaling'):
     hDC = win32gui.GetDC(0)
     w = win32print.GetDeviceCaps(hDC, win32con.DESKTOPHORZRES)
     h = win32print.GetDeviceCaps(hDC, win32con.DESKTOPVERTRES)
+    ArgumentManager.update_screen_size(w, h)
     if w * h >= 3840 * 2160:
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 

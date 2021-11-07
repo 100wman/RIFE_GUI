@@ -36,14 +36,9 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
         self.model_net = None
         self.model_dir = ""
 
-        if self.ARGS.use_rife_fp16:
-            torch.set_default_tensor_type(torch.cuda.HalfTensor)
-        else:
-            torch.set_default_tensor_type(torch.cuda.FloatTensor)
-
-        self.SBMNet = SBMENet(fp16=self.ARGS.use_rife_fp16)
-        self.ABMNet = ABMRNet(fp16=self.ARGS.use_rife_fp16)
-        self.SynNet = SynthesisNet(False, fp16=self.ARGS.use_rife_fp16)
+        self.SBMNet = SBMENet()
+        self.ABMNet = ABMRNet()
+        self.SynNet = SynthesisNet(False)
 
     # @profile
     def initiate_algorithm(self):
@@ -87,16 +82,16 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
         frame3 = img2
         ori_w, ori_h, _ = frame1.shape
         with torch.no_grad():
-            frame1 = TF.to_tensor(frame1).unsqueeze(0)
-            frame3 = TF.to_tensor(frame3).unsqueeze(0)
-            if self.ARGS.use_rife_fp16:
-                frame1 = frame1.half()
-                frame3 = frame3.half()
-            else:
-                frame1 = frame1.float()
-                frame3 = frame3.float()
-            frame1 = frame1.cuda()
-            frame3 = frame3.cuda()
+            # if self.ARGS.use_rife_fp16:
+            #     frame1 = TF.to_tensor(frame1).half()
+            #     frame3 = TF.to_tensor(frame3).half()
+            # else:
+            #     frame1 = TF.to_tensor(frame1)
+            #     frame3 = TF.to_tensor(frame3)
+            # frame1 = torch.from_numpy(img).to(self.device, non_blocking=True).permute(2,0,1).unsqueeze(0)
+            # frame3 = torch.from_numpy(img).to(self.device, non_blocking=True).permute(2,0,1).unsqueeze(0)
+            frame1 = TF.to_tensor(frame1).type(torch.FloatTensor).unsqueeze(0).cuda()
+            frame3 = TF.to_tensor(frame3).type(torch.FloatTensor).unsqueeze(0).cuda()
 
             H = frame1.shape[2]
             W = frame1.shape[3]
@@ -120,8 +115,8 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
             SBM = self.SBMNet(torch.cat((frame1_, frame3_), dim=1))[0]
             SBM_ = F.interpolate(SBM, scale_factor=4, mode='bilinear') * 20.0
 
-            frame2_1, Mask2_1 = warp(frame1_, SBM_ * (-1), return_mask=True, fp16=self.ARGS.use_rife_fp16)
-            frame2_3, Mask2_3 = warp(frame3_, SBM_, return_mask=True, fp16=self.ARGS.use_rife_fp16)
+            frame2_1, Mask2_1 = warp(frame1_, SBM_ * (-1), return_mask=True)
+            frame2_3, Mask2_3 = warp(frame3_, SBM_, return_mask=True)
 
             frame2_Anchor_ = (frame2_1 + frame2_3) / 2
             frame2_Anchor = frame2_Anchor_ + 0.5 * (frame2_3 * (1 - Mask2_1) + frame2_1 * (1 - Mask2_3))
@@ -161,7 +156,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
 
             result = F.interpolate(result, (H, W), mode='bicubic')
 
-            mid = result.squeeze().clamp_(0, 1).mul(255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
+            mid = result.squeeze().mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
             del result
             return mid
 
@@ -197,7 +192,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
 
 
 if __name__ == "__main__":
-    _abme_arg = ArgumentManager({'rife_interlace_inference': 2, 'use_rife_fp16': True})
+    _abme_arg = ArgumentManager({'rife_interlace_inference': 5})
     _abme_instance = ABMEInterpolation(_abme_arg)
     _abme_instance.initiate_algorithm()
     test_dir = r"D:\60-fps-Project\input or ref\Test\[2]Standard-Hard-Case"

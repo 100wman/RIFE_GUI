@@ -26,9 +26,9 @@ class SBMENet(nn.Module):
     Symmetric Bilateral Motion Estimation network in BMBC
     """
 
-    def __init__(self):
+    def __init__(self, fp16=False):
         super(SBMENet, self).__init__()
-
+        self.fp16 = fp16
         self.conv1a = conv(3, 16, kernel_size=3, stride=2)  # Stride is '1' in BMBC
         self.conv1aa = conv(16, 16, kernel_size=3, stride=1)
         self.conv1b = conv(16, 16, kernel_size=3, stride=1)
@@ -54,7 +54,7 @@ class SBMENet(nn.Module):
         dd = np.cumsum([128, 128, 96, 64, 32])
 
         od = (2 * 6 + 1) ** 2
-        self.bilateral_corr6 = BilateralCorrelation(md=6)
+        self.bilateral_corr6 = BilateralCorrelation(md=6, fp16=self.fp16)
         self.conv6_0 = conv(od, 128, kernel_size=3, stride=1)
         self.conv6_1 = conv(od + dd[0], 128, kernel_size=3, stride=1)
         self.conv6_2 = conv(od + dd[1], 96, kernel_size=3, stride=1)
@@ -65,7 +65,7 @@ class SBMENet(nn.Module):
         self.upfeat6 = deconv(od + dd[4], 2, kernel_size=4, stride=2, padding=1)
 
         od = (2 * 4 + 1) ** 2 + 128 * 2 + 4
-        self.bilateral_corr5 = BilateralCorrelation(md=4)
+        self.bilateral_corr5 = BilateralCorrelation(md=4, fp16=self.fp16)
         self.conv5_0 = conv(od, 128, kernel_size=3, stride=1)
         self.conv5_1 = conv(od + dd[0], 128, kernel_size=3, stride=1)
         self.conv5_2 = conv(od + dd[1], 96, kernel_size=3, stride=1)
@@ -76,7 +76,7 @@ class SBMENet(nn.Module):
         self.upfeat5 = deconv(od + dd[4], 2, kernel_size=4, stride=2, padding=1)
 
         od = (2 * 4 + 1) ** 2 + 96 * 2 + 4
-        self.bilateral_corr4 = BilateralCorrelation(md=4)
+        self.bilateral_corr4 = BilateralCorrelation(md=4, fp16=self.fp16)
         self.conv4_0 = conv(od, 128, kernel_size=3, stride=1)
         self.conv4_1 = conv(od + dd[0], 128, kernel_size=3, stride=1)
         self.conv4_2 = conv(od + dd[1], 96, kernel_size=3, stride=1)
@@ -87,7 +87,7 @@ class SBMENet(nn.Module):
         self.upfeat4 = deconv(od + dd[4], 2, kernel_size=4, stride=2, padding=1)
 
         od = (2 * 2 + 1) ** 2 + 64 * 2 + 4
-        self.bilateral_corr3 = BilateralCorrelation(md=2)
+        self.bilateral_corr3 = BilateralCorrelation(md=2, fp16=self.fp16)
         self.conv3_0 = conv(od, 128, kernel_size=3, stride=1)
         self.conv3_1 = conv(od + dd[0], 128, kernel_size=3, stride=1)
         self.conv3_2 = conv(od + dd[1], 96, kernel_size=3, stride=1)
@@ -98,7 +98,7 @@ class SBMENet(nn.Module):
         self.upfeat3 = deconv(od + dd[4], 2, kernel_size=4, stride=2, padding=1)
 
         od = (2 * 2 + 1) ** 2 + 32 * 2 + 4
-        self.bilateral_corr2 = BilateralCorrelation(md=2)
+        self.bilateral_corr2 = BilateralCorrelation(md=2, fp16=self.fp16)
         self.conv2_0 = conv(od, 128, kernel_size=3, stride=1)
         self.conv2_1 = conv(od + dd[0], 128, kernel_size=3, stride=1)
         self.conv2_2 = conv(od + dd[1], 96, kernel_size=3, stride=1)
@@ -134,7 +134,10 @@ class SBMENet(nn.Module):
         xx = torch.arange(0, W).view(1, 1, 1, W).expand(B, 1, H, W)
         yy = torch.arange(0, H).view(1, 1, H, 1).expand(B, 1, H, W)
 
-        grid = torch.cat((xx, yy), 1).float()
+        if self.fp16:
+            grid = torch.cat((xx, yy), 1).half()
+        else:
+            grid = torch.cat((xx, yy), 1).float()
 
         if x.is_cuda:
             grid = grid.to(x.device)

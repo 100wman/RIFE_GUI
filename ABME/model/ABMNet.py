@@ -37,12 +37,12 @@ class ABMRNet(nn.Module):
     Asymmetric Bilateral Motion Refinement netwrok
     """
 
-    def __init__(self, md=2):
+    def __init__(self, md=2, fp16=False):
         """
         input: md --- maximum displacement (for correlation. default: 4), after warpping
         """
         super(ABMRNet, self).__init__()
-
+        self.fp16 = fp16
         self.conv1a = conv(3, 16, kernel_size=3, stride=2)
         self.conv1aa = conv(16, 16, kernel_size=3, stride=1)
         self.conv1b = conv(16, 16, kernel_size=3, stride=1)
@@ -107,7 +107,10 @@ class ABMRNet(nn.Module):
         xx = torch.arange(0, W).view(1, 1, 1, W).expand(B, 1, H, W)
         yy = torch.arange(0, H).view(1, 1, H, 1).expand(B, 1, H, W)
 
-        grid = torch.cat((xx, yy), 1).float()
+        if self.fp16:
+            grid = torch.cat((xx, yy), 1).half()
+        else:
+            grid = torch.cat((xx, yy), 1).float()
 
         if x.is_cuda:
             grid = grid.to(x.device)
@@ -158,8 +161,8 @@ class ABMRNet(nn.Module):
         Z_2 = self.predict_mask2(x)
 
         feat1 = self.leakyRELU(self.upfeat2(x))
-        V_1 = Upsample(V_2, 2)
-        Z_1 = Upsample(Z_2, 2)
+        V_1 = Upsample(V_2, 2, self.fp16)
+        Z_1 = Upsample(Z_2, 2, self.fp16)
         warp1 = self.warp(self.conv1_ASFM(c21), V_1 * 10.0)
 
         c11_Res = feat1
