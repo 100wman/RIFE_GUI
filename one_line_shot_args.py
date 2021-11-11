@@ -490,7 +490,7 @@ class ReadFlow(IOFlow):
                     f"Invalid Input Section, changed to original section")
 
         output_dict = {"-map": "0:v:0", "-vframes": str(10 ** 10),
-                       "-sws_flags": "lanczos",
+                       "-sws_flags": "bicubic",
                        }  # use read frames cnt to avoid ffprobe, fuck
 
         output_dict.update(self._get_color_info_dict())
@@ -545,7 +545,7 @@ class ReadFlow(IOFlow):
             return time.time()
         return run_time
 
-    def update_decode_process_time(self, decode_time):
+    def __update_decode_process_time(self, decode_time):
         self.ARGS.update_task_info({'decode_process_time': decode_time})
 
     def remove_duplicate_frames(self, videogen_check: FFmpegReader.nextFrame, init=False) -> (list, list, dict):
@@ -741,7 +741,7 @@ class ReadFlow(IOFlow):
         check_frame_list = [i for i in check_frame_list if i > -1]
         return check_frame_list, scene_frame_list, check_frame_data
 
-    def _no_dedup_run(self):
+    def __no_dedup_run(self):
         """
         Extract Frames Without any dedup(or scene detection)
         :return:
@@ -783,21 +783,21 @@ class ReadFlow(IOFlow):
             if img1 is None:
                 is_end = True
                 self.__feed_to_rife(now_frame, img0, img0, n=0, is_end=is_end)
-                self.update_decode_process_time(time.time() - decode_time)
+                self.__update_decode_process_time(time.time() - decode_time)
                 break
             self.__feed_to_rife(now_frame, img0, img0, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
             self.scene_detection.update_scene_status(now_frame, "normal")
-            self.update_decode_process_time(time.time() - decode_time)
+            self.__update_decode_process_time(time.time() - decode_time)
 
             self.ARGS.update_task_info({"read_now_frame": now_frame})
-            self.update_scene_status()
+            self.__update_scene_status()
             pass
 
         self._output_queue.put(None)  # bad way to end
         videogen.close()
 
     # @profile
-    def _dedup_1xn_run(self):
+    def __dedup_1xn_run(self):
         """
         Go through all procedures to produce interpolation result in dedup mode
         :return:
@@ -894,11 +894,11 @@ class ReadFlow(IOFlow):
                                             is_end=is_end)
                     last_frame_key = now_frame_key
                     img0 = img1
-                    self.update_scene_status()
+                    self.__update_scene_status()
                 self.__feed_to_rife(now_frame_cnt + now_frame_key, img1, img1, n=0, is_end=is_end)
                 self.ARGS.update_task_info({"read_now_frame": now_frame_cnt + check_frame_list[-1]})
                 now_frame_cnt += last_frame_key
-            self.update_decode_process_time(time.time() - decode_time)
+            self.__update_decode_process_time(time.time() - decode_time)
 
         pass
         self._output_queue.put(None)
@@ -906,7 +906,7 @@ class ReadFlow(IOFlow):
         videogen_check.close()
 
     # @profile
-    def _dedup_any_fps_run(self):
+    def __dedup_any_fps_run(self):
         """
         Go through all procedures to produce interpolation result in any fps mode(from a fps to b fps)
         :return:
@@ -946,7 +946,7 @@ class ReadFlow(IOFlow):
             if img1 is None:
                 is_end = True
                 self.__feed_to_rife(now_frame, img0, img0, is_end=is_end)
-                self.update_decode_process_time(time.time() - decode_time)
+                self.__update_decode_process_time(time.time() - decode_time)
                 break
 
             diff = Tools.get_norm_img_diff(img0, img1)
@@ -956,7 +956,7 @@ class ReadFlow(IOFlow):
             if self.scene_detection.check_scene(img0, img1, use_diff=diff):
                 self.__feed_to_rife(now_frame, img0, img1, n=0,
                                     is_end=is_end)  # add img0 only, for there's no gap between img0 and img1
-                self.update_decode_process_time(time.time() - decode_time)
+                self.__update_decode_process_time(time.time() - decode_time)
                 self.scene_detection.update_scene_status(now_frame, "scene")
                 continue
             else:
@@ -995,23 +995,23 @@ class ReadFlow(IOFlow):
                             0 (1 2 3) 4[scene] => 0 (1 2) 3 4[scene] 括号内为RIFE应该生成的帧
                             """
                         self.scene_detection.update_scene_status(now_frame, "scene")
-                        self.update_decode_process_time(time.time() - decode_time)
+                        self.__update_decode_process_time(time.time() - decode_time)
 
                     elif skip != 0:  # skip >= 1
                         assert skip >= 1
                         """Not Scene"""
                         self.__feed_to_rife(now_frame, img0, img1, n=skip, is_end=is_end)
                         self.scene_detection.update_scene_status(now_frame, "normal")
-                        self.update_decode_process_time(time.time() - decode_time)
+                        self.__update_decode_process_time(time.time() - decode_time)
                     now_frame += skip
                 else:
                     """normal frames"""
                     self.__feed_to_rife(now_frame, img0, img1, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
                     self.scene_detection.update_scene_status(now_frame, "normal")
-                    self.update_decode_process_time(time.time() - decode_time)
+                    self.__update_decode_process_time(time.time() - decode_time)
 
                 self.ARGS.update_task_info({"read_now_frame": now_frame})
-                self.update_scene_status()
+                self.__update_scene_status()
             pass
 
         self._output_queue.put(None)  # bad way to end
@@ -1051,7 +1051,7 @@ class ReadFlow(IOFlow):
     def update_vfi_core(self, vfi_core: VideoFrameInterpolationBase):
         self.vfi_core = vfi_core
 
-    def update_scene_status(self):
+    def __update_scene_status(self):
         scene_status = self.scene_detection.get_scene_status()
         update_dict = {'recent_scene': scene_status['recent_scene'], 'scene_cnt': scene_status['scene']}
         self.ARGS.update_task_info(update_dict)
@@ -1059,11 +1059,11 @@ class ReadFlow(IOFlow):
     def run(self):
         try:
             if self.ARGS.render_only and self.ARGS.is_no_dedup_render:
-                self._no_dedup_run()
+                self.__no_dedup_run()
             elif self.ARGS.remove_dup_mode in [0, 1]:
-                self._dedup_any_fps_run()
+                self.__dedup_any_fps_run()
             else:  # 1, 2 => 去重一拍二或一拍三
-                self._dedup_1xn_run()
+                self.__dedup_1xn_run()
             self._task_done()
         except Exception as e:
             self.logger.critical("Read Thread Panicked")
@@ -1111,48 +1111,47 @@ class RenderFlow(IOFlow):
         """
         hdr10plus_metadata_path = self.__hdr10_metadata_processer.get_hdr10plus_metadata_path_at_point(start_frame)
         params_libx265s = {
-            "fast": "high-tier=0:ref=2:rd=2:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=1:"
-                    "subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:"
-                    "rc-lookahead=15:b-adapt=1:bframes=4:aq-mode=3:aq-strength=0.7:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
-                    "qcomp=0.65:sao=0:repeat-headers=1:info=0",
-            "8bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
-                    "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
-                    "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
-                    "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1:info=0",
-            "10bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
-                     "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
-                     "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
-                     "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1:info=0",
-            "hdr10": 'high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:'
-                     'limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:'
-                     'open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
-                     'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:'
+            "fast": "ref=2:rd=2:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=1:subme=3:"
+                    "merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:rc-lookahead=15:"
+                    "b-adapt=1:bframes=4:aq-mode=3:aq-strength=0.9:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:"
+                    "info=0",
+            "8bit": "ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:"
+                    "subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:"
+                    "keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
+                    "crqpoffs=-2:qcomp=0.65:sao=0:info=0",
+            "10bit": "ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:"
+                     "subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:"
+                     "keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
+                     "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:info=0",
+            "hdr10": 'ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:'
+                     'subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:'
+                     'keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
+                     'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:'
                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                      'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
                      "max-cll=1000,100:hdr10-opt=1:repeat-headers=1:info=0",
-            "hdr10+": 'high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:'
-                      'limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:'
-                      'open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
-                      'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:'
+            "hdr10+": 'ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:'
+                      'subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:'
+                      'keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
+                      'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:'
                       'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                       'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
                       f"max-cll=1000,100:dhdr10-info='{hdr10plus_metadata_path}'"
         }
 
         params_libx264s = {
-            "fast": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=4:deblock='-1:-1':"
-                    "rc-lookahead=30:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:me=hex:merange=16:"
-                    "subme=7:psy-rd='1:0.1':mixed-refs=1:trellis=1",
-            "8bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
-                    "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                    "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "10bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
-                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "hdr10": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
-                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
-                     "range=tv:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:"
+            "fast": "keyint=250:min-keyint=1:bframes=3:b-adapt=1:open-gop=0:ref=4:rc-lookahead=30:chroma-qp-offset=-1:"
+                    "aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:me=hex:merange=16:subme=7:psy-rd='0.85:0.0':"
+                    "mixed-refs=0:trellis=1",
+            "8bit": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
+                    "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
+                    "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
+            "10bit": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
+                     "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
+                     "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
+            "hdr10": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
+                     "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
+                     "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
                      "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
                      "cll='1000,100'"
         }
@@ -1606,7 +1605,7 @@ class RenderFlow(IOFlow):
         output_filepath += output_ext  # 添加后缀名
         return output_filepath, output_ext
 
-    def concat_when_default_fail(self):
+    def __check_concat_fail_circumstances(self):
         if not self.ARGS.is_encode_audio:
             self.ARGS.is_encode_audio = True
             self.logger.warning("Audio will be Encoded into AAC 640kbps to avoid mux error")
@@ -1685,7 +1684,7 @@ class RenderFlow(IOFlow):
             sp.wait()
             concat_return_code = sp.returncode
         except Exception as e:
-            if self.concat_when_default_fail():  # audio mux type modified to aac
+            if self.__check_concat_fail_circumstances():  # audio mux type modified to aac
                 self.logger.warning("Retry Concat after FFmpeg failed")
                 self.concat_all()
             else:
@@ -1696,7 +1695,7 @@ class RenderFlow(IOFlow):
         self.logger.info(f"{len(concat_list)} files concatenated to {os.path.basename(concat_filepath)}")
         if not os.path.exists(concat_filepath) or not os.path.getsize(concat_filepath) or concat_return_code:
             # If return code is not 0, then there must be error
-            if self.concat_when_default_fail():
+            if self.__check_concat_fail_circumstances():
                 self.logger.warning("Retry Concat after Output File Validity Check failed")
                 self.concat_all()
             else:
@@ -1766,7 +1765,7 @@ class RenderFlow(IOFlow):
                 if self._kill or not self.wait_for_input():
                     if frame_written:
                         frame_writer.close()
-                    self.logger.debug("Render thread exit")  # 主线程已结束，这里的锁其实没用，调试用的
+                    self.logger.debug("Render thread exit")
                     frame_writer.close()
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
@@ -1807,7 +1806,7 @@ class RenderFlow(IOFlow):
                 _over_time_reminder_task.deactive()
 
                 chunk_frame_cnt += 1
-                self.ARGS.task_info.update({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
+                self.ARGS.update_task_info({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
 
                 if not chunk_frame_cnt % self.ARGS.render_gap:
                     frame_writer.close()
@@ -1824,12 +1823,12 @@ class RenderFlow(IOFlow):
                 # Do not concat when main error is detected
                 self.concat_all()
 
+
         except Exception as e:
             self.logger.critical("Render Thread Panicked")
             self.logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
             self.ARGS.save_main_error(e)
             return
-
         return
 
     def update_validation_flow(self, validation_flow: ValidationFlow):
@@ -1991,6 +1990,12 @@ class ProgressUpdateFlow(IOFlow):
         self.start_frame = 0
         self.read_flow = _read_flow
 
+    def __task_progress_complete_check(self, now_frame: int):
+        if now_frame < self.ARGS.all_frames_cnt * 4 / 5:
+            self.logger.warning("Detect that Task Complete Progress Rate (now frame / all frame cnt) "
+                                "is lower than 80%, Please Check whether Your Disk of input file was disconnected "
+                                "during the process and check whether output file exists and is in full length!")
+
     def __preview_vfi(self, now_frame):
         if not self.ARGS.is_preview_imgs:
             time.sleep(0.1)
@@ -2000,7 +2005,7 @@ class ProgressUpdateFlow(IOFlow):
             time.sleep(0.1)
             return
         screen_h, screen_w = self.ARGS.get_screen_size()
-        title = f"SVFI Preview:"
+        title = f"SVFI Preview = Frame Source A + Interpolated/Uplifted B + Source C"
         comp_stack = np.hstack([preview_imgs[0], preview_imgs[len(preview_imgs) // 2], preview_imgs[-1]])
 
         preview_w = screen_w
@@ -2017,7 +2022,7 @@ class ProgressUpdateFlow(IOFlow):
     def update_start_frame(self, start_frame: int):
         self.start_frame = start_frame
 
-    def proceed_overtime_reminder_task(self):
+    def __proceed_overtime_reminder_task(self):
         if self.ARGS.is_empty_overtime_task_queue():
             return
         _over_time_reminder_task = self.ARGS.get_overtime_task()
@@ -2042,9 +2047,7 @@ class ProgressUpdateFlow(IOFlow):
         previous_cnt = self.start_frame
         self._release_initiation()
         while True:
-            if self._kill or self.ARGS.get_main_error() is not None:
-                break
-            self.proceed_overtime_reminder_task()
+            self.__proceed_overtime_reminder_task()
             task_status = self.ARGS.task_info  # render status quo
             postfix_dict = {"R": f"{task_status['render']}",
                             "C": f"{task_status['read_now_frame']}",
@@ -2068,7 +2071,9 @@ class ProgressUpdateFlow(IOFlow):
                                      'SRTAT': f"{task_status['sr_task_acquire_time']:.2f}s",
                                      'SRPT': f"{task_status['sr_process_time']:.2f}s",
                                      "SRL": f"{task_status['sr_queue_len']}", })
-
+            if self._kill or self.ARGS.get_main_error() is not None:
+                self.__task_progress_complete_check(now_frame)
+                break
             pbar.set_description(pbar_description)
             pbar.set_postfix(postfix_dict)
             pbar.update(now_frame - previous_cnt)
@@ -2108,7 +2113,7 @@ class InterpWorkFlow:
 
         """Set 'Global' Reminder"""
 
-    def feed_to_render(self, frames_list: list, is_end=False):
+    def __feed_to_render(self, frames_list: list, is_end=False):
         """
         维护输出帧数组的输入（往输出渲染线程喂帧
         :param frames_list:
@@ -2155,7 +2160,7 @@ class InterpWorkFlow:
                 limit=ArgumentManager.traceback_limit))
             raise e
 
-    def check_validation(self):
+    def __check_validation(self):
         if not self.validation_flow.CheckValidateStart():
             if self.validation_flow.GetValidateError() is not None:
                 logger.error(f"Validation Failed: ")
@@ -2181,7 +2186,7 @@ class InterpWorkFlow:
             if self.ARGS.is_rife_reverse:
                 raise GenericSteamException(f"{_msg} RIFE Reversed Flow is Unavailable")
 
-    def check_interp_prerequisite(self):
+    def __check_interp_prerequisite(self):
         if self.ARGS.render_only or self.ARGS.extract_only or self.ARGS.concat_only:
             return
 
@@ -2228,14 +2233,14 @@ class InterpWorkFlow:
             self.vram_test()
         self.read_flow.update_vfi_core(self.vfi_core)
 
-    def check_outside_error(self):
+    def __check_outside_error(self):
         if self.ARGS.get_main_error() is not None:
             logger.error("Error outside RIFE:")
-            self.feed_to_render([None], is_end=True)
+            self.__feed_to_render([None], is_end=True)
             self.task_failed()
 
     def task_finish(self):
-        self.check_outside_error()
+        self.__check_outside_error()
         logger.info(f"Program finished at {datetime.datetime.now()}: "
                     f"Duration: {datetime.datetime.now() - self.run_all_time}")
         logger.info("Please Note That Commercial Use of SVFI's Output is Strictly PROHIBITED, "
@@ -2269,7 +2274,7 @@ class InterpWorkFlow:
         """
 
         """Check Steam Validation"""
-        self.check_validation()
+        self.__check_validation()
 
         """Go through the process"""
         if self.ARGS.concat_only:
@@ -2289,13 +2294,13 @@ class InterpWorkFlow:
             """Load RIFE Model"""
             self.read_flow.start()
             self.update_progress_flow.start()
-            self.check_interp_prerequisite()
+            self.__check_interp_prerequisite()
             self.render_flow.update_validation_flow(self.validation_flow)
             self.render_flow.start()
 
             PURE_SCENE_THRESHOLD = 30
 
-            self.check_outside_error()
+            self.__check_outside_error()
             self.read_flow.acquire_initiation_clock()
             self.render_flow.acquire_initiation_clock()
             self.update_progress_flow.acquire_initiation_clock()
@@ -2309,7 +2314,7 @@ class InterpWorkFlow:
                 task_acquire_time = time.time() - task_acquire_time
                 process_time = time.time()
                 if task is None:
-                    self.feed_to_render([None], is_end=True)
+                    self.__feed_to_render([None], is_end=True)
                     break
                 """
                 task = {"now_frame", "img0", "img1", "n","scale", "is_end", "is_scene", "add_scene"}
@@ -2329,7 +2334,7 @@ class InterpWorkFlow:
                 """
 
                 if img1 is None:
-                    self.feed_to_render([None], is_end=True)
+                    self.__feed_to_render([None], is_end=True)
                     break
 
                 # if all(self.ARGS.resize_param):
@@ -2371,8 +2376,8 @@ class InterpWorkFlow:
                                                                           debug=debug)
 
                 process_time = time.time() - process_time
-                self.update_rife_progress(now_frame, task_acquire_time, process_time)
-                self.feed_to_render(feed_list, is_end=is_end)
+                self.__update_rife_progress(now_frame, task_acquire_time, process_time)
+                self.__feed_to_render(feed_list, is_end=is_end)
                 preview_imgs = [feed[1] for feed in feed_list]
                 preview_imgs.append(img1)
                 self.ARGS.update_preview_imgs(preview_imgs)
@@ -2392,7 +2397,7 @@ class InterpWorkFlow:
         self.update_progress_flow.kill()
         self.task_finish()
 
-    def update_rife_progress(self, now_frame, task_acquire_time, process_time, ):
+    def __update_rife_progress(self, now_frame, task_acquire_time, process_time, ):
         update_dict = {'rife_now_frame': now_frame,
                        'rife_task_acquire_time': task_acquire_time,
                        'rife_process_time': process_time,

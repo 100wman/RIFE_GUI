@@ -6,19 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
+    <width>519</width>
     <height>540</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>400</width>
-    <height>300</height>
+    <width>0</width>
+    <height>0</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>600</width>
+    <width>23351</width>
     <height>23351</height>
    </size>
   </property>
@@ -26,6 +26,16 @@
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="0">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
    <item row="0" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="sizePolicy">
@@ -36,9 +46,15 @@
      </property>
      <property name="minimumSize">
       <size>
-       <width>300</width>
-       <height>300</height>
+       <width>500</width>
+       <height>400</height>
       </size>
+     </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="sizeAdjustPolicy">
+      <enum>QAbstractScrollArea::AdjustToContents</enum>
      </property>
      <property name="widgetResizable">
       <bool>true</bool>
@@ -48,7 +64,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>380</width>
+        <width>499</width>
         <height>491</height>
        </rect>
       </property>
@@ -161,8 +177,11 @@
          <layout class="QGridLayout" name="gridLayout_4">
           <item row="2" column="0">
            <widget class="QCheckBox" name="ExpertModeChecker">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;显示专业选项&lt;/p&gt;&lt;p&gt;除非你知道这些选项在做什么，否则不要更改这些选项！！&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>开启专家模式</string>
+             <string>开启专家模式 (?)</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -171,15 +190,21 @@
           </item>
           <item row="3" column="1">
            <widget class="QCheckBox" name="UseGlobalSettingsChecker">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对于任务队列内的所有任务使用同一套任务参数&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>使用全局设置</string>
+             <string>使用全局设置 (!)</string>
             </property>
            </widget>
           </item>
           <item row="4" column="1">
            <widget class="QCheckBox" name="DisableDedupRenderChecker">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;压制模式下，不对输入进行额外的内容操作（去重等），按照原输入帧率内容压制输出&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>无去重压制</string>
+             <string>原味压制模式 (?)</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -188,8 +213,11 @@
           </item>
           <item row="4" column="0">
            <widget class="QCheckBox" name="RudeExitModeChecker">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在任务结束后终止SVFI相关进程，请注意这将会强制终止以下进程：&lt;/p&gt;&lt;p&gt;ffmpeg.exe&lt;/p&gt;&lt;p&gt;ffprobe.exe&lt;/p&gt;&lt;p&gt;one_line_shot_args.exe&lt;/p&gt;&lt;p&gt;QSVEncC64.exe&lt;/p&gt;&lt;p&gt;NVEncC64.exe&lt;/p&gt;&lt;p&gt;SvtHevcEncApp.exe&lt;/p&gt;&lt;p&gt;SvtVp9EncApp.exe&lt;/p&gt;&lt;p&gt;SvtAv1EncApp.exe&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>鲁莽的退出</string>
+             <string>鲁莽的退出 (!)</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -208,8 +236,11 @@
           </item>
           <item row="2" column="1">
            <widget class="QCheckBox" name="PreviewArgsModeChecker">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在任务启动前显示被选中的任务参数&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>开启任务前参数文本预览</string>
+             <string>开启任务前参数文本预览 (?)</string>
             </property>
             <property name="checked">
              <bool>false</bool>
@@ -218,8 +249,11 @@
           </item>
           <item row="5" column="0">
            <widget class="QCheckBox" name="PreviewVfiChecker">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在任务启动后可以查看当前任务进度预览，包括参考帧1，补帧/超分帧，参考帧2&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>开启预览</string>
+             <string>开启预览 (?)</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -237,8 +271,11 @@
          <layout class="QGridLayout" name="gridLayout_6">
           <item row="0" column="0">
            <widget class="QCheckBox" name="QuietModeChecker">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;不建议开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;关闭任务启动前的所有提示弹窗&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>开启安静模式（不显示弹窗等）</string>
+             <string>开启安静模式 (?)</string>
             </property>
             <property name="checked">
              <bool>false</bool>
@@ -248,7 +285,7 @@
           <item row="1" column="0">
            <widget class="QCheckBox" name="WinOnTopChecker">
             <property name="text">
-             <string>窗口置顶（下次启动生效）</string>
+             <string>窗口置顶 (Invalid)</string>
             </property>
            </widget>
           </item>
@@ -273,16 +310,6 @@
        </item>
       </layout>
      </widget>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
     </widget>
    </item>
   </layout>

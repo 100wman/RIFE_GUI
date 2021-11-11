@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1254</width>
-    <height>860</height>
+    <height>856</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -743,7 +743,7 @@
                     <x>0</x>
                     <y>0</y>
                     <width>400</width>
-                    <height>738</height>
+                    <height>735</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_10">
@@ -812,7 +812,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>382</width>
-                        <height>409</height>
+                        <height>406</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1090,7 +1090,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>382</width>
-                        <height>409</height>
+                        <height>406</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1363,7 +1363,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>365</width>
-                        <height>476</height>
+                        <height>468</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1839,8 +1839,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>378</width>
-                        <height>643</height>
+                        <width>374</width>
+                        <height>631</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2464,7 +2464,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>365</width>
-                        <height>540</height>
+                        <height>532</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2902,7 +2902,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>382</width>
-                        <height>409</height>
+                        <height>406</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2991,7 +2991,7 @@
                         <x>0</x>
                         <y>0</y>
                         <width>382</width>
-                        <height>409</height>
+                        <height>406</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -3424,7 +3424,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1254</width>
-     <height>23</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">

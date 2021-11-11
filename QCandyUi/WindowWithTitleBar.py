@@ -337,7 +337,6 @@ class WindowWithTitleBar(QFrame):
         """
         self.m_titlebar.setMaximumEnable(isEnable)
 
-
     def paintEvent(self, event):
         return
         path = QPainterPath()
