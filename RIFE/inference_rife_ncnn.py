@@ -90,8 +90,8 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         else:
             return [*first_half, *second_half]
 
-    def get_auto_scale(self, img0, img1):
-        return self.ARGS.rife_exp
+    # def get_auto_scale(self, img0, img1):
+    #     return self.ARGS.rife_exp
 
     def generate_n_interp(self, img1, img2, n, scale, debug=False):
         if debug:

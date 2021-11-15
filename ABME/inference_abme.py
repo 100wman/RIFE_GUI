@@ -56,8 +56,9 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
             # torch.cuda.set_device(self.ARGS.use_specific_gpu)
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
-        self.model_dir = os.path.join(appDir, 'train_log', 'abme_best')
 
+        print("INFO - Loading ABME Model: https://github.com/JunHeum/ABME")
+        self.model_dir = os.path.join(appDir, 'train_log', 'abme_best')
         self.SBMNet.load_state_dict(torch.load(os.path.join(self.model_dir, 'SBME_ckpt.pth'), map_location='cpu'))
         self.ABMNet.load_state_dict(torch.load(os.path.join(self.model_dir, 'ABMR_ckpt.pth'), map_location='cpu'))
         self.SynNet.load_state_dict(torch.load(os.path.join(self.model_dir, 'SynNet_ckpt.pth'), map_location='cpu'))
@@ -79,6 +80,10 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
         # self.SBMNet.eval()
         # self.ABMNet.eval()
         # self.SynNet.eval()
+        first_card = torch.cuda.get_device_properties(0)
+        card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
+        print(f"INFO - ABME Using {card_info}, model_name: {os.path.basename(self.model_dir)}")
+
         self.initiated = True
 
     # @profile

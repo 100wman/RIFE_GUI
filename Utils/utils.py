@@ -28,6 +28,7 @@ from sklearn import linear_model
 
 from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE
 from skvideo.utils import check_output
+from skimage.metrics._structural_similarity import structural_similarity as compare_ssim
 
 
 class DefaultConfigParser(ConfigParser):
@@ -78,21 +79,18 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.6"
+    gui_version = "3.8.7"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.6"
+    ols_version = "7.3.7"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Modify Resampling Algorithm by assigning opencv: area, ffmpeg: bicubic
-    - Optimize Code Structure by minimizing public members of functions
-    - Add Task Complete Progress Sanity Check
-    - Optimize Preview Title
-    - Optimize documentation for Preference Menu
-    - Upgrade Render Parameters for libx264 and libx265
+    - Add New Dynamic Scale (Ver. 2, 11/15/21)
+    - Add New RIFE Model: official_v6 and a self-trained model (anime_training)
+    - Fix Some Bugs on options' display of vfi
     """
 
     path_len_limit = 230
@@ -835,7 +833,34 @@ class VideoFrameInterpolationBase:
         return interp_list
 
     def get_auto_scale(self, img1, img2) -> float:
-        return 0.5
+        def mean_scale(HR, targetHeight, targetWidth):
+            h, w, c = HR.shape
+            BChannel = HR[:, :, 0]
+            GChannel = HR[:, :, 1]
+            RChannel = HR[:, :, 2]
+            ystep = h / targetHeight
+            xstep = w / targetWidth
+            bgr_map = np.zeros((targetHeight, targetWidth, c), np.float32)
+            for y in range(targetHeight - 1):
+                for x in range(targetWidth - 1):
+                    B = BChannel[int(y * ystep):int(ystep * (y + 1)) - 1,
+                        int(x * xstep):int(xstep * (x + 1)) - 1].mean()
+                    G = GChannel[int(y * ystep):int(ystep * (y + 1)) - 1,
+                        int(x * xstep):int(xstep * (x + 1)) - 1].mean()
+                    R = RChannel[int(y * ystep):int(ystep * (y + 1)) - 1,
+                        int(x * xstep):int(xstep * (x + 1)) - 1].mean()
+                    bgr_map[y, x] = [B, G, R]
+            return bgr_map.astype(np.uint8)
+
+        i0 = mean_scale(img1, 8, 8)
+        i1 = mean_scale(img2, 8, 8)
+        scale_list = [1.0, 0.5, 0.25]
+        dis_ssim = (1 - compare_ssim(i0, i1, multichannel=True)) * 100
+        scale_max = len(scale_list)
+        if dis_ssim >= scale_max:
+            return scale_list[scale_max - 1]
+        else:
+            return scale_list[int(dis_ssim)]
 
     def __make_n_inference(self, img1, img2, scale, n):
         raise NotImplementedError("Abstract")

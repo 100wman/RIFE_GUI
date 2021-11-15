@@ -3,6 +3,8 @@ import time
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from RIFE.IFNet_v6 import *
+from RIFE.loss import *
+from RIFE.refine_v6 import *
 
 device = torch.device("cuda")
 
@@ -10,8 +12,6 @@ device = torch.device("cuda")
 class Model:
     def __init__(self, use_multi_cards=False, forward_ensemble=False, tta=0, local_rank=-1):
         self.tta = tta
-        self.flownet = IFNet()
-
         self.forward_ensemble = forward_ensemble
         self.use_multi_cards = use_multi_cards
         self.device_count = torch.cuda.device_count()
@@ -37,13 +37,12 @@ class Model:
                 if "module." in k
             }
         if rank <= 0:
-            params = convert(torch.load('{}/flownet.pkl'.format(path)))
-            self.flownet.load_state_dict(params)
+            self.flownet.load_state_dict(convert(torch.load('{}/flownet.pkl'.format(path), map_location=device)))
 
     def calculate_prediction(self, img0, img1, scale):
-        scale_list = [4 / scale, 2 / scale, 1 / scale]
         imgs = torch.cat((img0, img1), 1)
-        flow, mask, merged, flow_teacher, merged_teacher, loss_distill = self.flownet(imgs, scale_list)
+        flow, mask, merged, flow_teacher, merged_teacher, loss_distill = \
+            self.flownet(imgs, [4 / scale, 2 / scale, 1 / scale], )
         return merged[2]
 
     def TTA_FRAME(self, img0, img1, iter_time=2, scale=1.0):
@@ -82,6 +81,7 @@ if __name__ == '__main__':
         0, 1, (1, 3, 256, 256))).float().to(device)
     _imgs = torch.cat((_img0, _img1), 1)
     model = Model(True, True, 3)
+    model.load_model(r"D:\60-fps-Project\Projects\RIFE GUI\train_log\official_v6", -1)
     model.eval()
     _t = time.time()
     print(model.inference(_img0, _img1).shape)

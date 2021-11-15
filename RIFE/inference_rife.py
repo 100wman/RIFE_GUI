@@ -2,7 +2,6 @@ import os
 import traceback
 import warnings
 
-import cv2
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -37,7 +36,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         if not torch.cuda.is_available():
             self.device = torch.device("cpu")
             self.ARGS.use_rife_fp16 = False
-            print("INFO - use cpu to interpolate")
+            print("INFO - RIFE Using cpu")
         else:
             self.device = torch.device(f"cuda")
             # torch.cuda.set_device(self.ARGS.use_specific_gpu)
@@ -47,17 +46,19 @@ class RifeInterpolation(VideoFrameInterpolationBase):
             if self.ARGS.use_rife_fp16:
                 try:
                     torch.set_default_tensor_type(torch.cuda.HalfTensor)
-                    print("INFO - FP16 mode switch success")
+                    print("INFO - RIFE FP16 mode switch success")
                 except Exception as e:
-                    print("INFO - FP16 mode switch failed")
+                    print("INFO - RIFE FP16 mode switch failed")
                     traceback.print_exc()
                     self.ARGS.use_rife_fp16 = False
 
         if self.ARGS.rife_model == "" or not os.path.exists(self.ARGS.rife_model):
             self.model_path = os.path.join(appDir, 'train_log', 'official_2.3')
+            print("WARNING - Using Default RIFE Model official_2.3")
         else:
             self.model_path = self.ARGS.rife_model
 
+        print("INFO - Loading RIFE Model: https://github.com/hzwer/arXiv2020-RIFE")
         try:
             from RIFE.RIFE_HDv2 import Model
             model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
@@ -80,13 +81,13 @@ class RifeInterpolation(VideoFrameInterpolationBase):
                 model.load_model(self.model_path, -1)
                 self.model_version = 6
                 print("INFO - RIFE v6 model loaded.")
-
-        first_card = torch.cuda.get_device_properties(0)
-        card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
-        print(f"INFO - RIFE Using {card_info}")
         self.model = model
         self.model.eval()
         self.model.device()
+
+        first_card = torch.cuda.get_device_properties(0)
+        card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
+        print(f"INFO - RIFE Using {card_info}, model_name: {os.path.basename(self.model_path)}")
         self.initiated = True
 
     def __inference(self, img1, img2, scale):
@@ -191,22 +192,22 @@ class RifeInterpolation(VideoFrameInterpolationBase):
             0).float() / 255.
                 for img in imgs]
 
-    def get_auto_scale(self, i0, i1):
-        scale_range = [0.25, 0.5, 1.0]
-        max_distance = 0
-        select_scale = 0.5
-        for scale in scale_range:
-            pwh = int(32 / scale)
-            t0 = cv2.resize(i0, (pwh, pwh))
-            t1 = cv2.resize(i1, (pwh, pwh))
-            I0, I1 = self._get_auto_scale_to_tensor(t0, t1)
-            lf, _ = self.model.calculate_flow(I0, I1, scale)
-            rf, _ = self.model.calculate_flow(I1, I0, scale)
-            distance = abs(((lf - rf) / 2).mean())
-            if distance > max_distance:
-                select_scale = scale
-                max_distance = distance
-        return select_scale
+    # def get_auto_scale(self, i0, i1):
+    #     scale_range = [0.25, 0.5, 1.0]
+    #     max_distance = 0
+    #     select_scale = 0.5
+    #     for scale in scale_range:
+    #         pwh = int(32 / scale)
+    #         t0 = cv2.resize(i0, (pwh, pwh))
+    #         t1 = cv2.resize(i1, (pwh, pwh))
+    #         I0, I1 = self._get_auto_scale_to_tensor(t0, t1)
+    #         lf, _ = self.model.calculate_flow(I0, I1, scale)
+    #         rf, _ = self.model.calculate_flow(I1, I0, scale)
+    #         distance = abs(((lf - rf) / 2).mean())
+    #         if distance > max_distance:
+    #             select_scale = scale
+    #             max_distance = distance
+    #     return select_scale
 
     def run(self):
         pass

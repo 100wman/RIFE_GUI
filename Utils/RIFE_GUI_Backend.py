@@ -1980,12 +1980,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             current_model_index = 0b010
         elif 'xvfi' in current_model.lower():
             current_model_index = 0b100
-        self.InterpScaleSelector.setEnabled(0b001 & current_model_index)
-        self.InterpScaleReminder.setEnabled(0b001 & current_model_index)
+        self.InterpScaleSelector.setEnabled(0b001 & current_model_index and not self.AutoInterpScaleChecker.isChecked())
+        self.InterpScaleReminder.setEnabled(0b001 & current_model_index and not self.AutoInterpScaleChecker.isChecked())
         self.TtaModeZone.setEnabled(0b001 & current_model_index)
         self.UseMultiCardsChecker.setEnabled(0b001 & current_model_index)
         self.ForwardEnsembleChecker.setEnabled(0b001 & current_model_index)
-        self.AutoInterpScaleChecker.setEnabled(0b001 & current_model_index)
         pass
 
     @pyqtSlot(str)

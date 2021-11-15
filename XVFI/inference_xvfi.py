@@ -7,12 +7,13 @@ import cv2
 import numpy as np
 import torch.backends.cudnn as cudnn
 import torch.utils.data
+from torch.autograd import Variable
 from torch.nn import functional as F
 
 from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
 from XVFI.XVFInet import XVFInet
 from XVFI.utils import weights_init
-from torch.autograd import Variable
+
 # from line_profiler_pycharm import profile
 
 
@@ -61,7 +62,11 @@ class XVFInterpolation(VideoFrameInterpolationBase):
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
 
-        model_path = glob.glob(os.path.join(self.ARGS.rife_model_dir, self.ARGS.rife_model_name, "*.pt"))[0]
+        print("INFO - Loading XVFI Model: https://github.com/JihyongOh/XVFI")
+        model_path = glob.glob(os.path.join(self.ARGS.rife_model_dir, self.ARGS.rife_model_name, "*.pt"))
+        if not len(model_path):
+            raise FileNotFoundError(f"Could not find any valid XVFI model at {self.ARGS.rife_model_dir}")
+        model_path = model_path[0]
 
         """ Initialize a model """
         checkpoint = torch.load(model_path, map_location='cpu')
@@ -74,6 +79,11 @@ class XVFInterpolation(VideoFrameInterpolationBase):
         self.model_net.load_state_dict(checkpoint['state_dict_Model'], strict=True)
         # switch to evaluate mode
         self.model_net.eval()
+
+        first_card = torch.cuda.get_device_properties(0)
+        card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
+        print(f"INFO - XVFI Using {card_info}, model_name: {os.path.basename(model_path)}")
+        self.initiated = True
 
     # @profile
     def __inference(self, img1, img2, n):
