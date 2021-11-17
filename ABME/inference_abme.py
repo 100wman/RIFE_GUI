@@ -171,7 +171,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
             return mid
 
     # @profile
-    def __make_n_inference(self, img1, img2, scale, n):
+    def _make_n_inference(self, img1, img2, scale, n):
         if self.is_interlace_inference:
             pieces_img1 = self.split_input_image(img1)
             pieces_img2 = self.split_input_image(img2)
@@ -183,8 +183,8 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
             mid = self.__inference(img1, img2)
         if n == 1:
             return [mid]
-        first_half = self.__make_n_inference(img1, mid, scale, n=n // 2)
-        second_half = self.__make_n_inference(mid, img2, scale, n=n // 2)
+        first_half = self._make_n_inference(img1, mid, scale, n=n // 2)
+        second_half = self._make_n_inference(mid, img2, scale, n=n // 2)
         if n % 2:
             return [*first_half, mid, *second_half]
         else:
@@ -196,7 +196,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
             for i in range(n):
                 output_gen.append(img1)
             return output_gen
-        interp_gen = self.__make_n_inference(img0, img1, scale, n=n)
+        interp_gen = self._make_n_inference(img0, img1, scale, n=n)
         return interp_gen
         pass
 

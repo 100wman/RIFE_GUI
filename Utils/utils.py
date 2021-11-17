@@ -79,18 +79,20 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.7"
+    gui_version = "3.8.8"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.7"
+    ols_version = "7.3.8"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add New Dynamic Scale (Ver. 2, 11/15/21)
-    - Add New RIFE Model: official_v6 and a self-trained model (anime_training)
-    - Fix Some Bugs on options' display of vfi
+    - Add New Multi-Frame-Interpolation method of RIFE: official_v7_multi
+    - Optimize Code Structure (inheritance)
+    - Fix bug of misplaced reversed-optical-flow
+    - Reduce PURE SCENE THRESHOLD to 20 frames
+    - Optimize Options Display related to VFI
     """
 
     path_len_limit = 230
@@ -862,7 +864,7 @@ class VideoFrameInterpolationBase:
         else:
             return scale_list[int(dis_ssim)]
 
-    def __make_n_inference(self, img1, img2, scale, n):
+    def _make_n_inference(self, img1, img2, scale, n):
         raise NotImplementedError("Abstract")
 
     def run(self):

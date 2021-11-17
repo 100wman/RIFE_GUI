@@ -45,9 +45,9 @@ class RifeInterpolation(VideoFrameInterpolationBase):
     def calculate_prediction(self, i1, i2, scale=1.0):
         rife_instance = self.device[random.randrange(0, len(self.device))]
         if self.ARGS.is_rife_reverse:
-            mid = rife_instance.process(i1, i2)[0]
-        else:
             mid = rife_instance.process(i2, i1)[0]
+        else:
+            mid = rife_instance.process(i1, i2)[0]
         return mid
 
     def TTA_FRAME(self, img0, img1, iter_time=2, scale=1.0):
@@ -79,12 +79,12 @@ class RifeInterpolation(VideoFrameInterpolationBase):
             m2 = self.TTA_FRAME(LX, RX, 1, scale)
             return self.TTA_FRAME(m1, m2, 1, scale)
 
-    def __make_n_inference(self, i1, i2, scale, n):
+    def _make_n_inference(self, i1, i2, scale, n):
         mid = self.inference(i1, i2, iter_time=self.ARGS.rife_tta_iter)
         if n == 1:
             return [mid]
-        first_half = self.__make_n_inference(i1, mid, scale, n=n // 2)
-        second_half = self.__make_n_inference(mid, i2, scale, n=n // 2)
+        first_half = self._make_n_inference(i1, mid, scale, n=n // 2)
+        second_half = self._make_n_inference(mid, i2, scale, n=n // 2)
         if n % 2:
             return [*first_half, mid, *second_half]
         else:
@@ -101,7 +101,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
             return output_gen
         img1 = self.generate_input_img(img1)
         img2 = self.generate_input_img(img2)
-        interp_gen = self.__make_n_inference(img1, img2, scale, n)
+        interp_gen = self._make_n_inference(img1, img2, scale, n)
         return interp_gen
 
     def run(self):

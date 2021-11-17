@@ -2193,21 +2193,33 @@ class InterpWorkFlow:
             return
 
         if 'abme' in self.ARGS.rife_model_name.lower():
+            """model: abme_best"""
             _over_time_reminder_task = OverTimeReminderTask(15, "ABME VFI Module Load Failed",
                                                             "Import Cracked(>15s so far), Please terminate the process and check your CUDA version according to the manual")
             self.ARGS.put_overtime_task(_over_time_reminder_task)
             from ABME import inference_abme as inference
             self.vfi_core = inference.ABMEInterpolation(self.ARGS)
-            logger.warning("ABME Interpolation Module Loaded, Note that this is alpha only")
+            logger.warning("ABME VFI Module Loaded, Note that this is alpha only")
             _over_time_reminder_task.deactive()
         elif 'xvfi' in self.ARGS.rife_model_name.lower():
+            """model: xvfi_*"""
             _over_time_reminder_task = OverTimeReminderTask(15, "XVFI Module Load Failed",
                                                             "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
             self.ARGS.put_overtime_task(_over_time_reminder_task)
             from XVFI import inference_xvfi as inference
             self.vfi_core = inference.XVFInterpolation(self.ARGS)
-            logger.warning("XVFI Interpolation Module Loaded, Note that this is alpha only")
+            logger.warning("XVFI VFI Module Loaded, Note that this is alpha only")
             _over_time_reminder_task.deactive()
+        elif 'v7' in self.ARGS.rife_model_name.lower() and 'multi' in self.ARGS.rife_model_name.lower():
+            """model: rife's official_v7_multi"""
+            _over_time_reminder_task = OverTimeReminderTask(15, "RIFE Multi VFI Module Load Failed",
+                                                            "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
+            self.ARGS.put_overtime_task(_over_time_reminder_task)
+            from RIFE import inference_rife as inference
+            self.vfi_core = inference.RifeMultiInterpolation(self.ARGS)
+            logger.warning("RIFE VFI Module Multi Version Loaded, Note that this is alpha only")
+            _over_time_reminder_task.deactive()
+            pass
         else:
             _over_time_reminder_task = OverTimeReminderTask(15, "RIFE VFI Module Load Failed",
                                                             "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
@@ -2229,6 +2241,7 @@ class InterpWorkFlow:
             """Update RIFE Core"""
             self.vfi_core = inference.RifeInterpolation(self.ARGS)
             _over_time_reminder_task.deactive()
+            logger.info("RIFE VFI Module Loaded")
         self.vfi_core.initiate_algorithm()
 
         if not self.ARGS.use_ncnn:
@@ -2300,7 +2313,7 @@ class InterpWorkFlow:
             self.render_flow.update_validation_flow(self.validation_flow)
             self.render_flow.start()
 
-            PURE_SCENE_THRESHOLD = 30
+            PURE_SCENE_THRESHOLD = 20
 
             self.__check_outside_error()
             self.read_flow.acquire_initiation_clock()

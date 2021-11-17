@@ -1971,21 +1971,47 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(str)
     def on_ModuleSelector_currentTextChanged(self):
-        current_model = self.ModuleSelector.currentText()
+        current_model = self.ModuleSelector.currentText().lower()
         """
-        000 = XVFI, ABME, RIFE
+        000000 = RIFEv2, RIFEv3, RIFEv6, RIFEv7, XVFI, ABME 
         """
-        current_model_index = 0b001  # default is RIFE
-        if 'abme' in current_model.lower():
-            current_model_index = 0b010
-        elif 'xvfi' in current_model.lower():
-            current_model_index = 0b100
-        self.InterpScaleSelector.setEnabled(0b001 & current_model_index and not self.AutoInterpScaleChecker.isChecked())
-        self.InterpScaleReminder.setEnabled(0b001 & current_model_index and not self.AutoInterpScaleChecker.isChecked())
-        self.TtaModeZone.setEnabled(0b001 & current_model_index)
-        self.UseMultiCardsChecker.setEnabled(0b001 & current_model_index)
-        self.ForwardEnsembleChecker.setEnabled(0b001 & current_model_index)
-        pass
+        if 'abme_best' in current_model:
+            current_model_index = 0b000001
+        elif 'anime' in current_model:
+            if any([i in current_model for i in ['sharp', 'smooth']]):
+                current_model_index = 0b100000  # RIFEv2
+            else:  # RIFEv6, anime_training
+                current_model_index = 0b001000
+        elif 'official' in current_model:
+            if '2.3' in current_model:
+                current_model_index = 0b100000  # RIFEv2.3
+            elif '3.' in current_model:
+                current_model_index = 0b010000
+            elif 'v6' in current_model:
+                current_model_index = 0b001000
+            else: # RIFEv7
+                current_model_index = 0b000100
+        elif 'xvfi' in current_model:
+            current_model_index = 0b000010
+        else:
+            current_model_index = 0b100000  # default RIFEv2
+        """
+                    Rv2 Rv3 Rv6 Rv7 XVFI ABME
+                DS   1   1   1   1    0   0
+                TTA  1   1   1   0    0   1
+                MC   1   1   1   0    0   0
+                EN   0   1   0   0    0   0
+        """
+        DS_enable = 0b111100 & current_model_index
+        self.AutoInterpScaleChecker.setChecked(self.AutoInterpScaleChecker.isChecked() if DS_enable else False)
+        self.AutoInterpScaleChecker.setEnabled(DS_enable)
+        self.TtaModeZone.setEnabled(0b111001 & current_model_index)
+        self.UseMultiCardsChecker.setEnabled(0b111000 & current_model_index)
+        EN_enable = 0b010000 & current_model_index
+        self.ForwardEnsembleChecker.setChecked(self.ForwardEnsembleChecker.isChecked() if EN_enable else False)
+        self.ForwardEnsembleChecker.setEnabled(EN_enable)
+        self.InterpScaleSelector.setEnabled(DS_enable)
+        self.InterpScaleReminder.setEnabled(DS_enable)
 
     @pyqtSlot(str)
     def on_SettingsPresetsInputs_currentTextChanged(self):

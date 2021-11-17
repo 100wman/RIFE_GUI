@@ -117,7 +117,7 @@ class XVFInterpolation(VideoFrameInterpolationBase):
             return output_imgs
 
     # @profile
-    def __make_n_inference(self, img1, img2, scale, n):
+    def _make_n_inference(self, img1, img2, scale, n):
         if self.is_interlace_inference:
             pieces_img1 = self.split_input_image(img1)
             pieces_img2 = self.split_input_image(img2)
@@ -137,7 +137,7 @@ class XVFInterpolation(VideoFrameInterpolationBase):
             for i in range(n):
                 output_gen.append(img1)
             return output_gen
-        interp_gen = self.__make_n_inference(img0, img1, scale, n=n)
+        interp_gen = self._make_n_inference(img0, img1, scale, n=n)
         return interp_gen
 
 
