@@ -1858,24 +1858,31 @@ class SuperResolutionFlow(IOFlow):
             sr_scale = self.ARGS.resize_exp
         try:
             if self.ARGS.use_sr_algo == "waifu2x":
-                import Utils.SuperResolutionModule
-                self.sr_module = Utils.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
-                                                                       scale=sr_scale,
-                                                                       num_threads=self.ARGS.ncnn_thread,
-                                                                       resize=resize_param)
+                import SuperResolution.SuperResolutionModule
+                self.sr_module = SuperResolution.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
+                                                                                 scale=sr_scale,
+                                                                                 num_threads=self.ARGS.ncnn_thread,
+                                                                                 resize=resize_param)
             elif self.ARGS.use_sr_algo == "realSR":
-                import Utils.SuperResolutionModule
-                self.sr_module = Utils.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
-                                                                        scale=sr_scale,
-                                                                        resize=resize_param)
+                import SuperResolution.SuperResolutionModule
+                self.sr_module = SuperResolution.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
+                                                                                  scale=sr_scale,
+                                                                                  resize=resize_param)
             elif self.ARGS.use_sr_algo == "realESR":
-                import Utils.RealESRModule
-                self.sr_module = Utils.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
-                                                                 gpu_id=self.ARGS.use_specific_gpu,
-                                                                 # TODO Assign another card here
-                                                                 scale=sr_scale, tile=self.ARGS.sr_tilesize,
-                                                                 half=self.ARGS.use_realesr_fp16,
-                                                                 resize=resize_param)
+                import SuperResolution.RealESRModule
+                self.sr_module = SuperResolution.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
+                                                                           gpu_id=self.ARGS.use_specific_gpu,
+                                                                           # TODO Assign another card here
+                                                                           scale=sr_scale, tile=self.ARGS.sr_tilesize,
+                                                                           half=self.ARGS.use_realesr_fp16,
+                                                                           resize=resize_param)
+            elif self.ARGS.use_sr_algo == "waifuCuda":
+                import SuperResolution.WaifuCudaModule
+                self.sr_module = SuperResolution.WaifuCudaModule.SvfiWaifuCuda(model=self.ARGS.use_sr_model,
+                                                                               gpu_id=self.ARGS.use_specific_gpu,
+                                                                               scale=sr_scale, tile=self.ARGS.sr_tilesize,
+                                                                               half=self.ARGS.use_realesr_fp16,
+                                                                               resize=resize_param)
             self.logger.info(
                 f"Load Super Resolution Module at {self.ARGS.use_sr_algo}, "
                 f"Model at {self.ARGS.use_sr_model}, scale_times = output resolution / transfer resolution = {sr_scale}")
@@ -1959,11 +1966,21 @@ class SuperResolutionFlow(IOFlow):
                     self.ARGS.put_overtime_task(_over_time_reminder_task)
 
                     sr_process_time = time.time()
+                    ori_img0 = None
                     if img0 is not None:
+                        ori_img0 = img0.copy()
                         img0 = self.sr_module.svfi_process(img0)
                     sr_process_time = time.time() - sr_process_time
-                    if img1 is not None:
-                        img1 = self.sr_module.svfi_process(img1)
+
+                    if img1 is not None and ori_img0 is not None:
+                        try:
+                            if not bool((ori_img0 == img1).all()):
+                                img1 = self.sr_module.svfi_process(img1)
+                            else:
+                                img1 = img0
+                        except Exception:
+                            print(traceback.format_exc())
+                            pass
                     task['img0'] = img0
                     task['img1'] = img1
                     self.ARGS.update_task_info({'sr_now_frame': now_frame,

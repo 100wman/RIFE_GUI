@@ -1442,7 +1442,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         for m in os.listdir(sr_algo_ncnn_dir):
             if not os.path.isfile(os.path.join(sr_algo_ncnn_dir, m)):
                 model_list.append(m)
-            if "realESR" in current_sr_algo:
+            if "realESR" in current_sr_algo or 'waifuCuda' in current_sr_algo:
                 # pth model only
                 model_list.append(m)
 
@@ -2063,7 +2063,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(str)
     def on_AiSrSelector_currentTextChanged(self):
         self.settings_update_sr_model()
-        bool_result = 'realESR' in self.AiSrSelector.currentText()
+        bool_result = 'realESR' in self.AiSrSelector.currentText() or 'waifuCuda' in self.AiSrSelector.currentText()
         self.TileSizeLabel.setVisible(bool_result)
         self.SrTileSizeSelector.setVisible(bool_result)
         self.RealESRFp16Checker.setVisible(bool_result)

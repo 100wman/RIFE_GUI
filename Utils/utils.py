@@ -79,20 +79,17 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.8"
+    gui_version = "3.8.9"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.8"
+    ols_version = "7.3.9"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add New Multi-Frame-Interpolation method of RIFE: official_v7_multi
-    - Optimize Code Structure (inheritance)
-    - Fix bug of misplaced reversed-optical-flow
-    - Reduce PURE SCENE THRESHOLD to 20 frames
-    - Optimize Options Display related to VFI
+    - Add New Waifu Cuda Super Resolution Module
+    - Optimize Speed of SR Process (in case img0 == img1)
     """
 
     path_len_limit = 230
@@ -1653,64 +1650,6 @@ class TransitionDetection:
 
     def get_scene_status(self):
         return self.scedet_info
-
-
-class OverTimeReminderBearer:
-    reminders = {}
-
-    def generate_reminder(self, *args, **kwargs):
-        while True:
-            t = random.randrange(100000, 999999)
-            if t not in self.reminders:
-                # reminder = OvertimeReminder(reminder_id=t, *args, **kwargs)
-                # self.reminders[t] = reminder
-                return t
-
-    def terminate_reminder(self, reminder_id: int):
-        return
-        if reminder_id not in self.reminders:
-            raise threading.ThreadError(f"Do not exist reminder {reminder_id}")
-        self.reminders[reminder_id].terminate()
-
-    def terminate_all(self):
-        for reminder in self.reminders.values():
-            reminder.terminate()
-
-
-class OvertimeReminder(threading.Thread):
-    def __init__(self, interval: int, logger=None, msg_1="Function Type", msg_2="Function Warning", callback=None,
-                 reminder_id=0, *args, **kwargs):
-        super().__init__()
-        self.logger = logger
-        if self.logger is None:
-            self.logger = Tools.get_logger("OverTime Reminder", "")
-        self.interval = interval
-        self.msg_1 = msg_1
-        self.msg_2 = msg_2
-        self.callback = callback
-        self.args = args
-        self.kwargs = kwargs
-        self.terminated = False
-        if reminder_id == 0:
-            reminder_id = random.randrange(100000, 999999)
-        self.name = f'Reminder-{reminder_id}'
-        self.start()
-
-    def run(self):
-        start_time = 0
-        while start_time < self.interval:
-            time.sleep(1)
-            if self.terminated:
-                return
-        if not self.terminated:
-            self.logger.warning(f"Function [{self.msg_1}] exceeds {self.interval} seconds, {self.msg_2}")
-        if self.callback is not None:
-            self.logger.debug(f"OvertimeReminder Callback launch: type {type(self.callback)}")
-            self.callback(*self.args, **self.kwargs)
-        return
-
-    def terminate(self):
-        self.terminated = True
 
 
 class OverTimeReminderTask:

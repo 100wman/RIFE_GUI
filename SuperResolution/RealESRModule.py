@@ -15,6 +15,7 @@ logger = Tools.get_logger("RealESR", '')
 
 class RealESRGANer:
     def __init__(self, scale, model_path, tile=0, tile_pad=10, pre_pad=10, half=False):
+        # TODO Extract Base Class for refactor
         self.scale = scale
         self.tile_size = tile
         self.tile_pad = tile_pad
@@ -297,8 +298,8 @@ if __name__ == '__main__':
     test = SvfiRealESR(model="RealESR_RFDN_x2plus_anime110k-160k.pth", )
     # test.svfi_process(cv2.imread(r"D:\60-fps-Project\Projects\RIFE GUI\Utils\RealESRGAN\input\used\input.png"))
     o = test.svfi_process(
-        cv2.imread(r"D:\60-fps-Project\Projects\RIFE GUI\test\images\0.png", cv2.IMREAD_UNCHANGED))
-    cv2.imwrite("out3.png", o)
+        cv2.imread(r"/test/images/0.png", cv2.IMREAD_UNCHANGED))
+    cv2.imwrite("../Utils/out3.png", o)
     # cv2.imshow('test', o)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
