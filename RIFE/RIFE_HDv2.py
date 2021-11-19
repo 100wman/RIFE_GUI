@@ -185,7 +185,7 @@ class Model:
 
     def calculate_flow(self, img0, img1, scale):
         imgs = torch.cat((img0, img1), 1)
-        flow, _ = self.flownet(imgs, scale)
+        flow, _ = self.flownet(imgs, scale, ensemble=self.forward_ensemble)
         if self.forward_ensemble:
             pass
         return flow, imgs

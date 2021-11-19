@@ -2000,14 +2000,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 DS   1   1   1   1    0   0
                 TTA  1   1   1   0    0   1
                 MC   1   1   1   0    0   0
-                EN   0   1   0   0    0   0
+                EN   1   1   1   1    0   0
         """
         DS_enable = 0b111100 & current_model_index
         self.AutoInterpScaleChecker.setChecked(self.AutoInterpScaleChecker.isChecked() if DS_enable else False)
         self.AutoInterpScaleChecker.setEnabled(DS_enable)
         self.TtaModeZone.setEnabled(0b111001 & current_model_index)
         self.UseMultiCardsChecker.setEnabled(0b111000 & current_model_index)
-        EN_enable = 0b010000 & current_model_index
+        EN_enable = 0b111100 & current_model_index
         self.ForwardEnsembleChecker.setChecked(self.ForwardEnsembleChecker.isChecked() if EN_enable else False)
         self.ForwardEnsembleChecker.setEnabled(EN_enable)
         self.InterpScaleSelector.setEnabled(DS_enable)

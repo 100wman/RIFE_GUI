@@ -79,17 +79,18 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.9"
+    gui_version = "3.8.10"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.9"
+    ols_version = "7.3.10"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add New Waifu Cuda Super Resolution Module
-    - Optimize Speed of SR Process (in case img0 == img1)
+    - Add Forward Ensemble for v2, v6 and v7 model
+    - Establish some files for further sdr-hdr & luminance mapping due to rife's stability
+    - Establish DLC Publish Procedure Manure for further development
     """
 
     path_len_limit = 230

@@ -41,8 +41,9 @@ class Model:
 
     def calculate_prediction(self, img0, img1, scale):
         imgs = torch.cat((img0, img1), 1)
+        scale_list = [4 / scale, 2 / scale, 1 / scale]
         flow, mask, merged, flow_teacher, merged_teacher, loss_distill = \
-            self.flownet(imgs, [4 / scale, 2 / scale, 1 / scale], )
+            self.flownet(imgs, scale_list, ensemble=self.forward_ensemble)
         return merged[2]
 
     def TTA_FRAME(self, img0, img1, iter_time=2, scale=1.0):
