@@ -78,16 +78,16 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7"
-    version_tag = f"{gui_version}-beta " \
+    gui_version = "3.7.1"
+    version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.3"
+    ols_version = "7.3.4"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix Free Hide on VFI settings(set Visible False)
+    - Load Essential Fixes from 3.8.10
     """
 
     path_len_limit = 230
@@ -349,7 +349,7 @@ class Tools:
     @staticmethod
     def get_norm_img(img1, resize=True):
         if resize:
-            img1 = cv2.resize(img1, Tools.resize_param, interpolation=cv2.INTER_LINEAR)
+            img1 = cv2.resize(img1, Tools.resize_param)
         img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
         img1 = cv2.equalizeHist(img1)  # 进行直方图均衡化
         # img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
@@ -541,8 +541,8 @@ class Tools:
                          'SvtHevcEncApp.exe', 'SvtVp9EncApp.exe', 'SvtAv1EncApp.exe']:
                 try:
                     os.kill(pid, signal.SIGABRT)
-                except PermissionError:
-                    pass
+                except Exception as e:
+                    traceback.print_exc()
                 print(f"Warning: Kill Process before exit: {pname}")
 
     @staticmethod
@@ -632,7 +632,7 @@ class ImageRead(ImageIO):
     def read_frame(self, path):
         img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), 1)[:, :, ::-1].copy()
         if self.resize_flag:
-            img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_LANCZOS4)
+            img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_AREA)
         return img
 
     def nextFrame(self):
@@ -690,7 +690,7 @@ class ImageWrite(ImageIO):
 
     def write_frame(self, img, path):
         if self.resize_flag:
-            img = cv2.resize(img, (self.resize[0], self.resize[1]))
+            img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_AREA)
         cv2.imencode(self.output_ext, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))[1].tofile(path)
 
     def writeFrame(self, img):
@@ -769,8 +769,10 @@ class VideoFrameInterpolationBase:
             self.split_w, self.split_h = 4, 2
         elif self.args.rife_interlace_inference == 4:  # w split to 4, h split to 4
             self.split_w, self.split_h = 4, 4
-        elif self.args.rife_interlace_inference == 5:  # w split to 4, h split to 4
+        elif self.args.rife_interlace_inference == 5:  # w split to 8, h split to 4
             self.split_w, self.split_h = 8, 4
+        elif self.args.rife_interlace_inference == 6:  # w split to 8, h split to 8
+            self.split_w, self.split_h = 8, 8
 
         if self.args.use_rife_multi_cards:
             self.split_w, self.split_h = 2, 1  # override previous settings
@@ -1271,7 +1273,8 @@ class TransitionDetection_ST:
             return
         try:
             comp_stack = np.hstack((self.img1, self.img2))
-            comp_stack = cv2.resize(comp_stack, (960, int(960 * comp_stack.shape[0] / comp_stack.shape[1])), )
+            comp_stack = cv2.resize(comp_stack, (960, int(960 * comp_stack.shape[0] / comp_stack.shape[1])),
+                                    interpolation=cv2.INTER_AREA)
             cv2.putText(comp_stack,
                         title,
                         (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0))

@@ -378,7 +378,7 @@ class ReadFlow(IOFlow):
         :param img:
         :return:
         """
-        if img is None or not all(self.ARGS.crop_param):
+        if img is None or not any(self.ARGS.crop_param):
             return img
 
         h, w, _ = img.shape
@@ -481,7 +481,7 @@ class ReadFlow(IOFlow):
                     f"Invalid Input Section, changed to original section")
 
         output_dict = {"-map": "0:v:0", "-vframes": str(10 ** 10),
-                       "-sws_flags": "lanczos",
+                       "-sws_flags": "bicubic",
                        }  # use read frames cnt to avoid ffprobe, fuck
 
         output_dict.update(self._get_color_info_dict())
@@ -1102,48 +1102,47 @@ class RenderFlow(IOFlow):
         """
         hdr10plus_metadata_path = self.__hdr10_metadata_processer.get_hdr10plus_metadata_path_at_point(start_frame)
         params_libx265s = {
-            "fast": "high-tier=0:ref=2:rd=2:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=1:"
-                    "subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:"
-                    "rc-lookahead=15:b-adapt=1:bframes=4:aq-mode=3:aq-strength=0.7:qg-size=8:cbqpoffs=-2:crqpoffs=-2:"
-                    "qcomp=0.65:sao=0:repeat-headers=1:info=0",
-            "8bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
-                    "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
-                    "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
-                    "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1:info=0",
-            "10bit": "high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:"
-                     "limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:"
-                     "open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
-                     "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:repeat-headers=1:info=0",
-            "hdr10": 'high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:'
-                     'limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:'
-                     'open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
-                     'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:'
+            "fast": "ref=2:rd=2:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=1:subme=3:"
+                    "merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:rc-lookahead=15:"
+                    "b-adapt=1:bframes=4:aq-mode=3:aq-strength=0.9:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:"
+                    "info=0",
+            "8bit": "ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:"
+                    "subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:"
+                    "keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
+                    "crqpoffs=-2:qcomp=0.65:sao=0:info=0",
+            "10bit": "ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:"
+                     "subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:"
+                     "keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
+                     "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:info=0",
+            "hdr10": 'ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:'
+                     'subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:'
+                     'keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
+                     'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:'
                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                      'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
                      "max-cll=1000,100:hdr10-opt=1:repeat-headers=1:info=0",
-            "hdr10+": 'high-tier=0:ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:'
-                      'limit-tu=4:me=3:subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:'
-                      'open-gop=0:keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
-                      'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:'
+            "hdr10+": 'ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:'
+                      'subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:'
+                      'keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
+                      'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:'
                       'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                       'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
                       f"max-cll=1000,100:dhdr10-info='{hdr10plus_metadata_path}'"
         }
 
         params_libx264s = {
-            "fast": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=4:deblock='-1:-1':"
-                    "rc-lookahead=30:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:me=hex:merange=16:"
-                    "subme=7:psy-rd='1:0.1':mixed-refs=1:trellis=1",
-            "8bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
-                    "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                    "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "10bit": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
-                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "hdr10": "keyint=250:min-keyint=1:bframes=8:b-adapt=2:open-gop=0:ref=12:deblock='-1:-1':"
-                     "rc-lookahead=60:chroma-qp-offset=-2:aq-mode=1:aq-strength=0.8:qcomp=0.75:partitions=all:"
-                     "direct=auto:me=umh:merange=24:subme=10:psy-rd='1:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
-                     "range=tv:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:"
+            "fast": "keyint=250:min-keyint=1:bframes=3:b-adapt=1:open-gop=0:ref=4:rc-lookahead=30:chroma-qp-offset=-1:"
+                    "aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:me=hex:merange=16:subme=7:psy-rd='0.85:0.0':"
+                    "mixed-refs=0:trellis=1",
+            "8bit": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
+                    "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
+                    "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
+            "10bit": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
+                     "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
+                     "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
+            "hdr10": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
+                     "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
+                     "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
                      "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
                      "cll='1000,100'"
         }
@@ -1757,7 +1756,7 @@ class RenderFlow(IOFlow):
                 if self._kill or not self.wait_for_input():
                     if frame_written:
                         frame_writer.close()
-                    self.logger.debug("Render thread exit")  # 主线程已结束，这里的锁其实没用，调试用的
+                    self.logger.debug("Render thread exit")
                     frame_writer.close()
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
@@ -1951,11 +1950,21 @@ class SuperResolutionFlow(IOFlow):
                     self.ARGS.put_overtime_task(_over_time_reminder_task)
 
                     sr_process_time = time.time()
+                    ori_img0 = None
                     if img0 is not None:
+                        ori_img0 = img0.copy()
                         img0 = self.sr_module.svfi_process(img0)
                     sr_process_time = time.time() - sr_process_time
-                    if img1 is not None:
-                        img1 = self.sr_module.svfi_process(img1)
+
+                    if img1 is not None and ori_img0 is not None:
+                        try:
+                            if not bool((ori_img0 == img1).all()):
+                                img1 = self.sr_module.svfi_process(img1)
+                            else:
+                                img1 = img0
+                        except Exception:
+                            print(traceback.format_exc())
+                            pass
                     task['img0'] = img0
                     task['img1'] = img1
                     self.ARGS.update_task_info({'sr_now_frame': now_frame,
@@ -2108,8 +2117,10 @@ class InterpWorkFlow:
                 w, h = self.ARGS.resize_width, self.ARGS.resize_height
             else:
                 w, h = self.ARGS.frame_size
-
+            if self.ARGS.use_rife_auto_scale:
+                self.ARGS.rife_scale = 1
             logger.info(f"Start VFI VRAM Test: {w}x{h} with scale {self.ARGS.rife_scale}, "
+                        f"Auto Scale {'on' if self.ARGS.use_rife_auto_scale else 'off'}, "
                         f"interlace inference mode: {self.ARGS.rife_interlace_inference}")
 
             test_img0, test_img1 = np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8), \
@@ -2158,9 +2169,10 @@ class InterpWorkFlow:
             self.ARGS.put_overtime_task(_over_time_reminder_task)
             from ABME import inference_abme as inference
             self.vfi_core = inference.ABMEInterpolation(self.ARGS)
-            logger.warning("ABME Interpolation Module Loaded, Note that this is alpha only")
+            logger.warning("ABME VFI Module Loaded, Note that this is alpha only")
             _over_time_reminder_task.deactive()
         elif 'xvfi' in self.ARGS.rife_model_name.lower():
+            """model: xvfi_*"""
             _over_time_reminder_task = OverTimeReminderTask(15, "XVFI Module Load Failed",
                                                             "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
             self.ARGS.put_overtime_task(_over_time_reminder_task)
@@ -2189,6 +2201,7 @@ class InterpWorkFlow:
             """Update RIFE Core"""
             self.vfi_core = inference.RifeInterpolation(self.ARGS)
             _over_time_reminder_task.deactive()
+            logger.info("RIFE VFI Module Loaded")
         self.vfi_core.initiate_algorithm()
 
         if not self.ARGS.use_ncnn:
@@ -2260,7 +2273,7 @@ class InterpWorkFlow:
             self.render_flow.update_validation_flow(self.validation_flow)
             self.render_flow.start()
 
-            PURE_SCENE_THRESHOLD = 30
+            PURE_SCENE_THRESHOLD = 20
 
             self.check_outside_error()
             self.read_flow.acquire_initiation_clock()

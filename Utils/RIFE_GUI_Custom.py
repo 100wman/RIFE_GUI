@@ -5,6 +5,7 @@ import os
 import random
 import re
 import shutil
+import time
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import *
@@ -100,13 +101,14 @@ class MyListWidgetItem(QWidget):
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
         self.RemoveItemButton.setText("    -    ")
         self.DuplicateItemButton.setText("    +    ")
-        self.iniCheck.setEnabled(False)
+        # self.iniCheck.setEnabled(False)
         self.RemoveItemButton.clicked.connect(self.on_RemoveItemButton_clicked)
         self.DuplicateItemButton.clicked.connect(self.on_DuplicateItemButton_clicked)
         self.TaskIdDisplay.editingFinished.connect(self.on_TaskIdDisplay_editingFinished)
         """Item Data Settings"""
         self.task_id = None
         self.input_path = None
+        self.last_click_time = time.time()
 
     def setTask(self, input_path: str, task_id: str):
         self.task_id = task_id
@@ -149,8 +151,11 @@ class MyListWidgetItem(QWidget):
         emit_data.update({"previous_task_id": previous_task_id, "action": 3})
         self.dupSignal.emit(emit_data)  # update
 
+    @pyqtSlot(bool)
     def on_iniCheck_toggled(self):
-        self.iniCheck.setChecked(True)
+        if time.time() - self.last_click_time > 0.1:
+            self.iniCheck.setChecked(not self.iniCheck.isChecked())
+            self.last_click_time = time.time()
 
 
 class MyLineWidget(QtWidgets.QLineEdit):
@@ -231,7 +236,7 @@ class MyListWidget(QListWidget):
         """
         try:
             widget = self.itemWidget(item)
-            widget.on_iniCheck_toggled()
+            # widget.on_iniCheck_toggled()
             item_data = widget.get_task_info()
             item_data.update({"row": self.row(item)})
         except AttributeError:
@@ -601,7 +606,7 @@ class SVFI_Config_Manager:
             self.logger.warning("Not find Config to remove, guess executed directly from main file")
         pass
 
-    def MaintainConfig(self):
+    def UpdateRootConfig(self):
         """
         维护配置文件,在LoadSettings后维护
         :return:
