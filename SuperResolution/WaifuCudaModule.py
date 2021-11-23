@@ -1,17 +1,16 @@
 import math
 import os
+import time
 
 import cv2
 import numpy as np
 import torch
 from basicsr.utils.registry import ARCH_REGISTRY
+from line_profiler_pycharm import profile
 from torch import nn as nn
 from torch.nn import functional as F
 
 from Utils.utils import overtime_reminder_deco, Tools
-
-# from line_profiler_pycharm import profile
-
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 logger = Tools.get_logger("WaifuCuda", '')
@@ -32,6 +31,7 @@ class UpCunet(nn.Module):
         self.cunet_unet2 = CunetUnet2(channels, deconv=False)  # -20
         self.spatial_zero_padding = SpatialZeroPadding(-20)
 
+    # @profile
     def forward(self, x):
         # x = np.pad(x, [(18, 18 ), (18, 18), (0, 0)], mode='reflect')#训练不支持奇数，反正切好了偶数的
         x = F.pad(x, (18, 18, 18, 18), 'reflect')
@@ -287,9 +287,8 @@ class WaifuCudaer:
         return self.output
 
     @torch.no_grad()
-    # @profile
+    @profile
     def enhance(self, img, outscale=None, alpha_upsampler='realesrgan'):
-        h_input, w_input = img.shape[0:2]
         # img: numpy
         img = img.astype(np.float32)
         if np.max(img) > 256:  # 16-bit image
@@ -326,55 +325,16 @@ class WaifuCudaer:
             output_img = torch.tensor(65535.0) * output_img
             output_img = torch.round(output_img)
             output = output_img.cpu().numpy().astype(np.uint16)
-            # output = (output_img * 65535.0).round().astype(np.uint16)
         else:
             output_img = torch.tensor(255.0) * output_img
             output_img = torch.round(output_img)
-            output = output_img.cpu().numpy().astype(np.uint8)
-            # output = (output_img * 255.0).round().astype(np.uint8)
-        # output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
-        # output_img = np.transpose(output_img[[2, 1, 0], :, :], (1, 2, 0))
-        # if img_mode == 'L':
-        #     output_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
-        #
-        # # ------------------- process the alpha channel if necessary ------------------- #
-        # if img_mode == 'RGBA':
-        #     if alpha_upsampler == 'realesrgan':
-        #         self.pre_process(alpha)
-        #         if self.tile_size > 0:
-        #             self.tile_process()
-        #         else:
-        #             self.process()
-        #         output_alpha = self.post_process()
-        #         output_alpha = output_alpha.data.squeeze().float().cpu().clamp_(0, 1).numpy()
-        #         output_alpha = np.transpose(output_alpha[[2, 1, 0], :, :], (1, 2, 0))
-        #         output_alpha = cv2.cvtColor(output_alpha, cv2.COLOR_BGR2GRAY)
-        #     else:
-        #         h, w = alpha.shape[0:2]
-        #         output_alpha = cv2.resize(alpha, (w * self.scale, h * self.scale), interpolation=cv2.INTER_LINEAR)
-        #
-        #     # merge the alpha channel
-        #     output_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2BGRA)
-        #     output_img[:, :, 3] = output_alpha
-        #
-        # # ------------------------------ return ------------------------------ #
-        # if max_range == 65535:  # 16-bit image
-        #     output = (output_img * 65535.0).round().astype(np.uint16)
-        # else:
-        #     output = (output_img * 255.0).round().astype(np.uint8)
-
-        # if outscale is not None and outscale != float(self.scale):
-        #     output = cv2.resize(
-        #         output, (
-        #             int(w_input * outscale),
-        #             int(h_input * outscale),
-        #         ), interpolation=cv2.INTER_)
-
+            output = output_img.cpu().numpy()
+            output = output.astype(np.uint8)
         return output, img_mode
 
 
 class SvfiWaifuCuda:
-    def __init__(self, model="", gpu_id=0, precent=90, scale=2, tile=100, resize=(0, 0), half=False):
+    def __init__(self, model="", gpu_id=0, precent=90, scale=2, tile=200, resize=(0, 0), half=False):
         app_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         self.resize_param = resize
         self.scale_exp = 2
@@ -392,6 +352,7 @@ class SvfiWaifuCuda:
     def svfi_process(self, img):
         if self.scale > 1:
             cur_scale = 1
+            # TODO Remove Torch Transfer Here (Transfer Once, for the rest except the first round, keep padding insteam of torch.from_numpy
             while cur_scale < self.scale:
                 img = self.process(img)
                 cur_scale *= self.scale_exp
@@ -403,11 +364,14 @@ class SvfiWaifuCuda:
 
 
 if __name__ == '__main__':
-    test = SvfiWaifuCuda(model="waifu2x-cunet2x-gan-real-305k.pth", )
+    test = SvfiWaifuCuda(model="waifu2x-cunet2x-305k.pth", tile=0, half=True)
     # test.svfi_process(cv2.imread(r"D:\60-fps-Project\Projects\RIFE GUI\Utils\RealESRGAN\input\used\input.png"))
-    o = test.svfi_process(
-        cv2.imread(r"/test/images/0.png", cv2.IMREAD_UNCHANGED))
-    cv2.imwrite("../Utils/out3.png", o)
+    for i in range(8):
+        t = time.time()
+        o = test.svfi_process(
+            cv2.imread(r"../test/images/0.png", cv2.IMREAD_UNCHANGED))
+        cv2.imwrite("../test/images/0-waifu.png", o)
+        print(time.time() - t)
     # cv2.imshow('test', o)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()

@@ -88,9 +88,7 @@ class ArgumentManager:
     update_log = f"""
     {version_tag}
     Update Log
-    - Add Forward Ensemble for v2, v6 and v7 model
-    - Establish some files for further sdr-hdr & luminance mapping due to rife's stability
-    - Establish DLC Publish Procedure Manure for further development
+    - Check Waifu2x Cuda Implementation Efficiency
     """
 
     path_len_limit = 230
