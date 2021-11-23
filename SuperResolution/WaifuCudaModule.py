@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import torch
 from basicsr.utils.registry import ARCH_REGISTRY
-from line_profiler_pycharm import profile
+# from line_profiler_pycharm import profile
 from torch import nn as nn
 from torch.nn import functional as F
 
@@ -287,7 +287,7 @@ class WaifuCudaer:
         return self.output
 
     @torch.no_grad()
-    @profile
+    # @profile
     def enhance(self, img, outscale=None, alpha_upsampler='realesrgan'):
         # img: numpy
         img = img.astype(np.float32)
