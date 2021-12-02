@@ -1157,6 +1157,16 @@ class RenderFlow(IOFlow):
                      "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
                      "cll='1000,100'"
         }
+        if self.ARGS.use_crf:
+            for k in params_libx264s:
+                params_libx264s[k] = f"crf={self.ARGS.render_crf}:" + params_libx264s[k]
+            for k in params_libx265s:
+                params_libx265s[k] = f"crf={self.ARGS.render_crf}:" + params_libx265s[k]
+        else:  # vbr control
+            for k in params_libx264s:
+                params_libx264s[k] = f"bitrate={self.ARGS.render_bitrate * 1024:.0f}:" + params_libx264s[k]
+            for k in params_libx265s:
+                params_libx265s[k] = f"bitrate={self.ARGS.render_bitrate * 1024:.0f}:" + params_libx265s[k]
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
@@ -1823,8 +1833,6 @@ class RenderFlow(IOFlow):
                     and not self._kill and self.ARGS.get_main_error() is None:
                 # Do not concat when main error is detected
                 self.concat_all()
-
-
         except Exception as e:
             self.logger.critical("Render Thread Panicked")
             self.logger.critical(traceback.format_exc(limit=ArgumentManager.traceback_limit))
@@ -1881,7 +1889,8 @@ class SuperResolutionFlow(IOFlow):
                 import SuperResolution.WaifuCudaModule
                 self.sr_module = SuperResolution.WaifuCudaModule.SvfiWaifuCuda(model=self.ARGS.use_sr_model,
                                                                                gpu_id=self.ARGS.use_specific_gpu,
-                                                                               scale=sr_scale, tile=self.ARGS.sr_tilesize,
+                                                                               scale=sr_scale,
+                                                                               tile=self.ARGS.sr_tilesize,
                                                                                half=self.ARGS.use_realesr_fp16,
                                                                                resize=resize_param)
             self.logger.info(
@@ -2287,8 +2296,8 @@ class InterpWorkFlow:
         self.update_progress_flow.kill()
         logger.error(f"\n\n\nProgram Failed at {datetime.datetime.now()}: "
                      f"Duration: {datetime.datetime.now() - self.run_all_time}")
-        if self.ARGS.get_main_error():
-            raise self.ARGS.get_main_error()
+        # if self.ARGS.get_main_error():
+        #     raise self.ARGS.get_main_error()
 
     def wait_for_input(self):
         outside_ok = True

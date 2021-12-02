@@ -2021,13 +2021,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         DS_enable = 0b111100 & current_model_index
         self.AutoInterpScaleChecker.setChecked(self.AutoInterpScaleChecker.isChecked() if DS_enable else False)
         self.AutoInterpScaleChecker.setEnabled(DS_enable)
-        self.TtaModeZone.setEnabled(0b111001 & current_model_index)
+        self.TtaModeSelector.setEnabled(0b111001 & current_model_index)
+        self.TtaIterTimesSelector.setEnabled(0b111001 & current_model_index)
         self.UseMultiCardsChecker.setEnabled(0b111000 & current_model_index)
         EN_enable = 0b111100 & current_model_index
         self.ForwardEnsembleChecker.setChecked(self.ForwardEnsembleChecker.isChecked() if EN_enable else False)
         self.ForwardEnsembleChecker.setEnabled(EN_enable)
         self.InterpScaleSelector.setEnabled(DS_enable)
         self.InterpScaleReminder.setEnabled(DS_enable)
+        self.settings_free_hide()
 
     @pyqtSlot(str)
     def on_SettingsPresetsInputs_currentTextChanged(self):

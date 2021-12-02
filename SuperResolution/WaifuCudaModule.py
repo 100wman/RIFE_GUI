@@ -50,7 +50,7 @@ class CunetUnet1(nn.Module):
         block1 = UnetConv(64, 128, 64, se=True)
         self.unet_branch = UnetBranch(block1, 64, 64, depad=-4)
         self.conv0 = nn.Conv2d(64, 64, kernel_size=3)
-        self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        self.lrelu = nn.LeakyReLU(0.1)
         if deconv:
             # Uncertain
             self.conv1 = nn.ConvTranspose2d(64, channels, kernel_size=4, stride=2, padding=3)
@@ -78,7 +78,7 @@ class CunetUnet2(nn.Module):
         )
         self.unet_branch = UnetBranch(block2, 64, 64, depad=-16)
         self.conv0 = nn.Conv2d(64, 64, kernel_size=3)
-        self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        self.lrelu = nn.LeakyReLU(0.1)
         if deconv:
             # Uncertain
             self.conv1 = nn.ConvTranspose2d(64, channels, kernel_size=4, stride=2, padding=3)
@@ -98,9 +98,9 @@ class UnetConv(nn.Module):
     def __init__(self, channels_in: int, channels_mid: int, channels_out: int, se: bool):
         super().__init__()
         self.conv0 = nn.Conv2d(channels_in, channels_mid, 3)
-        self.lrelu0 = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        self.lrelu0 = nn.LeakyReLU(0.1)
         self.conv1 = nn.Conv2d(channels_mid, channels_out, 3)
-        self.lrelu1 = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        self.lrelu1 = nn.LeakyReLU(0.1)
         self.se = se
         if se:
             self.se_block = SEBlock(channels_out, r=8)
@@ -119,10 +119,10 @@ class UnetBranch(nn.Module):
     def __init__(self, insert: nn.Module, channels_in: int, channels_out: int, depad: int):
         super().__init__()
         self.conv0 = nn.Conv2d(channels_in, channels_in, kernel_size=2, stride=2)
-        self.lrelu0 = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        self.lrelu0 = nn.LeakyReLU(0.1)
         self.insert = insert
         self.conv1 = nn.ConvTranspose2d(channels_out, channels_out, kernel_size=2, stride=2)
-        self.lrelu1 = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        self.lrelu1 = nn.LeakyReLU(0.1)
         self.spatial_zero_padding = SpatialZeroPadding(depad)
 
     def forward(self, x):
