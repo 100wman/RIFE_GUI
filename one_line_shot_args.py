@@ -428,6 +428,7 @@ class ReadFlow(IOFlow):
                 f"Please Check Your Input Parameters: "
                 f"Start Chunk, Start Frame, Start Point, Start Frame")
             self.ARGS.save_main_error(main_error)
+            self._release_initiation()
             raise main_error
         return chunk_cnt, start_frame, videogen, videogen_check
 
@@ -495,6 +496,7 @@ class ReadFlow(IOFlow):
 
         output_dict.update(self._get_color_info_dict())
 
+        # vf_args = f"lut3d=PQ400.cube"
         vf_args = f"copy"
         if start_frame not in [-1, 0]:
             # not start from the beginning
@@ -1766,7 +1768,6 @@ class RenderFlow(IOFlow):
                     if frame_written:
                         frame_writer.close()
                     self.logger.debug("Render thread exit")
-                    frame_writer.close()
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
 

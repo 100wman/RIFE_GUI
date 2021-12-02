@@ -79,16 +79,20 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.10"
+    gui_version = "3.8.11"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.10"
+    ols_version = "7.3.11"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Check Waifu2x Cuda Implementation Efficiency
+    - Fix Reader Thread Dead Block all threads
+    - Fix Import Torch failed cause system failed
+    - Add Input Path Invalid Character Check
+    - Add Input Task Empty Check
+    - Improve Waifu2x VRAM Usage Efficiency by inplace
     """
 
     path_len_limit = 230

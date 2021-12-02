@@ -4,6 +4,7 @@ import os
 abspath = os.path.abspath(__file__)
 appDir = os.path.dirname(os.path.dirname(abspath))
 
+INVALID_CHARACTERS = ["'", '"']
 
 class TASKBAR_STATE(enum.Enum):
     TBPF_NOPROGRESS = 0x00000000

@@ -15,7 +15,6 @@ import traceback
 
 import cv2
 import psutil
-import torch
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication, Qt
 from PyQt5.QtCore import QSettings, pyqtSignal, pyqtSlot, QThread, QTime, QVariant, QPoint, QSize
@@ -25,7 +24,7 @@ from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFi
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.LicenseModule import RetailValidation, SteamValidation
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator, StateTooltip
-from Utils.StaticParameters import appDir, TASKBAR_STATE, SupportFormat, EncodePresetAssemply
+from Utils.StaticParameters import appDir, TASKBAR_STATE, SupportFormat, EncodePresetAssemply, INVALID_CHARACTERS
 from Utils.utils import Tools, ArgumentManager, ImageWrite
 
 MAC = True
@@ -615,7 +614,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx"), )
                 self.current_failed = True
                 return
-            elif 'error: unable to allocate' in now_text:
+            elif 'error: unable to allocate' in now_text or 'buy new ram' in now_text:
                 self.function_send_msg("Memory Failed", _translate('', "申请内存失败，请关闭后台程序或增加虚拟内存"), )
                 self.current_failed = True
                 return
@@ -1358,12 +1357,17 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.DiscreteCardSelector.setCurrentIndex(card_id)
             return
         cuda_infos = {}
-        self.rife_cuda_cnt = torch.cuda.device_count()
-        for i in range(self.rife_cuda_cnt):
-            card = torch.cuda.get_device_properties(i)
-            info = f"{card.name}, {card.total_memory / 1024 ** 3:.1f} GB"
-            cuda_infos[f"{i}"] = info
-        logger.debug(f"NVIDIA data: {cuda_infos}")
+        try:
+            import torch
+            self.rife_cuda_cnt = torch.cuda.device_count()
+            for i in range(self.rife_cuda_cnt):
+                card = torch.cuda.get_device_properties(i)
+                info = f"{card.name}, {card.total_memory / 1024 ** 3:.1f} GB"
+                cuda_infos[f"{i}"] = info
+            logger.debug(f"NVIDIA data: {cuda_infos}")
+        except:
+            logger.error("Failed to load status of Nvidia Graphic Cards")
+            logger.error(traceback.format_exc())
 
         if not len(cuda_infos):
             self.hasNVIDIA = False
@@ -1696,10 +1700,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def function_load_tasks_settings(self, load_all=False, load_one=False):
         task_data = self.InputFileName.getItems()
+        if not len(task_data):
+            """Task List Is Empty"""
+            if not load_all:
+                self.function_send_msg("Input is Empty!", _translate("", "Input List Is Empty, Please Load one input file and retry!"))
+                # TODO i18n
+            return []
         task_list = list()
         self.function_disable_inputfilename_connection()
         self.function_show_pending_dialog("Saving Settings...", _translate("", "保存当前设置中..."))
-
         for t in task_data:
             if self.InputFileName.itemWidget(t).iniCheck.isChecked():
                 row_ = self.InputFileName.getWidgetData(t)['row']
@@ -1788,7 +1797,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_send_msg("Path Too Long", _translate('', '输入文件路径过长，请适当缩短文件路径并重试'))
         elif fail_code == 2:
             """Free Version Does not support multi import"""
-            self.function_send_msg("Community Version", _translate('', '请升级专业版以使用任务队列'))
+            pass
+            # self.function_send_msg("Community Version", _translate('', '请升级专业版以使用任务队列'))
+        elif fail_code == 3:
+            """Path has invalid character"""
+            self.function_send_msg("Path Has Invalid Character",
+                                   _translate('', "Your Input File Consists Invalid Characters like ") +
+                                   ", ".join(INVALID_CHARACTERS) +
+                                   _translate('', " please rename your input file and retry"))
 
     @pyqtSlot(bool)
     def on_InputButton_clicked(self):
