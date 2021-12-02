@@ -78,16 +78,16 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.7.1"
+    gui_version = "3.7.2"
     version_tag = f"{gui_version} " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.4"
+    ols_version = "7.3.5"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Load Essential Fixes from 3.8.10
+    - Load Essential Fixes from 3.8.11
     """
 
     path_len_limit = 230

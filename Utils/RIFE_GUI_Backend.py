@@ -15,7 +15,6 @@ import traceback
 
 import cv2
 import psutil
-import torch
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication, Qt
 from PyQt5.QtCore import QSettings, pyqtSignal, pyqtSlot, QThread, QTime, QVariant, QPoint, QSize
@@ -25,7 +24,7 @@ from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFi
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.LicenseModule import RetailValidation, SteamValidation
 from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator, StateTooltip
-from Utils.StaticParameters import appDir, TASKBAR_STATE, SupportFormat, EncodePresetAssemply
+from Utils.StaticParameters import appDir, TASKBAR_STATE, SupportFormat, EncodePresetAssemply, INVALID_CHARACTERS
 from Utils.utils import Tools, ArgumentManager, ImageWrite
 
 MAC = True
@@ -613,7 +612,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx"), )
                 self.current_failed = True
                 return
-            elif 'error: unable to allocate' in now_text:
+            elif 'error: unable to allocate' in now_text or 'buy new ram' in now_text:
                 self.function_send_msg("Memory Failed", _translate('', "申请内存失败，请关闭后台程序或增加虚拟内存"), )
                 self.current_failed = True
                 return
@@ -1360,12 +1359,17 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 self.DiscreteCardSelector.setCurrentIndex(card_id)
             return
         cuda_infos = {}
-        self.rife_cuda_cnt = torch.cuda.device_count()
-        for i in range(self.rife_cuda_cnt):
-            card = torch.cuda.get_device_properties(i)
-            info = f"{card.name}, {card.total_memory / 1024 ** 3:.1f} GB"
-            cuda_infos[f"{i}"] = info
-        logger.debug(f"NVIDIA data: {cuda_infos}")
+        try:
+            import torch
+            self.rife_cuda_cnt = torch.cuda.device_count()
+            for i in range(self.rife_cuda_cnt):
+                card = torch.cuda.get_device_properties(i)
+                info = f"{card.name}, {card.total_memory / 1024 ** 3:.1f} GB"
+                cuda_infos[f"{i}"] = info
+            logger.debug(f"NVIDIA data: {cuda_infos}")
+        except:
+            logger.error("Failed to load status of Nvidia Graphic Cards")
+            logger.error(traceback.format_exc())
 
         if not len(cuda_infos):
             self.hasNVIDIA = False
@@ -1444,7 +1448,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         for m in os.listdir(sr_algo_ncnn_dir):
             if not os.path.isfile(os.path.join(sr_algo_ncnn_dir, m)):
                 model_list.append(m)
-            if "realESR" in current_sr_algo:
+            if "realESR" in current_sr_algo or 'waifuCuda' in current_sr_algo:
                 # pth model only
                 model_list.append(m)
 
@@ -1698,10 +1702,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def function_load_tasks_settings(self, load_all=False, load_one=False):
         task_data = self.InputFileName.getItems()
+        if not len(task_data):
+            """Task List Is Empty"""
+            if not load_all:
+                self.function_send_msg("Input is Empty!", _translate("", "Input List Is Empty, Please Load one input file and retry!"))
+                # TODO i18n
+            return []
         task_list = list()
         self.function_disable_inputfilename_connection()
         self.function_show_pending_dialog("Saving Settings...", _translate("", "保存当前设置中..."))
-
         for t in task_data:
             if self.InputFileName.itemWidget(t).iniCheck.isChecked():
                 row_ = self.InputFileName.getWidgetData(t)['row']
@@ -1790,7 +1799,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_send_msg("Path Too Long", _translate('', '输入文件路径过长，请适当缩短文件路径并重试'))
         elif fail_code == 2:
             """Free Version Does not support multi import"""
-            self.function_send_msg("Community Version", _translate('', '请升级专业版以使用任务队列'))
+            pass
+            # self.function_send_msg("Community Version", _translate('', '请升级专业版以使用任务队列'))
+        elif fail_code == 3:
+            """Path has invalid character"""
+            self.function_send_msg("Path Has Invalid Character",
+                                   _translate('', "Your Input File Consists Invalid Characters like ") +
+                                   ", ".join(INVALID_CHARACTERS) +
+                                   _translate('', " please rename your input file and retry"))
 
     @pyqtSlot(bool)
     def on_InputButton_clicked(self):
@@ -1973,22 +1989,47 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(str)
     def on_ModuleSelector_currentTextChanged(self):
-        current_model = self.ModuleSelector.currentText()
+        current_model = self.ModuleSelector.currentText().lower()
         """
-        000 = XVFI, ABME, RIFE
+        000000 = RIFEv2, RIFEv3, RIFEv6, RIFEv7, XVFI, ABME 
         """
-        current_model_index = 0b001  # default is RIFE
-        if 'abme' in current_model.lower():
-            current_model_index = 0b010
-        elif 'xvfi' in current_model.lower():
-            current_model_index = 0b100
-        self.InterpScaleSelector.setEnabled(0b001 & current_model_index)
-        self.InterpScaleReminder.setEnabled(0b001 & current_model_index)
-        self.TtaModeZone.setEnabled(0b001 & current_model_index)
-        self.UseMultiCardsChecker.setEnabled(0b001 & current_model_index)
-        self.ForwardEnsembleChecker.setEnabled(0b001 & current_model_index)
-        self.AutoInterpScaleChecker.setEnabled(0b001 & current_model_index)
-        pass
+        if 'abme_best' in current_model:
+            current_model_index = 0b000001
+        elif 'anime' in current_model:
+            if any([i in current_model for i in ['sharp', 'smooth']]):
+                current_model_index = 0b100000  # RIFEv2
+            else:  # RIFEv6, anime_training
+                current_model_index = 0b001000
+        elif 'official' in current_model:
+            if '2.3' in current_model:
+                current_model_index = 0b100000  # RIFEv2.3
+            elif '3.' in current_model:
+                current_model_index = 0b010000
+            elif 'v6' in current_model:
+                current_model_index = 0b001000
+            else: # RIFEv7
+                current_model_index = 0b000100
+        elif 'xvfi' in current_model:
+            current_model_index = 0b000010
+        else:
+            current_model_index = 0b100000  # default RIFEv2
+        """
+                    Rv2 Rv3 Rv6 Rv7 XVFI ABME
+                DS   1   1   1   1    0   0
+                TTA  1   1   1   0    0   1
+                MC   1   1   1   0    0   0
+                EN   1   1   1   1    0   0
+        """
+        DS_enable = 0b111100 & current_model_index
+        self.AutoInterpScaleChecker.setChecked(self.AutoInterpScaleChecker.isChecked() if DS_enable else False)
+        self.AutoInterpScaleChecker.setEnabled(DS_enable)
+        self.TtaModeZone.setEnabled(0b111001 & current_model_index)
+        self.UseMultiCardsChecker.setEnabled(0b111000 & current_model_index)
+        EN_enable = 0b111100 & current_model_index
+        self.ForwardEnsembleChecker.setChecked(self.ForwardEnsembleChecker.isChecked() if EN_enable else False)
+        self.ForwardEnsembleChecker.setEnabled(EN_enable)
+        self.InterpScaleSelector.setEnabled(DS_enable)
+        self.InterpScaleReminder.setEnabled(DS_enable)
 
     @pyqtSlot(str)
     def on_SettingsPresetsInputs_currentTextChanged(self):
@@ -2040,7 +2081,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     @pyqtSlot(str)
     def on_AiSrSelector_currentTextChanged(self):
         self.settings_update_sr_model()
-        bool_result = 'realESR' in self.AiSrSelector.currentText()
+        bool_result = 'realESR' in self.AiSrSelector.currentText() or 'waifuCuda' in self.AiSrSelector.currentText()
         self.TileSizeLabel.setVisible(bool_result)
         self.SrTileSizeSelector.setVisible(bool_result)
         self.RealESRFp16Checker.setVisible(bool_result)

@@ -419,6 +419,7 @@ class ReadFlow(IOFlow):
                 f"Please Check Your Input Parameters: "
                 f"Start Chunk, Start Frame, Start Point, Start Frame")
             self.ARGS.save_main_error(main_error)
+            self._release_initiation()
             raise main_error
         return chunk_cnt, start_frame, videogen, videogen_check
 
@@ -1757,7 +1758,6 @@ class RenderFlow(IOFlow):
                     if frame_written:
                         frame_writer.close()
                     self.logger.debug("Render thread exit")
-                    frame_writer.close()
                     self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
                     break
 
@@ -2178,7 +2178,16 @@ class InterpWorkFlow:
             self.ARGS.put_overtime_task(_over_time_reminder_task)
             from XVFI import inference_xvfi as inference
             self.vfi_core = inference.XVFInterpolation(self.ARGS)
-            logger.warning("XVFI Interpolation Module Loaded, Note that this is alpha only")
+            logger.warning("XVFI VFI Module Loaded, Note that this is alpha only")
+            _over_time_reminder_task.deactive()
+        elif 'v7' in self.ARGS.rife_model_name.lower() and 'multi' in self.ARGS.rife_model_name.lower():
+            """model: rife's official_v7_multi"""
+            _over_time_reminder_task = OverTimeReminderTask(15, "RIFE Multi VFI Module Load Failed",
+                                                            "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
+            self.ARGS.put_overtime_task(_over_time_reminder_task)
+            from RIFE import inference_rife as inference
+            self.vfi_core = inference.RifeMultiInterpolation(self.ARGS)
+            logger.warning("RIFE VFI Module Multi Version (v7) Loaded")
             _over_time_reminder_task.deactive()
         else:
             _over_time_reminder_task = OverTimeReminderTask(15, "RIFE VFI Module Load Failed",

@@ -2,10 +2,11 @@ import time
 
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from RIFE.IFNet_HDv3 import *
+from RIFE.IFNet_v6 import *
 from RIFE.loss import *
+from RIFE.refine_v6 import *
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda")
 
 
 class Model:
@@ -22,9 +23,6 @@ class Model:
         if local_rank != -1:
             self.flownet = DDP(self.flownet, device_ids=[local_rank], output_device=local_rank)
 
-    def train(self):
-        self.flownet.train()
-
     def eval(self):
         self.flownet.eval()
 
@@ -33,44 +31,20 @@ class Model:
 
     def load_model(self, path, rank=0):
         def convert(param):
-            if rank == -1:
-                return {
-                    k.replace("module.", ""): v
-                    for k, v in param.items()
-                    if "module." in k
-                }
-            else:
-                return param
-
+            return {
+                k.replace("module.", ""): v
+                for k, v in param.items()
+                if "module." in k
+            }
         if rank <= 0:
-            if torch.cuda.is_available():
-                self.flownet.load_state_dict(convert(torch.load('{}/flownet.pkl'.format(path))), False)
-            else:
-                self.flownet.load_state_dict(convert(torch.load('{}/flownet.pkl'.format(path), map_location='cpu')),
-                                             False)
-
-    def save_model(self, path, rank=0):
-        if rank == 0:
-            torch.save(self.flownet.state_dict(), '{}/flownet.pkl'.format(path))
-
-    def calculate_flow(self, i0, i1, scale):
-        """
-
-        :param i0: tensor
-        :param i1: tensor
-        :param scale: float
-        :return:
-        """
-        imgs = torch.cat((i0, i1), 1)
-        scale_list = [4 / scale, 2 / scale, 1 / scale]
-        flow = self.flownet(imgs, scale_list, ensemble=self.forward_ensemble)[1]
-        return flow, imgs
+            self.flownet.load_state_dict(convert(torch.load('{}/flownet.pkl'.format(path), map_location=device)))
 
     def calculate_prediction(self, img0, img1, scale):
         imgs = torch.cat((img0, img1), 1)
         scale_list = [4 / scale, 2 / scale, 1 / scale]
-        merged = self.flownet(imgs, scale_list, ensemble=self.forward_ensemble)[0][2]
-        return merged
+        flow, mask, merged, flow_teacher, merged_teacher, loss_distill = \
+            self.flownet(imgs, scale_list, ensemble=self.forward_ensemble)
+        return merged[2]
 
     def TTA_FRAME(self, img0, img1, iter_time=2, scale=1.0):
         if iter_time != 0:

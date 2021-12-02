@@ -12,6 +12,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import QPainter, QPixmap
 from PyQt5.QtWidgets import *
 
+from Utils.StaticParameters import INVALID_CHARACTERS
 from Utils.utils import Tools, ArgumentManager
 
 abspath = os.path.abspath(__file__)
@@ -293,6 +294,9 @@ class MyListWidget(QListWidget):
             if self.count() >= 1:
                 self.failSignal.emit(2)  # community version does not support multi import
                 return {"input_path": input_path, "task_id": task_id}
+        if any([i in input_path for i in INVALID_CHARACTERS]):
+            self.failSignal.emit(3)  # path has invalid character
+            return {"input_path": input_path, "task_id": task_id}
         # input_path, task_id = self.addConfigItem(input_path, task_id)
         if task_id is None:
             task_id = self.generateTaskId(input_path)

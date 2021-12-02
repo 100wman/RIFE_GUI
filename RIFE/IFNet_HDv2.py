@@ -61,25 +61,40 @@ class IFNet(nn.Module):
         self.block2 = IFBlock(10, scale=2, c=96)
         self.block3 = IFBlock(10, scale=1, c=48)
 
-    def forward(self, x, scale=1.0):
+    def forward(self, x, scale=1.0, ensemble=False):
         if scale != 1.0:
             x = F.interpolate(x, scale_factor=scale, mode="bilinear", align_corners=False)
-        flow0 = self.block0(x)
+        flow0 = self.block0(torch.cat((x[:, :3], x[:, 3:]), 1))
+        if ensemble:
+            flow01 = self.block0(torch.cat((x[:, 3:], x[:, :3]), 1))
+            flow0 = (flow0 + torch.cat((flow01[:, 2:4], flow01[:, :2]), 1)) / 2
         F1 = flow0
         F1_large = F.interpolate(F1, scale_factor=2.0, mode="bilinear", align_corners=False) * 2.0
         warped_img0 = warp(x[:, :3], F1_large[:, :2])
         warped_img1 = warp(x[:, 3:], F1_large[:, 2:4])
         flow1 = self.block1(torch.cat((warped_img0, warped_img1, F1_large), 1))
+        if ensemble:
+            F1_large = torch.cat((F1_large[:, 2:4], F1_large[:, :2]), 1)
+            flow11 = self.block1(torch.cat((warped_img1, warped_img0, F1_large), 1))
+            flow1 = (flow1 + torch.cat((flow11[:, 2:4], flow11[:, :2]), 1)) / 2
         F2 = (flow0 + flow1)
         F2_large = F.interpolate(F2, scale_factor=2.0, mode="bilinear", align_corners=False) * 2.0
         warped_img0 = warp(x[:, :3], F2_large[:, :2])
         warped_img1 = warp(x[:, 3:], F2_large[:, 2:4])
         flow2 = self.block2(torch.cat((warped_img0, warped_img1, F2_large), 1))
+        if ensemble:
+            F2_large = torch.cat((F2_large[:, 2:4], F2_large[:, :2]), 1)
+            flow21 = self.block2(torch.cat((warped_img1, warped_img0, F2_large), 1))
+            flow2 = (flow2 + torch.cat((flow21[:, 2:4], flow21[:, :2]), 1)) / 2
         F3 = (flow0 + flow1 + flow2)
         F3_large = F.interpolate(F3, scale_factor=2.0, mode="bilinear", align_corners=False) * 2.0
         warped_img0 = warp(x[:, :3], F3_large[:, :2])
         warped_img1 = warp(x[:, 3:], F3_large[:, 2:4])
         flow3 = self.block3(torch.cat((warped_img0, warped_img1, F3_large), 1))
+        if ensemble:
+            F3_large = torch.cat((F3_large[:, 2:4], F3_large[:, :2]), 1)
+            flow31 = self.block3(torch.cat((warped_img1, warped_img0, F3_large), 1))
+            flow3 = (flow3 + torch.cat((flow31[:, 2:4], flow31[:, :2]), 1)) / 2
         F4 = (flow0 + flow1 + flow2 + flow3)
         if scale != 1.0:
             F4 = F.interpolate(F4, scale_factor=1 / scale, mode="bilinear", align_corners=False) / scale
