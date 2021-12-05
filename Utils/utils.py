@@ -79,7 +79,7 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.12"
+    gui_version = "3.8.13"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
     ols_version = "7.3.12"
@@ -88,9 +88,7 @@ class ArgumentManager:
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix Render QC Parameters not transmitted (crf, bitrate)
-    - Fix TTA Mode matching of vfi models
-    - Optimize Program Failed Error Feedback 
+    - Fix AMD Mode Failure to Check Mode Button
     """
 
     path_len_limit = 230
