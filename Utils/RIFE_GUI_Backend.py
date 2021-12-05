@@ -761,7 +761,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.InterpBeforeResizeSelector.setVisible(False)
         self.AiSrMode.setVisible(False)
         self.SrModeLabel.setVisible(False)
-        self.FastDenoiseChecker.setVisible(False)
+        # self.FastDenoiseChecker.setVisible(False)
 
         # Public Beta Test Only
         self.InterlaceInferenceChecker.setVisible(False)
