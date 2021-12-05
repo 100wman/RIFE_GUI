@@ -1373,10 +1373,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if not len(cuda_infos):
             self.hasNVIDIA = False
-            self.function_send_msg("No NVIDIA Card Found", _translate('', "未找到N卡，将使用A卡或核显"))
+            self.function_send_msg("No Available NVIDIA Card Found", _translate('', "未找到N卡，将使用A卡或核显"))
             appData.setValue("use_ncnn", True)
             self.UseNCNNButton.setChecked(True)
-            self.UseNCNNButton.setEnabled(False)
+            # self.UseNCNNButton.setEnabled(False)
             self.on_UseNCNNButton_clicked()
             return
         else:
