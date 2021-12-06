@@ -79,16 +79,18 @@ class ArgumentManager:
     is_free = False
     is_release = True
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.13"
+    gui_version = "3.8.14"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.12"
+    ols_version = "7.3.13"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix AMD Mode Failure to Check Mode Button
+    - Add Back Fast Denoise Mode
+    - Remove RealSR Module Completely
+    - Fix Custom Render Parameters Not parsed Correctly and update Guide
     """
 
     path_len_limit = 230
@@ -487,40 +489,21 @@ class Tools:
         return chunk_paths, int(chunk_cnt), int(last_frame)
 
     @staticmethod
-    def get_custom_cli_params(command: str):
-        command_params = command.split(' ')
-        hint = False
-        result = list()
-        current = ""
+    def get_custom_cli_params(_command: str):
+        command_params = _command.split('||')
         command_dict = dict()
-        try:
-            for command in command_params:
-                command = command.strip()
-                if not len(command):
-                    continue
-                current_hint = '"' in command or "'" in command
-                if hint and current_hint:
-                    result.append(current + command)
-                    current = ""
-                    hint = False
-                elif (current_hint and not hint) or (not current_hint and hint):
-                    current += command + " "
-                    hint = current_hint
-                else:
-                    result.append(command)
-                    current = ""
-                    hint = current_hint
-            param = ""
-            for command in result:
-                if command.startswith("-"):
-                    if param != "":
-                        command_dict.update({param: ""})
-                    param = command
-                else:
-                    command_dict.update({param: command})
-                    param = ""
-        except:
-            traceback.print_exc()
+        param = ""
+        for command in command_params:
+            command = command.strip().replace("\\'", "'").replace('\\"', '"').strip('\\')
+            if command.startswith("-"):
+                if param != "":
+                    command_dict.update({param: ""})
+                param = command
+            else:
+                command_dict.update({param: command})
+                param = ""
+        if param != "":  # final note
+            command_dict.update({param: ""})
         return command_dict
 
     @staticmethod

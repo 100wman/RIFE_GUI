@@ -804,7 +804,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>2</number>
+                      <number>3</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -1833,7 +1833,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-240</y>
                         <width>378</width>
                         <height>631</height>
                        </rect>
@@ -1859,7 +1859,7 @@
                                </sizepolicy>
                               </property>
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;专业选项，必须输入和编码器对应的参数（FFmpeg、EnCc系列或SVT）&lt;/p&gt;&lt;p&gt;此参数将替换用于压制的部分参数，&lt;/p&gt;&lt;p&gt;参数与值成对，若参数值为空则留出一空格，结尾保留空格&lt;/p&gt;&lt;p&gt;e.g.&lt;/p&gt;&lt;p&gt;&amp;quot;-x265-params loseless=1 -preset:v placebo &amp;quot;&lt;/p&gt;&lt;p&gt;&amp;quot;-an  &amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;专业选项，必须输入和编码器对应的参数（FFmpeg、EnCc系列或SVT）&lt;/p&gt;&lt;p&gt;此参数将替换用于压制的部分参数，&lt;/p&gt;&lt;p&gt;参数之间用“||”间隔&lt;/p&gt;&lt;p&gt;e.g.&lt;/p&gt;&lt;p&gt;&amp;quot;-x265-params||loseless=1 ||-preset:v||placebo&amp;quot;&lt;/p&gt;&lt;p&gt;&amp;quot;-an&amp;quot;&lt;/p&gt;&lt;p&gt;&amp;quot;-||-an&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>自定义压制参数： (?)</string>
