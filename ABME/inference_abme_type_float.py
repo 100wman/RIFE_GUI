@@ -19,8 +19,8 @@ warnings.filterwarnings('ignore')
 
 
 class ABMEInterpolation(VideoFrameInterpolationBase):
-    def __init__(self, __args: ArgumentManager):
-        super().__init__(__args)
+    def __init__(self, __args: ArgumentManager, logger):
+        super().__init__(__args, logger)
 
         self.initiated = False
         self.ARGS = __args

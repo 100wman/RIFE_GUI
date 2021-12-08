@@ -8,14 +8,14 @@ import torch
 from torch.nn import functional as F
 
 from Utils.StaticParameters import appDir
-from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
+from Utils.utils import ArgumentManager, VideoFrameInterpolationBase, Tools
 
 warnings.filterwarnings("ignore")
 
 
 class RifeInterpolation(VideoFrameInterpolationBase):
-    def __init__(self, __args: ArgumentManager):
-        super().__init__(__args)
+    def __init__(self, __args: ArgumentManager, logger):
+        super().__init__(__args, logger)
         self.initiated = False
         self.ARGS = __args
 
@@ -37,14 +37,14 @@ class RifeInterpolation(VideoFrameInterpolationBase):
 
         self._check_model_path()
 
-        print("INFO - Loading RIFE Model: https://github.com/hzwer/arXiv2020-RIFE")
+        self.logger.info("Loading RIFE Model: https://github.com/hzwer/arXiv2020-RIFE")
         try:
             from RIFE.RIFE_HDv2 import Model
             model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
                           forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
             model.load_model(self.model_path, -1 if not self.ARGS.use_rife_multi_cards else 0)
             self.model_version = 2
-            print("INFO - RIFE v2.x model loaded.")
+            self.logger.info("RIFE v2.x model loaded.")
         except:
             try:
                 from RIFE.RIFE_HDv3 import Model
@@ -52,14 +52,14 @@ class RifeInterpolation(VideoFrameInterpolationBase):
                               forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
                 model.load_model(self.model_path, -1)
                 self.model_version = 3
-                print("INFO - RIFE v3.x model loaded.")
+                self.logger.info("RIFE v3.x model loaded.")
             except:
                 from RIFE.RIFE_v6 import Model
                 model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
                               forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
                 model.load_model(self.model_path, -1)
                 self.model_version = 6
-                print("INFO - RIFE v6 model loaded.")
+                self.logger.info("RIFE v6 model loaded.")
         self.model = model
         self.model.eval()
         self.model.device()
@@ -70,12 +70,12 @@ class RifeInterpolation(VideoFrameInterpolationBase):
     def _print_card_info(self):
         first_card = torch.cuda.get_device_properties(0)
         card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
-        print(f"INFO - RIFE Using {card_info}, model_name: {os.path.basename(self.model_path)}")
+        self.logger.info(f"RIFE Using {card_info}, model_name: {os.path.basename(self.model_path)}")
 
     def _check_model_path(self):
         if self.ARGS.rife_model == "" or not os.path.exists(self.ARGS.rife_model):
             self.model_path = os.path.join(appDir, 'train_log', 'official_2.3')
-            print("WARNING - Using Default RIFE Model official_2.3")
+            self.logger.warning("Using Default RIFE Model official_2.3")
         else:
             self.model_path = self.ARGS.rife_model
 
@@ -84,7 +84,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         if not torch.cuda.is_available():
             self.device = torch.device("cpu")
             self.ARGS.use_rife_fp16 = False
-            print("INFO - RIFE Using cpu")
+            self.logger.info("RIFE Using cpu")
         else:
             self.device = torch.device(f"cuda")
             # torch.cuda.set_device(self.ARGS.use_specific_gpu)
@@ -94,9 +94,9 @@ class RifeInterpolation(VideoFrameInterpolationBase):
             if self.ARGS.use_rife_fp16:
                 try:
                     torch.set_default_tensor_type(torch.cuda.HalfTensor)
-                    print("INFO - RIFE FP16 mode switch success")
+                    self.logger.info("RIFE FP16 mode switch success")
                 except Exception as e:
-                    print("INFO - RIFE FP16 mode switch failed")
+                    self.logger.info("RIFE FP16 mode switch failed")
                     traceback.print_exc()
                     self.ARGS.use_rife_fp16 = False
 
@@ -139,7 +139,10 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         :return:
         """
         h, w, _ = img.shape
-        tmp = max(32, int(32 / scale))
+        if self.model_version == 4:  # special treat for 4.0 scale issue - Practical-RIFE issue #6
+            tmp = max(128, int(128 / scale))
+        else:
+            tmp = max(32, int(32 / scale))
         ph = ((h - 1) // tmp + 1) * tmp
         pw = ((w - 1) // tmp + 1) * tmp
         padding = (0, pw - w, 0, ph - h)
@@ -224,21 +227,30 @@ class RifeInterpolation(VideoFrameInterpolationBase):
 
 
 class RifeMultiInterpolation(RifeInterpolation):
-    def __init__(self, __args: ArgumentManager):
-        super().__init__(__args)
+    def __init__(self, __args: ArgumentManager, logger):
+        super().__init__(__args, logger)
 
     def initiate_algorithm(self):
         if self.initiated:
             return
         self._initiate_torch()
         self._check_model_path()
-        print("INFO - Loading RIFE Model: https://github.com/hzwer/arXiv2020-RIFE")
-        from RIFE.RIFE_v7_multi import Model
-        model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
-                      forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
-        model.load_model(self.model_path, -1 if not self.ARGS.use_rife_multi_cards else 0)
-        self.model_version = 7
-        print("INFO - RIFE v7 multi model loaded.")
+        self.logger.info("Loading RIFE Model: https://github.com/hzwer/arXiv2020-RIFE")
+        try:
+            from RIFE.RIFE_v7_multi import Model
+            model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
+                          forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
+            model.load_model(self.model_path, -1 if not self.ARGS.use_rife_multi_cards else 0)
+            self.model_version = 7
+            self.logger.info("RIFE v7 multi model loaded.")
+        except:
+            from RIFE.RIFE_HDv4 import Model
+            model = Model(use_multi_cards=self.ARGS.use_rife_multi_cards,
+                          forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
+            model.load_model(self.model_path, -1)
+            self.model_version = 4
+            self.logger.info("RIFE 4.0 model loaded.")
+            pass
         self.model = model
         self.model.eval()
         self.model.device()
@@ -247,8 +259,8 @@ class RifeMultiInterpolation(RifeInterpolation):
 
     def _check_model_path(self):
         if self.ARGS.rife_model == "" or not os.path.exists(self.ARGS.rife_model):
-            self.model_path = os.path.join(appDir, 'train_log', 'official_v7_multi')
-            print("WARNING - Using Default RIFE Model official_v7_multi")
+            self.model_path = os.path.join(appDir, 'train_log', 'official_4.0')
+            self.logger.warning("Using Default RIFE Model official_4.0")
         else:
             self.model_path = self.ARGS.rife_model
 
@@ -283,9 +295,9 @@ if __name__ == "__main__":
     _image_path = r'D:\60-fps-Project\Projects\RIFE GUI\test\images'
     _i0 = cv2.imread(os.path.join(_image_path, r'0.png'))
     _i1 = cv2.imread(os.path.join(_image_path, r'1.png'))
-    _inference_module = RifeInterpolation(ArgumentManager({}))
+    _inference_module = RifeMultiInterpolation(ArgumentManager({'rife_model': os.path.join(appDir, 'train_log', 'official_4.0')}), Tools.get_logger("", ""))
     _inference_module.initiate_algorithm()
     _imid = _inference_module.generate_n_interp(_i0, _i1, 2, 1.0)
     for _mid_index, _mid in enumerate(_imid):
-        cv2.imwrite(os.path.join(_image_path, f'n=2_model=2.3_scale=1_{_mid_index}.png'), _mid)
+        cv2.imwrite(os.path.join(_image_path, f'n=2_model=4.0_scale=1_{_mid_index}.png'), _mid)
     pass

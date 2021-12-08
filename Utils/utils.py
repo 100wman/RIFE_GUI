@@ -77,20 +77,20 @@ class ArgumentManager:
     """Release Version Control"""
     is_steam = True
     is_free = False
-    is_release = True
+    is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.14"
+    gui_version = "3.8.15"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.13"
+    ols_version = "7.3.14"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add Back Fast Denoise Mode
-    - Remove RealSR Module Completely
-    - Fix Custom Render Parameters Not parsed Correctly and update Guide
+    - Add RIFE 4.0 Model
+    - Optimize RIFE Module Log Display
+    - Optimize VFI Module Options Display
     """
 
     path_len_limit = 230
@@ -752,8 +752,9 @@ class SuperResolutionBase:
 
 
 class VideoFrameInterpolationBase:
-    def __init__(self, __args: ArgumentManager):
+    def __init__(self, __args: ArgumentManager, logger: logging.Logger):
         self.initiated = False
+        self.logger = logger
         self.args = {}
         if __args is not None:
             """Update Args"""

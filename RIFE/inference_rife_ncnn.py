@@ -10,8 +10,8 @@ raw = rife_ncnn_vulkan.raw
 
 
 class RifeInterpolation(VideoFrameInterpolationBase):
-    def __init__(self, __args: ArgumentManager):
-        super().__init__(__args)
+    def __init__(self, __args: ArgumentManager, logger):
+        super().__init__(__args, logger)
         self.ARGS = __args
         uhd_mode = True if self.ARGS.rife_exp < 1 else False
         self.initiated = False

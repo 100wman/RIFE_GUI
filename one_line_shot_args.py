@@ -379,7 +379,7 @@ class ReadFlow(IOFlow):
                                                       use_fixed_scdet=self.ARGS.use_scdet_fixed,
                                                       fixed_max_scdet=self.ARGS.scdet_fixed_max,
                                                       scdet_output=self.ARGS.is_scdet_output)
-        self.vfi_core = VideoFrameInterpolationBase(self.ARGS)
+        self.vfi_core = VideoFrameInterpolationBase(self.ARGS, logger)
 
     def __crop(self, img):
         """
@@ -1872,11 +1872,11 @@ class SuperResolutionFlow(IOFlow):
                                                                                  scale=sr_scale,
                                                                                  num_threads=self.ARGS.ncnn_thread,
                                                                                  resize=resize_param)
-            elif self.ARGS.use_sr_algo == "realSR":
-                import SuperResolution.SuperResolutionModule
-                self.sr_module = SuperResolution.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
-                                                                                  scale=sr_scale,
-                                                                                  resize=resize_param)
+            # elif self.ARGS.use_sr_algo == "realSR":
+            #     import SuperResolution.SuperResolutionModule
+            #     self.sr_module = SuperResolution.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
+            #                                                                       scale=sr_scale,
+            #                                                                       resize=resize_param)
             elif self.ARGS.use_sr_algo == "realESR":
                 import SuperResolution.RealESRModule
                 self.sr_module = SuperResolution.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
@@ -2136,7 +2136,7 @@ class InterpWorkFlow:
         self.update_progress_flow = ProgressUpdateFlow(self.ARGS, logger, self.read_flow)
 
         """Set VFI Core"""
-        self.vfi_core = VideoFrameInterpolationBase(self.ARGS)
+        self.vfi_core = VideoFrameInterpolationBase(self.ARGS, logger)
 
         """Set 'Global' Reminder"""
 
@@ -2219,32 +2219,33 @@ class InterpWorkFlow:
         if self.ARGS.render_only or self.ARGS.extract_only or self.ARGS.concat_only:
             return
 
-        if 'abme' in self.ARGS.rife_model_name.lower():
+        model_name_lower = self.ARGS.rife_model_name.lower()
+        if 'abme' in model_name_lower:
             """model: abme_best"""
             _over_time_reminder_task = OverTimeReminderTask(15, "ABME VFI Module Load Failed",
                                                             "Import Cracked(>15s so far), Please terminate the process and check your CUDA version according to the manual")
             self.ARGS.put_overtime_task(_over_time_reminder_task)
             from ABME import inference_abme as inference
-            self.vfi_core = inference.ABMEInterpolation(self.ARGS)
+            self.vfi_core = inference.ABMEInterpolation(self.ARGS, logger)
             logger.warning("ABME VFI Module Loaded, Note that this is alpha only")
             _over_time_reminder_task.deactive()
-        elif 'xvfi' in self.ARGS.rife_model_name.lower():
+        elif 'xvfi' in model_name_lower:
             """model: xvfi_*"""
             _over_time_reminder_task = OverTimeReminderTask(15, "XVFI Module Load Failed",
                                                             "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
             self.ARGS.put_overtime_task(_over_time_reminder_task)
             from XVFI import inference_xvfi as inference
-            self.vfi_core = inference.XVFInterpolation(self.ARGS)
+            self.vfi_core = inference.XVFInterpolation(self.ARGS, logger)
             logger.warning("XVFI VFI Module Loaded, Note that this is alpha only")
             _over_time_reminder_task.deactive()
-        elif 'v7' in self.ARGS.rife_model_name.lower() and 'multi' in self.ARGS.rife_model_name.lower():
-            """model: rife's official_v7_multi"""
+        elif ('v7' in model_name_lower and 'multi' in model_name_lower) or '4.' in model_name_lower:
+            """model: rife's official_v7_multi / official 4.0"""
             _over_time_reminder_task = OverTimeReminderTask(15, "RIFE Multi VFI Module Load Failed",
                                                             "Import Cracked(>15s so far), Please terminate the process and check your Environment according to the manual")
             self.ARGS.put_overtime_task(_over_time_reminder_task)
             from RIFE import inference_rife as inference
-            self.vfi_core = inference.RifeMultiInterpolation(self.ARGS)
-            logger.warning("RIFE VFI Module Multi Version Loaded, Note that this is alpha only")
+            self.vfi_core = inference.RifeMultiInterpolation(self.ARGS, logger)
+            logger.warning("RIFE VFI Module Multi Version Loaded")
             _over_time_reminder_task.deactive()
             pass
         else:
@@ -2266,7 +2267,7 @@ class InterpWorkFlow:
                     self.ARGS.rife_model_name = "rife-v2"
                     from RIFE import inference_rife_ncnn as inference
             """Update RIFE Core"""
-            self.vfi_core = inference.RifeInterpolation(self.ARGS)
+            self.vfi_core = inference.RifeInterpolation(self.ARGS, logger)
             _over_time_reminder_task.deactive()
             logger.info("RIFE VFI Module Loaded")
         self.vfi_core.initiate_algorithm()

@@ -764,6 +764,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AiSrMode.setVisible(False)
         self.SrModeLabel.setVisible(False)
         # self.FastDenoiseChecker.setVisible(False)
+        self.OneClickHDRField.setEnabled(False)
 
     def settings_free_hide(self):
         """
@@ -1989,7 +1990,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_ModuleSelector_currentTextChanged(self):
         current_model = self.ModuleSelector.currentText().lower()
         """
-        000000 = RIFEv2, RIFEv3, RIFEv6, RIFEv7, XVFI, ABME 
+        000000 = RIFEv2, RIFEv3, RIFEv6, RIFEv7/RIFE 4.0, XVFI, ABME 
         """
         if 'abme_best' in current_model:
             current_model_index = 0b000001
@@ -1999,12 +2000,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             else:  # RIFEv6, anime_training
                 current_model_index = 0b001000
         elif 'official' in current_model:
-            if '2.3' in current_model:
-                current_model_index = 0b100000  # RIFEv2.3
+            if '2.' in current_model:
+                current_model_index = 0b100000  # RIFEv2.x
             elif '3.' in current_model:
                 current_model_index = 0b010000
             elif 'v6' in current_model:
                 current_model_index = 0b001000
+            elif '4.' in current_model:
+                current_model_index = 0b000100
             else: # RIFEv7
                 current_model_index = 0b000100
         elif 'xvfi' in current_model:
@@ -2021,8 +2024,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         DS_enable = 0b111100 & current_model_index
         self.AutoInterpScaleChecker.setChecked(self.AutoInterpScaleChecker.isChecked() if DS_enable else False)
         self.AutoInterpScaleChecker.setEnabled(DS_enable)
-        self.TtaModeSelector.setEnabled(0b111001 & current_model_index)
-        self.TtaIterTimesSelector.setEnabled(0b111001 & current_model_index)
+        TTA_enable = 0b111001 & current_model_index
+        self.TtaModeSelector.setEnabled(TTA_enable)
+        self.TtaIterTimesSelector.setEnabled(TTA_enable)
+        if not TTA_enable:
+            self.TtaModeSelector.setCurrentIndex(0)
         self.UseMultiCardsChecker.setEnabled(0b111000 & current_model_index)
         EN_enable = 0b111100 & current_model_index
         self.ForwardEnsembleChecker.setChecked(self.ForwardEnsembleChecker.isChecked() if EN_enable else False)

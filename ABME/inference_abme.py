@@ -19,8 +19,8 @@ warnings.filterwarnings('ignore')
 
 
 class ABMEInterpolation(VideoFrameInterpolationBase):
-    def __init__(self, __args: ArgumentManager):
-        super().__init__(__args)
+    def __init__(self, __args: ArgumentManager, logger):
+        super().__init__(__args, logger)
 
         self.initiated = False
         self.ARGS = __args
@@ -57,7 +57,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
 
-        print("INFO - Loading ABME Model: https://github.com/JunHeum/ABME")
+        self.logger.info("Loading ABME Model: https://github.com/JunHeum/ABME")
         self.model_dir = os.path.join(appDir, 'train_log', 'abme_best')
         self.SBMNet.load_state_dict(torch.load(os.path.join(self.model_dir, 'SBME_ckpt.pth'), map_location='cpu'))
         self.ABMNet.load_state_dict(torch.load(os.path.join(self.model_dir, 'ABMR_ckpt.pth'), map_location='cpu'))
@@ -82,7 +82,7 @@ class ABMEInterpolation(VideoFrameInterpolationBase):
         # self.SynNet.eval()
         first_card = torch.cuda.get_device_properties(0)
         card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
-        print(f"INFO - ABME Using {card_info}, model_name: {os.path.basename(self.model_dir)}")
+        self.logger.info(f"ABME Using {card_info}, model_name: {os.path.basename(self.model_dir)}")
 
         self.initiated = True
 

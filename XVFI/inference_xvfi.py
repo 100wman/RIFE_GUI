@@ -10,7 +10,7 @@ import torch.utils.data
 from torch.autograd import Variable
 from torch.nn import functional as F
 
-from Utils.utils import ArgumentManager, VideoFrameInterpolationBase
+from Utils.utils import ArgumentManager, VideoFrameInterpolationBase, Tools
 from XVFI.XVFInet import XVFInet
 from XVFI.utils import weights_init
 
@@ -38,8 +38,8 @@ class XVFIArgument:
 
 
 class XVFInterpolation(VideoFrameInterpolationBase):
-    def __init__(self, __args: ArgumentManager):
-        super().__init__(__args)
+    def __init__(self, __args: ArgumentManager, logger):
+        super().__init__(__args, logger)
         self.initiated = False
         self.ARGS = __args
         self.auto_scale = self.ARGS.use_rife_auto_scale
@@ -62,7 +62,7 @@ class XVFInterpolation(VideoFrameInterpolationBase):
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
 
-        print("INFO - Loading XVFI Model: https://github.com/JihyongOh/XVFI")
+        self.logger.info("Loading XVFI Model: https://github.com/JihyongOh/XVFI")
         model_path = glob.glob(os.path.join(self.ARGS.rife_model_dir, self.ARGS.rife_model_name, "*.pt"))
         if not len(model_path):
             raise FileNotFoundError(f"Could not find any valid XVFI model at {self.ARGS.rife_model_dir}")
@@ -70,7 +70,7 @@ class XVFInterpolation(VideoFrameInterpolationBase):
 
         """ Initialize a model """
         checkpoint = torch.load(model_path, map_location='cpu')
-        print("INFO - XVFI load model '{}', epoch: {},".format(os.path.basename(model_path),
+        self.logger.info("XVFI load model '{}', epoch: {},".format(os.path.basename(model_path),
                                                                checkpoint['last_epoch'] + 1))
         self.model_net = XVFInet(self.XVFI_Argument).apply(weights_init).to(self.device)  # XVFI.apply...
 
@@ -82,7 +82,7 @@ class XVFInterpolation(VideoFrameInterpolationBase):
 
         first_card = torch.cuda.get_device_properties(0)
         card_info = f"{first_card.name}, {first_card.total_memory / 1024 ** 3:.1f} GB"
-        print(f"INFO - XVFI Using {card_info}, model_name: {os.path.basename(model_path)}")
+        self.logger.info(f"XVFI Using {card_info}, model_name: {os.path.basename(model_path)}")
         self.initiated = True
 
     # @profile
@@ -151,7 +151,7 @@ if __name__ == "__main__":
          "rife_model_name": r"XVFInet_Vimeo_exp1",
          "rife_interlace_inference": 2
          })
-    _xvfi_instance = XVFInterpolation(_xvfi_arg)
+    _xvfi_instance = XVFInterpolation(_xvfi_arg, Tools.get_logger("", ""))
     _xvfi_instance.initiate_algorithm()
     test_dir = r"D:\60-fps-Project\input or ref\Test\[2]Standard-Hard-Case"
     output_dir = r"D:\60-fps-Project\input or ref\Test\output"
