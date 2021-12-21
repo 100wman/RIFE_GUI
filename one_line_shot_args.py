@@ -320,13 +320,15 @@ class IOFlow(threading.Thread):
             self.initiation_event.set()
         self.initiation_event.wait()
 
-    def _get_color_info_dict(self):
+    def _get_color_tag_dict(self):
         color_tag_map = {'-color_range': 'color_range',
                          '-color_primaries': 'color_primaries',
                          '-colorspace': 'color_space', '-color_trc': 'color_transfer'}
         output_dict = {}
         for ct in color_tag_map:
-            output_dict.update({ct: self.ARGS.video_info_instance.video_info[color_tag_map[ct]]})
+            ct_data = self.ARGS.video_info_instance.video_info[color_tag_map[ct]]
+            if len(ct_data):
+                output_dict.update({ct: ct_data})
         return output_dict
 
     def check_chunk(self):
@@ -494,10 +496,11 @@ class ReadFlow(IOFlow):
                        "-sws_flags": "bicubic",
                        }  # use read frames cnt to avoid ffprobe, fuck
 
-        output_dict.update(self._get_color_info_dict())
+        output_dict.update(self._get_color_tag_dict())
 
         # vf_args = f"lut3d=PQ400.cube"
         vf_args = f"copy"
+
         if start_frame not in [-1, 0]:
             # not start from the beginning
             if self.ARGS.risk_resume_mode:
@@ -522,14 +525,17 @@ class ReadFlow(IOFlow):
                 if self.ARGS.frame_size != self.ARGS.transfer_param and all(self.ARGS.transfer_param):
                     output_dict.update({"-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
+        scale_args = ""
+        if '-colorspace' in output_dict:
+            scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
         """Quick Extraction"""
         if not self.ARGS.is_quick_extract and not frame_check:
             # vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
             if self.ARGS.hdr_mode == HDR_STATE.NONE:
                 """Only BT709 could zscale,,, to avoid banding"""
-                vf_args += f",zscale=min=709:m=709,format=yuv444p10le,format=rgb48be,format=rgb24"
+                scale_args = f",format=yuv444p10le{scale_args},format=rgb48be,format=rgb24"
             output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
-        vf_args += f",minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
+        vf_args += f"{scale_args},minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
 
         """Update video filters"""
         output_dict["-vf"] = vf_args
@@ -1185,7 +1191,7 @@ class RenderFlow(IOFlow):
         output_dict = {"-r": f"{self.ARGS.target_fps:.3f}", "-preset:v": self.ARGS.render_encoder_preset,
                        "-metadata": f'title="Powered By SVFI {self.ARGS.version}"'}
 
-        output_dict.update(self._get_color_info_dict())
+        output_dict.update(self._get_color_tag_dict())
 
         if not self.ARGS.is_img_input:
             input_dict.update({"-r": f"{self.ARGS.target_fps:.3f}"})
@@ -1201,7 +1207,9 @@ class RenderFlow(IOFlow):
                 input_dict.update({"-r": f"{self.ARGS.target_fps:.3f}"})
             output_dict.pop("-r")
 
-        vf_args = "copy"  # debug
+        vf_args = "format=yuv444p10le"  # debug
+        if '-colorspace' in output_dict:
+            vf_args = f"scale=out_color_matrix={output_dict['-colorspace']},{vf_args}"
         output_dict.update({"-vf": vf_args})
 
         if all(self.ARGS.resize_param):
@@ -1307,14 +1315,7 @@ class RenderFlow(IOFlow):
                 "--aq": "",
                 "--aq-temporal": "",
                 "--bref-mode": "middle"}
-            if '-color_range' in output_dict:
-                _output_dict.update({"--colorrange": output_dict["-color_range"]})
-            if '-colorspace' in output_dict:
-                _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
-            if '-color_trc' in output_dict:
-                _output_dict.update({"--transfer": output_dict["-color_trc"]})
-            if '-color_primaries' in output_dict:
-                _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+            self.convert_encc_color_tag(output_dict, _output_dict)
 
             if '-s' in output_dict:
                 _output_dict.update({'--output-res': output_dict['-s']})
@@ -1358,14 +1359,7 @@ class RenderFlow(IOFlow):
                 "--b-adapt": "", "--gop-len": "250", "-b": "6", "--ref": "8", "--b-pyramid": "", "--weightb": "",
                 "--weightp": "", "--adapt-ltr": "",
             }
-            if '-color_range' in output_dict:
-                _output_dict.update({"--colorrange": output_dict["-color_range"]})
-            if '-colorspace' in output_dict:
-                _output_dict.update({"--colormatrix": output_dict["-colorspace"]})
-            if '-color_trc' in output_dict:
-                _output_dict.update({"--transfer": output_dict["-color_trc"]})
-            if '-color_primaries' in output_dict:
-                _output_dict.update({"--colorprim": output_dict["-color_primaries"]})
+            self.convert_encc_color_tag(_output_dict, output_dict)
 
             if '-s' in output_dict:
                 _output_dict.update({'--output-res': output_dict['-s']})
@@ -1530,6 +1524,16 @@ class RenderFlow(IOFlow):
         return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
                             verbosity=self.ARGS.debug)
 
+    def convert_encc_color_tag(self, ffmpeg_param_dict: dict, encc_param_dict: dict):
+        if '-color_range' in ffmpeg_param_dict:
+            encc_param_dict.update({"--colorrange": ffmpeg_param_dict["-color_range"]})
+        if '-colorspace' in ffmpeg_param_dict:
+            encc_param_dict.update({"--colormatrix": ffmpeg_param_dict["-colorspace"]})
+        if '-color_trc' in ffmpeg_param_dict:
+            encc_param_dict.update({"--transfer": ffmpeg_param_dict["-color_trc"]})
+        if '-color_primaries' in ffmpeg_param_dict:
+            encc_param_dict.update({"--colorprim": ffmpeg_param_dict["-color_primaries"]})
+
     def __rename_chunk(self, chunk_from_path: str, chunk_cnt: int, start_frame: int, end_frame: int):
         """Maintain Chunk json"""
         if self.ARGS.is_img_output or self._kill:
@@ -1679,7 +1683,7 @@ class RenderFlow(IOFlow):
         else:
             map_audio = ""
 
-        color_dict = self._get_color_info_dict()
+        color_dict = self._get_color_tag_dict()
         color_info_str = ""
         for ck, cd in color_dict.items():
             color_info_str += f" {ck} {cd}"
@@ -2032,17 +2036,19 @@ class ProgressUpdateFlow(IOFlow):
             time.sleep(0.1)
             return
         screen_h, screen_w = self.ARGS.get_screen_size()
-        title = f"SVFI Preview = Frame Source A + Interpolated/Uplifted B + Source C"
-        comp_stack = np.hstack([preview_imgs[0], preview_imgs[len(preview_imgs) // 2], preview_imgs[-1]])
+        title = f"SVFI Preview of Interpolated/Uplifted Frame"
+        comp_stack = preview_imgs[len(preview_imgs) // 2]
 
-        preview_w = screen_w
+        preview_w = screen_w // 2
         stack_h, stack_w, _ = comp_stack.shape
         preview_h = int(stack_h / stack_w * preview_w)
-        comp_stack = cv2.resize(comp_stack, (preview_w, preview_h)).astype(np.uint8)
+        comp_stack = cv2.resize(comp_stack, (preview_w, preview_h))
+
         cv2.putText(comp_stack,
-                    f"{now_frame / self.ARGS.all_frames_cnt * 100:.2f}%",
-                    (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0))
+                    f"Frame {now_frame}, {now_frame / self.ARGS.all_frames_cnt * 100:.2f}%",
+                    (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0))
         comp_stack = cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB)
+        # cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
         cv2.imshow(title, comp_stack)
         cv2.waitKey(41)  # 1/24
 

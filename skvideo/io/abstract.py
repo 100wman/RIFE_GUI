@@ -305,18 +305,11 @@ class VideoReaderAbstract(object):
         M is height, N is width, and C is number of channels per pixel.
 
         """
-        if self.inputframenum == 0:
-            while True:
-                frame = self._readFrame()
-                if len(frame) == 0:
-                    break
-                yield frame
-        else:
-            while True:
-                frame = self._readFrame()
-                if len(frame) == 0:
-                    break
-                yield frame
+        while True:
+            frame = self._readFrame()
+            if len(frame) == 0:
+                break
+            yield frame
 
     def __enter__(self):
         return self

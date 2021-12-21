@@ -79,18 +79,18 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.15"
+    gui_version = "3.8.16"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.14"
+    ols_version = "7.3.15"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add RIFE 4.0 Model
-    - Optimize RIFE Module Log Display
-    - Optimize VFI Module Options Display
+    - Optimize Scikit Video Read Frame Process
+    - Optimize Preview Display
+    - Fix Color Shifting at Render Process, FFmpeg Only, shit EnCc
     """
 
     path_len_limit = 230
@@ -387,6 +387,8 @@ class Tools:
         :param img2: cv2
         :return: float
         """
+        if (img1 == img2).all():
+            return 0
         img1 = Tools.get_norm_img(img1, resize)
         img2 = Tools.get_norm_img(img2, resize)
         # h, w = min(img1.shape[0], img2.shape[0]), min(img1.shape[1], img2.shape[1])
@@ -1066,18 +1068,18 @@ class VideoInfoProcessor:
         self.hdr10_parser = "hdr10plus_parser"
         self.hdr_mode = HDR_STATE.NOT_CHECKED
         self.project_dir = project_dir
-        self.color_data_tag = [('color_range', 'tv'),
-                               ('color_space', 'bt709'),
-                               ('color_transfer', 'bt709'),
-                               ('color_primaries', 'bt709')]
+        self.color_data_tag = [('color_range', ''),
+                               ('color_space', ''),
+                               ('color_transfer', ''),
+                               ('color_primaries', '')]
 
         self.interp_exp = interp_exp
         self.fps = 0  # float
         self.frames_size = (0, 0)  # width, height, float
         self.frames_cnt = 0  # int
         self.duration = 0
-        self.video_info = {'color_range': 'tv', 'color_transfer': 'bt709',
-                           'color_space': 'bt709', 'color_primaries': 'bt709'}
+        self.video_info = {'color_range': '', 'color_transfer': '',
+                           'color_space': '', 'color_primaries': ''}
         self.audio_info = dict()
         self.hdr10plus_metadata_path = None
         self.update_info()
