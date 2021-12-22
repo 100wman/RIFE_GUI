@@ -16,7 +16,7 @@ import psutil
 import tqdm
 
 from Utils.LicenseModule import EULAWriter
-from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, IMG_SIZE, IMG_TYPE
 from Utils.utils import ArgumentManager, DefaultConfigParser, Tools, VideoInfoProcessor, \
     ImageRead, ImageWrite, TransitionDetection_ST, \
     VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, \
@@ -2037,7 +2037,7 @@ class ProgressUpdateFlow(IOFlow):
             return
         screen_h, screen_w = self.ARGS.get_screen_size()
         title = f"SVFI Preview of Interpolated/Uplifted Frame"
-        comp_stack = preview_imgs[len(preview_imgs) // 2]
+        comp_stack = (preview_imgs[len(preview_imgs) // 2] / IMG_SIZE * 255.).astype(np.uint8)
 
         preview_w = screen_w // 2
         stack_h, stack_w, _ = comp_stack.shape
@@ -2185,8 +2185,8 @@ class InterpWorkFlow:
                         f"Auto Scale {'on' if self.ARGS.use_rife_auto_scale else 'off'}, "
                         f"interlace inference mode: {self.ARGS.rife_interlace_inference}")
 
-            test_img0, test_img1 = np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8), \
-                                   np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8)
+            test_img0, test_img1 = np.random.randint(0, int(IMG_SIZE), size=(h, w, 3)).astype(IMG_TYPE), \
+                                   np.random.randint(0, int(IMG_SIZE), size=(h, w, 3)).astype(IMG_TYPE)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
             logger.info(f"Interpolation VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1

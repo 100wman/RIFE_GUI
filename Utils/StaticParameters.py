@@ -1,10 +1,13 @@
 import enum
 import os
 
+import numpy as np
+
 abspath = os.path.abspath(__file__)
 appDir = os.path.dirname(os.path.dirname(abspath))
 
 INVALID_CHARACTERS = ["'", '"']
+
 
 class TASKBAR_STATE(enum.Enum):
     TBPF_NOPROGRESS = 0x00000000
@@ -66,3 +69,7 @@ class EncodePresetAssemply:
              },
 
     }
+
+
+IMG_SIZE = 65535.
+IMG_TYPE = np.uint8 if IMG_SIZE == 255. else np.uint16

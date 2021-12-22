@@ -3,15 +3,14 @@ import traceback
 import warnings
 
 import cv2
-import numpy as np
 import torch
 from torch.nn import functional as F
 
-from Utils.StaticParameters import appDir
+from Utils.StaticParameters import appDir, IMG_SIZE
 from Utils.utils import ArgumentManager, VideoFrameInterpolationBase, Tools
-
+import numpy as np
 warnings.filterwarnings("ignore")
-
+# from line_profiler_pycharm import profile
 
 class RifeInterpolation(VideoFrameInterpolationBase):
     def __init__(self, __args: ArgumentManager, logger):
@@ -109,7 +108,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         else:
             mid = self.model.inference(i1, i2, scale, iter_time=self.tta_iter)
         del i1, i2
-        mid = ((mid[0] * 255.).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
+        mid = ((mid[0] * IMG_SIZE).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
         return mid
 
     def _make_n_inference(self, img1, img2, scale, n):
@@ -162,11 +161,11 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         """
 
         try:
-            img_torch = torch.from_numpy(img).to(self.device, non_blocking=True).permute(2, 0, 1).unsqueeze(0)
+            img_torch = torch.from_numpy(img.astype(np.float32)).to(self.device, non_blocking=True).permute(2, 0, 1).unsqueeze(0)
             if self.ARGS.use_rife_fp16:
-                img_torch = img_torch.half() / 255.
+                img_torch = img_torch.half() / IMG_SIZE
             else:
-                img_torch = img_torch.float() / 255.
+                img_torch = img_torch.float() / IMG_SIZE
             if self.ARGS.use_rife_multi_cards and self.device_count > 1:
                 if self.device_count % 2 == 0:
                     batch = 2
@@ -194,33 +193,6 @@ class RifeInterpolation(VideoFrameInterpolationBase):
 
         interp_gen = self._make_n_inference(img1, img2, scale, n=n)
         return interp_gen
-
-    # def _get_auto_scale_to_tensor(self, *imgs):
-    #     if self.ARGS.use_rife_fp16:  # 是否为半精度
-    #         return [
-    #             torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(
-    #                 0).half() / 255.
-    #             for img in imgs]
-    #     return [torch.from_numpy(np.transpose(img, (2, 0, 1))).to(self.device, non_blocking=True).unsqueeze(
-    #         0).float() / 255.
-    #             for img in imgs]
-
-    # def get_auto_scale(self, i0, i1):
-    #     scale_range = [0.25, 0.5, 1.0]
-    #     max_distance = 0
-    #     select_scale = 0.5
-    #     for scale in scale_range:
-    #         pwh = int(32 / scale)
-    #         t0 = cv2.resize(i0, (pwh, pwh))
-    #         t1 = cv2.resize(i1, (pwh, pwh))
-    #         I0, I1 = self._get_auto_scale_to_tensor(t0, t1)
-    #         lf, _ = self.model.calculate_flow(I0, I1, scale)
-    #         rf, _ = self.model.calculate_flow(I1, I0, scale)
-    #         distance = abs(((lf - rf) / 2).mean())
-    #         if distance > max_distance:
-    #             select_scale = scale
-    #             max_distance = distance
-    #     return select_scale
 
     def run(self):
         pass
@@ -273,7 +245,7 @@ class RifeMultiInterpolation(RifeInterpolation):
         else:
             mids = self.model.inference(i1, i2, scale, n)
         del i1, i2
-        mids = [((mid[0] * 255.).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy() for mid in mids]
+        mids = [((mid[0] * IMG_SIZE).float().cpu().numpy().transpose(1, 2, 0))[:h, :w] for mid in mids]
         return mids
 
     def _make_n_inference(self, img1, img2, scale, n):

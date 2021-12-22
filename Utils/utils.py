@@ -26,7 +26,7 @@ import numpy as np
 import psutil
 from sklearn import linear_model
 
-from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, IMG_SIZE
 from skvideo.utils import check_output
 from skimage.metrics._structural_similarity import structural_similarity as compare_ssim
 
@@ -79,18 +79,16 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.16"
+    gui_version = "3.8.17"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.15"
+    ols_version = "7.3.16"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Optimize Scikit Video Read Frame Process
-    - Optimize Preview Display
-    - Fix Color Shifting at Render Process, FFmpeg Only, shit EnCc
+    - Change Work Environment to RGB48le
     """
 
     path_len_limit = 230
@@ -373,7 +371,7 @@ class Tools:
         if resize:
             img1 = cv2.resize(img1, Tools.resize_param)
         img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
-        img1 = cv2.equalizeHist(img1)  # 进行直方图均衡化
+        img1 = cv2.equalizeHist((img1 / IMG_SIZE * 255.).astype(np.uint8))  # 进行直方图均衡化
         # img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         # _, img1 = cv2.threshold(img1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return img1

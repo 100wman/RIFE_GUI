@@ -5,6 +5,7 @@ import warnings
 
 import numpy as np
 
+from Utils.StaticParameters import IMG_SIZE
 from .. import _HAS_FFMPEG
 from ..utils import *
 
@@ -175,7 +176,10 @@ class VideoReaderAbstract(object):
             outputdict['-f'] = self.OUTPUT_METHOD
 
         if '-pix_fmt' not in outputdict:
-            outputdict['-pix_fmt'] = "rgb24"
+            if IMG_SIZE == 255.:
+                outputdict['-pix_fmt'] = "rgb24"
+            else:
+                outputdict['-pix_fmt'] = "rgb48le"  # 48
         self.output_pix_fmt = outputdict['-pix_fmt']
 
         if '-s' in outputdict:
