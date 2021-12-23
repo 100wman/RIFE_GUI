@@ -250,7 +250,7 @@
           <item row="5" column="0">
            <widget class="QCheckBox" name="PreviewVfiChecker">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在任务启动后可以查看当前任务进度预览，包括参考帧1，补帧/超分帧，参考帧2&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在任务启动后可以查看当前任务正在处理的帧（已被补帧/超分）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;可能会降低任务处理速度（&amp;lt;10%）&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>开启预览 (?)</string>

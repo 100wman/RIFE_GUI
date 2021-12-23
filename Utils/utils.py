@@ -7,7 +7,6 @@ import json
 import logging
 import math
 import os
-import random
 import re
 import shlex
 import shutil
@@ -24,11 +23,11 @@ from queue import Queue
 import cv2
 import numpy as np
 import psutil
+from skimage.metrics._structural_similarity import structural_similarity as compare_ssim
 from sklearn import linear_model
 
-from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, IMG_SIZE
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE
 from skvideo.utils import check_output
-from skimage.metrics._structural_similarity import structural_similarity as compare_ssim
 
 
 class DefaultConfigParser(ConfigParser):
@@ -79,16 +78,23 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.8.17"
+    gui_version = "3.9.0"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.3.16"
+    ols_version = "7.4.0"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Change Work Environment to RGB48le
+    - Optimize Frame Extraction to fix color shifting and color banding in HDR case
+    - Add 16bit Mode
+    - Refactor CudaSuperResolutionModule
+    - Optimize Decode Time Display
+    - Update Output Filename Rule
+    - Fix Color Tag miss tagged when concating videos
+    - Fix output png sequence number missing in extract mode
+    - Fix Malfunction of resize after crop with assigning output resolution
     """
 
     path_len_limit = 230
@@ -174,11 +180,16 @@ class ArgumentManager:
         self.use_render_encoder_default_preset = args.get("use_render_encoder_default_preset", False)
         self.is_encode_audio = args.get("is_encode_audio", False)
         self.is_quick_extract = args.get("is_quick_extract", True)
+        self.is_float32_workflow = args.get("is_float32_workflow", True)
         self.hdr_mode = args.get("hdr_mode", 0)
         if self.hdr_mode == 0:  # AUTO
             self.hdr_mode = HDR_STATE(-2)
         else:
             self.hdr_mode = HDR_STATE(self.hdr_mode)
+
+        if not self.is_float32_workflow:  # change to 8bit
+            RGB_TYPE.change_8bit(True)
+
         self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "").strip('"').strip("'")
         self.is_no_concat = args.get("is_no_concat", False)
         self.use_fast_denoise = args.get("use_fast_denoise", False)
@@ -343,7 +354,7 @@ class Tools:
             except ValueError:
                 pass
             if not len(args[a]):
-                print(f"Warning: Find Empty Args at '{a}'")
+                print(f"Warning: Find Empty Arguments at '{a}'")
                 args[a] = ""
         return args
         pass
@@ -371,7 +382,7 @@ class Tools:
         if resize:
             img1 = cv2.resize(img1, Tools.resize_param)
         img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
-        img1 = cv2.equalizeHist((img1 / IMG_SIZE * 255.).astype(np.uint8))  # 进行直方图均衡化
+        img1 = cv2.equalizeHist((img1 / RGB_TYPE.SIZE * 255.).astype(np.uint8))  # 进行直方图均衡化
         # img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         # _, img1 = cv2.threshold(img1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return img1
@@ -693,8 +704,9 @@ class ImageWrite(ImageIO):
 
     def write_frame(self, img, path):
         if self.resize_flag:
-            img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_AREA)
-        cv2.imencode(self.output_ext, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))[1].tofile(path)
+            if img.shape[1] != self.resize[0] or img.shape[0] != self.resize[1]:
+                img = cv2.resize(img, (self.resize[0], self.resize[1]), interpolation=cv2.INTER_AREA)
+        cv2.imencode(self.output_ext, cv2.cvtColor(img.astype(RGB_TYPE.DTYPE), cv2.COLOR_RGB2BGR))[1].tofile(path)
 
     def writeFrame(self, img):
         img_path = os.path.join(self.folder, f"{self.frame_cnt:0>8d}{self.output_ext}")
@@ -761,7 +773,7 @@ class VideoFrameInterpolationBase:
             self.args = __args
         else:
             raise NotImplementedError("Args not sent in")
-        
+
         self.split_w = 1
         self.split_h = 1
         self.is_interlace_inference = self.args.rife_interlace_inference > 0

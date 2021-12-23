@@ -765,6 +765,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SrModeLabel.setVisible(False)
         # self.FastDenoiseChecker.setVisible(False)
         self.OneClickHDRField.setEnabled(False)
+        self.EvictFlickerChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -944,6 +945,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SaveAudioChecker.setChecked(appData.value("is_save_audio", True, type=bool))
         self.FastDenoiseChecker.setChecked(appData.value("use_fast_denoise", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
+        self.Float32WorkflowChecker.setChecked(appData.value("is_float32_workflow", True, type=bool))
         self.QuickExtractChecker.setChecked(appData.value("is_quick_extract", False, type=bool))
         self.DeinterlaceChecker.setChecked(appData.value("use_deinterlace", False, type=bool))
 
@@ -1058,6 +1060,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_render_encoder_default_preset", self.DefaultEncodePresetChecker.isChecked())
         appData.setValue("is_encode_audio", self.EncodeAudioChecker.isChecked())
         appData.setValue("render_encode_thread", self.EncodeThreadSelector.value())
+        appData.setValue("is_float32_workflow", self.Float32WorkflowChecker.isChecked())
         appData.setValue("is_quick_extract", self.QuickExtractChecker.isChecked())
         appData.setValue("hdr_mode", self.HDRModeSelector.currentIndex())
         appData.setValue("render_ffmpeg_customized", self.FFmpegCustomer.text())
@@ -1704,7 +1707,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not len(task_data):
             """Task List Is Empty"""
             if not load_all:
-                self.function_send_msg("Input is Empty!", _translate("", "Input List Is Empty, Please Load one input file and retry!"))
+                self.function_send_msg("Input is Empty!",
+                                       _translate("", "Input List Is Empty, Please Load one input file and retry!"))
                 # TODO i18n
             return []
         task_list = list()
@@ -2008,7 +2012,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 current_model_index = 0b001000
             elif '4.' in current_model:
                 current_model_index = 0b000100
-            else: # RIFEv7
+            else:  # RIFEv7
                 current_model_index = 0b000100
         elif 'xvfi' in current_model:
             current_model_index = 0b000010

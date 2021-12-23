@@ -3,14 +3,20 @@ import traceback
 import warnings
 
 import cv2
+import numpy as np
 import torch
 from torch.nn import functional as F
 
-from Utils.StaticParameters import appDir, IMG_SIZE
+from Utils.StaticParameters import appDir, RGB_TYPE
 from Utils.utils import ArgumentManager, VideoFrameInterpolationBase, Tools
-import numpy as np
+
 warnings.filterwarnings("ignore")
 # from line_profiler_pycharm import profile
+"""TEST"""
+
+
+# os.environ.setdefault('CUDA_LAUNCH_BLOCKING', "1")
+
 
 class RifeInterpolation(VideoFrameInterpolationBase):
     def __init__(self, __args: ArgumentManager, logger):
@@ -108,7 +114,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         else:
             mid = self.model.inference(i1, i2, scale, iter_time=self.tta_iter)
         del i1, i2
-        mid = ((mid[0] * IMG_SIZE).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
+        mid = ((mid[0] * RGB_TYPE.SIZE).float().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
         return mid
 
     def _make_n_inference(self, img1, img2, scale, n):
@@ -161,11 +167,13 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         """
 
         try:
-            img_torch = torch.from_numpy(img.astype(np.float32)).to(self.device, non_blocking=True).permute(2, 0, 1).unsqueeze(0)
+            img_torch = torch.from_numpy(img.astype(np.float32)).to(self.device, non_blocking=True).permute(2, 0,
+                                                                                                            1).unsqueeze(
+                0)
             if self.ARGS.use_rife_fp16:
-                img_torch = img_torch.half() / IMG_SIZE
+                img_torch = img_torch.half() / RGB_TYPE.SIZE
             else:
-                img_torch = img_torch.float() / IMG_SIZE
+                img_torch = img_torch.float() / RGB_TYPE.SIZE
             if self.ARGS.use_rife_multi_cards and self.device_count > 1:
                 if self.device_count % 2 == 0:
                     batch = 2
@@ -236,6 +244,7 @@ class RifeMultiInterpolation(RifeInterpolation):
         else:
             self.model_path = self.ARGS.rife_model
 
+    # @profile
     def __inference_n(self, img1, img2, scale, n):
         padding, h, w = self._generate_padding(img1, scale)
         i1 = self._generate_torch_img(img1, padding)
@@ -245,7 +254,7 @@ class RifeMultiInterpolation(RifeInterpolation):
         else:
             mids = self.model.inference(i1, i2, scale, n)
         del i1, i2
-        mids = [((mid[0] * IMG_SIZE).float().cpu().numpy().transpose(1, 2, 0))[:h, :w] for mid in mids]
+        mids = [((mid[0] * RGB_TYPE.SIZE).float().cpu().numpy().transpose(1, 2, 0))[:h, :w] for mid in mids]
         return mids
 
     def _make_n_inference(self, img1, img2, scale, n):
@@ -267,9 +276,11 @@ if __name__ == "__main__":
     _image_path = r'D:\60-fps-Project\Projects\RIFE GUI\test\images'
     _i0 = cv2.imread(os.path.join(_image_path, r'0.png'))
     _i1 = cv2.imread(os.path.join(_image_path, r'1.png'))
-    _inference_module = RifeMultiInterpolation(ArgumentManager({'rife_model': os.path.join(appDir, 'train_log', 'official_4.0')}), Tools.get_logger("", ""))
+    _inference_module = RifeMultiInterpolation(
+        ArgumentManager({'rife_model': os.path.join(appDir, 'train_log', 'official_4.0')}), Tools.get_logger("", ""))
     _inference_module.initiate_algorithm()
-    _imid = _inference_module.generate_n_interp(_i0, _i1, 2, 1.0)
+    for i in range(60):
+        _imid = _inference_module.generate_n_interp(_i0, _i1, 2, 1.0)
     for _mid_index, _mid in enumerate(_imid):
         cv2.imwrite(os.path.join(_image_path, f'n=2_model=4.0_scale=1_{_mid_index}.png'), _mid)
     pass

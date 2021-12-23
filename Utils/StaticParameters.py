@@ -71,5 +71,12 @@ class EncodePresetAssemply:
     }
 
 
-IMG_SIZE = 65535.
-IMG_TYPE = np.uint8 if IMG_SIZE == 255. else np.uint16
+class RGB_TYPE:
+    SIZE = 65535.
+    DTYPE = np.uint8 if SIZE == 255. else np.uint16
+
+    @staticmethod
+    def change_8bit(d8: bool):
+        if d8:
+            RGB_TYPE.SIZE = 255.
+            RGB_TYPE.DTYPE = np.uint8 if RGB_TYPE.SIZE == 255. else np.uint16

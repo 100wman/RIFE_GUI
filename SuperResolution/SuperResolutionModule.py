@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from Utils.StaticParameters import appDir
+from Utils.StaticParameters import appDir, RGB_TYPE
 from Utils.utils import overtime_reminder_deco, Tools
 from ncnn.sr.waifu2x.waifu2x_ncnn_vulkan import Waifu2x
 
@@ -26,9 +26,7 @@ class SvfiWaifu(Waifu2x):
     @overtime_reminder_deco(100, "RealSR",
                             "Low Super-Resolution speed detected, Please Consider lower your output resolution to enhance speed")
     def svfi_process(self, img):
-        image = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        image = Image.fromarray(cv2.cvtColor(img.astype(RGB_TYPE.DTYPE), cv2.COLOR_BGR2RGB))
         image = self.process(image)
         image = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
-        # if all(self.resize_param):
-        #     image = cv2.resize(img, self.resize_param, interpolation=cv2.INTER_LANCZOS4)
         return image

@@ -1,11 +1,10 @@
 import os
-import threading
 import time
 import warnings
 
 import numpy as np
 
-from Utils.StaticParameters import IMG_SIZE
+from Utils.StaticParameters import RGB_TYPE
 from .. import _HAS_FFMPEG
 from ..utils import *
 
@@ -176,10 +175,10 @@ class VideoReaderAbstract(object):
             outputdict['-f'] = self.OUTPUT_METHOD
 
         if '-pix_fmt' not in outputdict:
-            if IMG_SIZE == 255.:
+            if RGB_TYPE.SIZE == 255.:
                 outputdict['-pix_fmt'] = "rgb24"
             else:
-                outputdict['-pix_fmt'] = "rgb48le"  # 48
+                outputdict['-pix_fmt'] = "rgb48be"  # 48
         self.output_pix_fmt = outputdict['-pix_fmt']
 
         if '-s' in outputdict:
@@ -212,7 +211,7 @@ class VideoReaderAbstract(object):
     def __iter__(self):
         for frame in self.nextFrame():
             yield frame
-    
+
     def _createProcess(self, inputdict, outputdict, verbosity):
         pass
 
@@ -272,7 +271,8 @@ class VideoReaderAbstract(object):
 
         try:
             # Read framesize bytes
-            arr = np.frombuffer(self._proc.stdout.read(framesize * self.dtype.itemsize), dtype=self.dtype)
+            pipe_read = self._proc.stdout.read(framesize * self.dtype.itemsize)
+            arr = np.frombuffer(pipe_read, dtype=self.dtype)
             if len(arr) != framesize:
                 return np.array([])
             # assert len(arr) == framesize
@@ -288,7 +288,7 @@ class VideoReaderAbstract(object):
         if len(frame) == 0:
             return frame
 
-        if self.output_pix_fmt == 'rgb24':
+        if self.output_pix_fmt in ['rgb24', 'rgb48be']:
             self._lastread = frame.reshape((self.outputheight, self.outputwidth, self.outputdepth))
         elif self.output_pix_fmt.startswith('yuv444p') or self.output_pix_fmt.startswith(
                 'yuvj444p') or self.output_pix_fmt.startswith('yuva444p'):

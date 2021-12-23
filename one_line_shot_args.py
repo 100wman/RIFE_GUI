@@ -16,7 +16,7 @@ import psutil
 import tqdm
 
 from Utils.LicenseModule import EULAWriter
-from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, IMG_SIZE, IMG_TYPE
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE
 from Utils.utils import ArgumentManager, DefaultConfigParser, Tools, VideoInfoProcessor, \
     ImageRead, ImageWrite, TransitionDetection_ST, \
     VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, \
@@ -382,6 +382,8 @@ class ReadFlow(IOFlow):
                                                       fixed_max_scdet=self.ARGS.scdet_fixed_max,
                                                       scdet_output=self.ARGS.is_scdet_output)
         self.vfi_core = VideoFrameInterpolationBase(self.ARGS, logger)
+        self.decode_timer_on = False
+        self.decode_time_start = time.time()
 
     def __crop(self, img):
         """
@@ -517,6 +519,7 @@ class ReadFlow(IOFlow):
             output_dict.update({"-s": f"300x300"})
         else:
             if not self.ARGS.use_sr:
+                # TODO Refactor here with crop parameters
                 """直接用最终输出分辨率"""
                 if self.ARGS.frame_size != self.ARGS.resize_param and all(self.ARGS.resize_param):
                     output_dict.update({"-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
@@ -526,15 +529,15 @@ class ReadFlow(IOFlow):
                     output_dict.update({"-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
         scale_args = ""
-        if '-colorspace' in output_dict:
-            scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
-        """Quick Extraction"""
-        if not self.ARGS.is_quick_extract and not frame_check:
-            # vf_args += f",format=yuv444p10le,zscale=matrixin=input:chromal=input:cin=input,format=rgb48be,format=rgb24"
-            if self.ARGS.hdr_mode == HDR_STATE.NONE:
-                """Only BT709 could zscale,,, to avoid banding"""
-                scale_args = f",format=yuv444p10le{scale_args},format=rgb48be,format=rgb24"
-            output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
+        if not frame_check:
+            if '-colorspace' in output_dict:
+                scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
+            """Quick Extraction"""
+            if not self.ARGS.is_quick_extract:
+                scale_args = f",format=yuv444p10le{scale_args},format=rgb48be"
+                if RGB_TYPE.SIZE == 255.:  # 24
+                    scale_args += ",format=rgb24"
+                output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
         vf_args += f"{scale_args},minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
 
         """Update video filters"""
@@ -553,8 +556,15 @@ class ReadFlow(IOFlow):
             return time.time()
         return run_time
 
-    def __update_decode_process_time(self, decode_time):
-        self.ARGS.update_task_info({'decode_process_time': decode_time})
+    def __update_decode_process_time(self):
+        if not self.decode_timer_on:
+            self.decode_timer_on = True
+            self.decode_time_start = time.time()
+            return
+        else:
+            self.decode_timer_on = False
+            decode_time = time.time() - self.decode_time_start
+            self.ARGS.update_task_info({'decode_process_time': decode_time})
 
     def remove_duplicate_frames(self, videogen_check: FFmpegReader.nextFrame, init=False) -> (list, list, dict):
         """
@@ -772,7 +782,7 @@ class ReadFlow(IOFlow):
                 break
 
             run_time = self.__run_rest(run_time)
-            decode_time = time.time()
+            self.__update_decode_process_time()
             img0 = img1
             img1 = self.__crop(Tools.gen_next(videogen))
 
@@ -791,11 +801,9 @@ class ReadFlow(IOFlow):
             if img1 is None:
                 is_end = True
                 self.__feed_to_rife(now_frame, img0, img0, n=0, is_end=is_end)
-                self.__update_decode_process_time(time.time() - decode_time)
                 break
             self.__feed_to_rife(now_frame, img0, img0, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
             self.scene_detection.update_scene_status(now_frame, "normal")
-            self.__update_decode_process_time(time.time() - decode_time)
 
             self.ARGS.update_task_info({"read_now_frame": now_frame})
             self.__update_scene_status()
@@ -829,7 +837,7 @@ class ReadFlow(IOFlow):
                 break
 
             run_time = self.__run_rest(run_time)
-            decode_time = time.time()
+            self.__update_decode_process_time()
             check_frame_list, scene_frame_list, input_frame_data = self.remove_duplicate_frames(videogen_check,
                                                                                                 init=first_run)
             input_frame_data = dict(input_frame_data)
@@ -906,7 +914,6 @@ class ReadFlow(IOFlow):
                 self.__feed_to_rife(now_frame_cnt + now_frame_key, img1, img1, n=0, is_end=is_end)
                 self.ARGS.update_task_info({"read_now_frame": now_frame_cnt + check_frame_list[-1]})
                 now_frame_cnt += last_frame_key
-            self.__update_decode_process_time(time.time() - decode_time)
 
         pass
         self._output_queue.put(None)
@@ -945,7 +952,7 @@ class ReadFlow(IOFlow):
                 break
 
             run_time = self.__run_rest(run_time)
-            decode_time = time.time()
+            self.__update_decode_process_time()
             img0 = img1
             img1 = self.__crop(Tools.gen_next(videogen))
 
@@ -954,7 +961,6 @@ class ReadFlow(IOFlow):
             if img1 is None:
                 is_end = True
                 self.__feed_to_rife(now_frame, img0, img0, is_end=is_end)
-                self.__update_decode_process_time(time.time() - decode_time)
                 break
 
             diff = Tools.get_norm_img_diff(img0, img1)
@@ -964,7 +970,6 @@ class ReadFlow(IOFlow):
             if self.scene_detection.check_scene(img0, img1, use_diff=diff):
                 self.__feed_to_rife(now_frame, img0, img1, n=0,
                                     is_end=is_end)  # add img0 only, for there's no gap between img0 and img1
-                self.__update_decode_process_time(time.time() - decode_time)
                 self.scene_detection.update_scene_status(now_frame, "scene")
                 continue
             else:
@@ -1003,20 +1008,17 @@ class ReadFlow(IOFlow):
                             0 (1 2 3) 4[scene] => 0 (1 2) 3 4[scene] 括号内为RIFE应该生成的帧
                             """
                         self.scene_detection.update_scene_status(now_frame, "scene")
-                        self.__update_decode_process_time(time.time() - decode_time)
 
                     elif skip != 0:  # skip >= 1
                         assert skip >= 1
                         """Not Scene"""
                         self.__feed_to_rife(now_frame, img0, img1, n=skip, is_end=is_end)
                         self.scene_detection.update_scene_status(now_frame, "normal")
-                        self.__update_decode_process_time(time.time() - decode_time)
                     now_frame += skip
                 else:
                     """normal frames"""
                     self.__feed_to_rife(now_frame, img0, img1, n=0, is_end=is_end)  # 当前模式下非重复帧间没有空隙，仅输入img0
                     self.scene_detection.update_scene_status(now_frame, "normal")
-                    self.__update_decode_process_time(time.time() - decode_time)
 
                 self.ARGS.update_task_info({"read_now_frame": now_frame})
                 self.__update_scene_status()
@@ -1037,6 +1039,13 @@ class ReadFlow(IOFlow):
         :param is_end:是否是任务结束
         :return:
         """
+        scale = self.__get_auto_scale(img0, img1)
+        self.__update_decode_process_time()
+        self._output_queue.put(
+            {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "scale": scale,
+             "is_end": is_end, "add_scene": add_scene})
+
+    def __get_auto_scale(self, img0, img1):
         scale = self.ARGS.rife_scale
         if self.ARGS.use_rife_auto_scale and not self.ARGS.render_only and not self.ARGS.extract_only:
             """使用动态光流"""
@@ -1044,17 +1053,7 @@ class ReadFlow(IOFlow):
                 scale = 1.0
             else:
                 scale = self.vfi_core.get_auto_scale(img0, img1)
-
-        # if self.ARGS.rife_interp_before_resize and img0 is not None and img1 is not None:
-        #     h, w, _ = img0.shape
-        #     resize = (self.ARGS.rife_interp_before_resize,
-        #               int(h / w * self.ARGS.rife_interp_before_resize))
-        #     img0 = cv2.resize(img0, resize, interpolation=cv2.INTER_LANCZOS4)
-        #     img1 = cv2.resize(img1, resize, interpolation=cv2.INTER_LANCZOS4)
-
-        self._output_queue.put(
-            {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "scale": scale,
-             "is_end": is_end, "add_scene": add_scene})
+        return scale
 
     def update_vfi_core(self, vfi_core: VideoFrameInterpolationBase):
         self.vfi_core = vfi_core
@@ -1213,8 +1212,13 @@ class RenderFlow(IOFlow):
         output_dict.update({"-vf": vf_args})
 
         if all(self.ARGS.resize_param):
+            resize_width, resize_height = self.ARGS.resize_param
+            if resize_width - self.ARGS.crop_width * 2 and resize_height - self.ARGS.crop_height * 2:
+                resize_width = resize_width - self.ARGS.crop_width * 2
+                resize_height = resize_height - self.ARGS.crop_height * 2
+
             output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
-                                "-s": f"{self.ARGS.resize_param[0]}x{self.ARGS.resize_param[1]}"})
+                                "-s": f"{resize_width}x{resize_height}"})
 
         """Assign Render Codec"""
         """CRF / Bitrate Control"""
@@ -1583,39 +1587,45 @@ class RenderFlow(IOFlow):
 
         output_filepath = f"{os.path.join(self.ARGS.output_dir, Tools.get_filename(self.ARGS.input))}"
         if self.ARGS.render_only:
-            output_filepath += "_SVFI_Render"  # 仅渲染
-        output_filepath += f"_{int(self.ARGS.target_fps)}fps"  # 补帧
+            output_filepath += ".SVFI_Render"  # 仅渲染
+        output_filepath += f".{int(self.ARGS.target_fps)}fps"  # 补帧
 
         if self.ARGS.is_render_slow_motion:  # 慢动作
-            output_filepath += f"_[SLM_{self.ARGS.render_slow_motion_fps}fps]"
+            output_filepath += f".SLM={self.ARGS.render_slow_motion_fps}fps"
+        if self.ARGS.is_float32_workflow:
+            output_filepath += f".16bit"
+        if self.ARGS.is_quick_extract:
+            output_filepath += f".QE"
+        if self.ARGS.use_hwaccel_decode:
+            output_filepath += f".HW"
         if self.ARGS.use_deinterlace:
-            output_filepath += f"_[DI]"
+            output_filepath += f".DI"
         if self.ARGS.use_fast_denoise:
-            output_filepath += f"_[DN]"
+            output_filepath += f".DN"
 
         if not self.ARGS.render_only:
             """RIFE"""
             if self.ARGS.use_rife_auto_scale:
-                output_filepath += f"_[DS]"
+                output_filepath += f".DS"
             else:
-                output_filepath += f"_[S-{self.ARGS.rife_scale}]"  # 全局光流尺度
+                output_filepath += f".S={self.ARGS.rife_scale}"  # 全局光流尺度
             if self.ARGS.use_ncnn:
-                output_filepath += "_[NCNN]"
-            output_filepath += f"_[{os.path.basename(self.ARGS.rife_model_name)}]"  # 添加模型信息
+                output_filepath += ".NCNN"
+            output_filepath += f".RIFE={os.path.basename(self.ARGS.rife_model_name)}"  # 添加模型信息
             if self.ARGS.use_rife_fp16:
-                output_filepath += "_[FP16]"
+                output_filepath += ".FP16"
             if self.ARGS.is_rife_reverse:
-                output_filepath += "_[RR]"
+                output_filepath += ".RR"
             if self.ARGS.use_rife_forward_ensemble:
-                output_filepath += "_[RFE]"
+                output_filepath += ".RFE"
             if self.ARGS.rife_tta_mode:
-                output_filepath += f"_[TTA-{self.ARGS.rife_tta_mode}-{self.ARGS.rife_tta_iter}]"
+                output_filepath += f".TTA={self.ARGS.rife_tta_mode}-{self.ARGS.rife_tta_iter}"
             if self.ARGS.remove_dup_mode:  # 去重模式
-                output_filepath += f"_[FD-{self.ARGS.remove_dup_mode}]"
+                output_filepath += f".FD={self.ARGS.remove_dup_mode}"
 
         if self.ARGS.use_sr:  # 使用超分
             sr_model = os.path.splitext(self.ARGS.use_sr_model)[0]
-            output_filepath += f"_[SR-{self.ARGS.use_sr_algo}-{sr_model}]"
+            output_filepath += f".SR={os.path.splitext(sr_model)[0]}"
 
         output_filepath += f"_{self.ARGS.task_id[-6:]}"
         output_filepath += output_ext  # 添加后缀名
@@ -1689,9 +1699,9 @@ class RenderFlow(IOFlow):
             color_info_str += f" {ck} {cd}"
 
         ffmpeg_command = f'{self.__ffmpeg} -hide_banner -f concat -safe 0 -i "{concat_path}" {map_audio} -c:v copy ' \
-                         f'{Tools.fillQuotation(concat_filepath)} -metadata title="Powered By SVFI {self.ARGS.version}" ' \
+                         f'-metadata title="Powered By SVFI {self.ARGS.version}" ' \
                          f'{color_info_str} ' \
-                         f'-y'
+                         f'-y {Tools.fillQuotation(concat_filepath)}'
 
         self.logger.debug(f"Concat command: {ffmpeg_command}")
         concat_return_code = 0
@@ -1768,13 +1778,12 @@ class RenderFlow(IOFlow):
         """
         concat_test_flag = True
         chunk_cnt, start_frame = self.check_chunk()
-        chunk_frame_cnt = 1  # number of frames of current output chunk
+        chunk_frame_cnt = start_frame  # number of frames of current output chunk
         chunk_tmp_path = os.path.join(self.ARGS.project_dir, f"chunk-tmp{self.ARGS.output_ext}")
         if self.ARGS.all_frames_cnt < self.ARGS.render_gap:
             self.ARGS.render_gap = self.ARGS.render_gap
         try:
             frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, )  # get frame renderer
-            now_frame = start_frame
             frame_written = False
             self._release_initiation()
             while True:
@@ -1782,14 +1791,14 @@ class RenderFlow(IOFlow):
                     if frame_written:
                         frame_writer.close()
                     self.logger.debug("Render thread exit")
-                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
+                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, chunk_frame_cnt)
                     break
 
                 frame_data = self._input_queue.get()
                 if frame_data is None:
                     if frame_written:
                         frame_writer.close()
-                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
+                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, chunk_frame_cnt)
                     break
 
                 now_frame = frame_data[0]
@@ -1824,13 +1833,15 @@ class RenderFlow(IOFlow):
                 self.ARGS.update_task_info({"chunk_cnt": chunk_cnt, "render": now_frame})  # update render info
 
                 if not chunk_frame_cnt % self.ARGS.render_gap:
+                    # start_frame start from 0, chunk_frame_cnt is ahead of start_frame by 1 frame,
+                    # so start_frame is head of chunk_frame_cnt
                     frame_writer.close()
                     if concat_test_flag:
                         self.__check_audio_concat(chunk_tmp_path)
                         concat_test_flag = False
-                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, now_frame)
+                    self.__rename_chunk(chunk_tmp_path, chunk_cnt, start_frame, chunk_frame_cnt - 1)
                     chunk_cnt += 1
-                    start_frame = now_frame + 1
+                    start_frame = chunk_frame_cnt
                     _assign_last_n_frames = 0
                     frame_writer = self.__generate_frame_writer(start_frame, chunk_tmp_path, _assign_last_n_frames)
             if not self.ARGS.is_no_concat and not self.ARGS.is_img_output \
@@ -2037,7 +2048,7 @@ class ProgressUpdateFlow(IOFlow):
             return
         screen_h, screen_w = self.ARGS.get_screen_size()
         title = f"SVFI Preview of Interpolated/Uplifted Frame"
-        comp_stack = (preview_imgs[len(preview_imgs) // 2] / IMG_SIZE * 255.).astype(np.uint8)
+        comp_stack = (preview_imgs[len(preview_imgs) // 2] / RGB_TYPE.SIZE * 255.).astype(np.uint8)
 
         preview_w = screen_w // 2
         stack_h, stack_w, _ = comp_stack.shape
@@ -2047,7 +2058,7 @@ class ProgressUpdateFlow(IOFlow):
         cv2.putText(comp_stack,
                     f"Frame {now_frame}, {now_frame / self.ARGS.all_frames_cnt * 100:.2f}%",
                     (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0))
-        comp_stack = cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB)
+        comp_stack = cv2.cvtColor(comp_stack.astype(np.uint8), cv2.COLOR_BGR2RGB)
         # cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
         cv2.imshow(title, comp_stack)
         cv2.waitKey(41)  # 1/24
@@ -2157,13 +2168,11 @@ class InterpWorkFlow:
             if frame_data is None:
                 self.render_task_queue.put(None)
                 logger.debug("Put None to render_task_queue in advance")
-                return
+                break
             self.render_task_queue.put(frame_data)  # 往输出队列（消费者）喂正常的帧
-            if frame_i == len(frames_list) - 1:
-                if is_end:
-                    self.render_task_queue.put(None)
-                    logger.debug("Put None to render_task_queue")
-                    return
+        if is_end:
+            self.render_task_queue.put(None)
+            logger.debug("Put None to render_task_queue")
         pass
 
     def vram_test(self):
@@ -2185,8 +2194,8 @@ class InterpWorkFlow:
                         f"Auto Scale {'on' if self.ARGS.use_rife_auto_scale else 'off'}, "
                         f"interlace inference mode: {self.ARGS.rife_interlace_inference}")
 
-            test_img0, test_img1 = np.random.randint(0, int(IMG_SIZE), size=(h, w, 3)).astype(IMG_TYPE), \
-                                   np.random.randint(0, int(IMG_SIZE), size=(h, w, 3)).astype(IMG_TYPE)
+            test_img0, test_img1 = np.random.randint(0, int(RGB_TYPE.SIZE), size=(h, w, 3)).astype(RGB_TYPE.DTYPE), \
+                                   np.random.randint(0, int(RGB_TYPE.SIZE), size=(h, w, 3)).astype(RGB_TYPE.DTYPE)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
             logger.info(f"Interpolation VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1

@@ -1833,7 +1833,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-79</y>
+                        <y>0</y>
                         <width>378</width>
                         <height>696</height>
                        </rect>
@@ -2049,7 +2049,7 @@
                           <item row="11" column="0">
                            <widget class="QCheckBox" name="HwaccelDecode">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;减小CPU解码负担，输入为4K时推荐开启&lt;/p&gt;&lt;p&gt;如果无法补帧，请尝试关闭此选项&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用硬件加速辅助解码，减小CPU解码负担，输入为4K分辨率时推荐开启&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;有可能产生颜色偏差及色带&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
                              <string>硬件解码 (!)</string>
@@ -2209,10 +2209,10 @@
                           <item row="9" column="0">
                            <widget class="QCheckBox" name="QuickExtractChecker">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;推荐开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;使用ffmpeg内置视频导出图片算法，速度快，但可能出现颜色偏差&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;常规视频推荐开启，HDR视频不推荐开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;使用非精细拆帧算法，最快速度拆帧，速度快，CPU占用小，适用于输入为SDR时快速出片，可能出现蓝通道颜色偏差（输出画面蓝色偏深），&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输入为HDR视频时开启此项会导致色带，应避免开启。&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>快速拆帧 (?)</string>
+                             <string>快速拆帧 (!)</string>
                             </property>
                             <property name="checked">
                              <bool>false</bool>
@@ -2445,6 +2445,19 @@
                               <widget class="MyComboBox" name="OneClickHDRModeSelector"/>
                              </item>
                             </layout>
+                           </widget>
+                          </item>
+                          <item row="9" column="1">
+                           <widget class="QCheckBox" name="Float32WorkflowChecker">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;推荐开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;全程使用16bit工作流，最大限度减轻色带，提高补帧画面精细程度，建议搭配关闭快速拆帧以及硬件解码使用。&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;不适用于NCNN-Waifu2x&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                            <property name="text">
+                             <string>高精度优化工作流 (!)</string>
+                            </property>
+                            <property name="checked">
+                             <bool>true</bool>
+                            </property>
                            </widget>
                           </item>
                          </layout>

@@ -172,7 +172,7 @@ class Ui_Dialog(object):
         self.OneWayModeChecker.setText(_translate("Dialog", "任务完成后清空任务列表"))
         self.PreviewArgsModeChecker.setToolTip(_translate("Dialog", "<html><head/><body><p>在任务启动前显示被选中的任务参数</p></body></html>"))
         self.PreviewArgsModeChecker.setText(_translate("Dialog", "开启任务前参数文本预览 (?)"))
-        self.PreviewVfiChecker.setToolTip(_translate("Dialog", "<html><head/><body><p>在任务启动后可以查看当前任务进度预览，包括参考帧1，补帧/超分帧，参考帧2</p></body></html>"))
+        self.PreviewVfiChecker.setToolTip(_translate("Dialog", "<html><head/><body><p>在任务启动后可以查看当前任务正在处理的帧（已被补帧/超分）</p><p><span style=\" font-weight:600;\">可能会降低任务处理速度（&lt;10%）</span></p></body></html>"))
         self.PreviewVfiChecker.setText(_translate("Dialog", "开启预览 (?)"))
         self.QuietModeChecker.setToolTip(_translate("Dialog", "<html><head/><body><p><span style=\" font-weight:600;\">不建议开启</span></p><p>关闭任务启动前的所有提示弹窗</p></body></html>"))
         self.QuietModeChecker.setText(_translate("Dialog", "开启安静模式 (?)"))
