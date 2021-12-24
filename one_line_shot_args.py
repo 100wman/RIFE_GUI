@@ -495,7 +495,7 @@ class ReadFlow(IOFlow):
                     f"Invalid Input Section, changed to original section")
 
         output_dict = {"-map": "0:v:0", "-vframes": str(10 ** 10),
-                       "-sws_flags": "bicubic",
+                       # "-sws_flags": "bicubic",
                        }  # use read frames cnt to avoid ffprobe, fuck
 
         output_dict.update(self._get_color_tag_dict())
@@ -529,15 +529,14 @@ class ReadFlow(IOFlow):
                     output_dict.update({"-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
         scale_args = ""
-        if not frame_check:
+        if not frame_check and not self.ARGS.is_quick_extract:
             if '-colorspace' in output_dict:
                 scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
             """Quick Extraction"""
-            if not self.ARGS.is_quick_extract:
-                scale_args = f",format=yuv444p10le{scale_args},format=rgb48be"
-                if RGB_TYPE.SIZE == 255.:  # 24
-                    scale_args += ",format=rgb24"
-                output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
+            scale_args = f",format=yuv444p10le{scale_args},format=rgb48be"
+            if RGB_TYPE.SIZE == 255.:  # 24
+                scale_args += ",format=rgb24"
+            output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
         vf_args += f"{scale_args},minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
 
         """Update video filters"""
@@ -1803,7 +1802,7 @@ class RenderFlow(IOFlow):
 
                 now_frame = frame_data[0]
                 frame = frame_data[1]
-
+                frame = frame.astype(RGB_TYPE.DTYPE)
                 if self.ARGS.use_fast_denoise:
                     frame = cv2.fastNlMeansDenoising(frame)
                 _over_time_reminder_task = OverTimeReminderTask(15, "Encoder",
@@ -1940,7 +1939,7 @@ class SuperResolutionFlow(IOFlow):
 
             self.logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
 
-            test_img0 = np.random.randint(0, 255, size=(h, w, 3)).astype(np.uint8)
+            test_img0 = np.random.randint(0, RGB_TYPE.SIZE, size=(h, w, 3)).astype(RGB_TYPE.DTYPE)
             self.sr_module.svfi_process(test_img0)
             self.logger.info(f"SR VRAM Test Success")
             self._release_vram_check_lock()
@@ -2048,7 +2047,7 @@ class ProgressUpdateFlow(IOFlow):
             return
         screen_h, screen_w = self.ARGS.get_screen_size()
         title = f"SVFI Preview of Interpolated/Uplifted Frame"
-        comp_stack = (preview_imgs[len(preview_imgs) // 2] / RGB_TYPE.SIZE * 255.).astype(np.uint8)
+        comp_stack = (preview_imgs[len(preview_imgs) // 2]).astype(RGB_TYPE.DTYPE)
 
         preview_w = screen_w // 2
         stack_h, stack_w, _ = comp_stack.shape
@@ -2057,8 +2056,8 @@ class ProgressUpdateFlow(IOFlow):
 
         cv2.putText(comp_stack,
                     f"Frame {now_frame}, {now_frame / self.ARGS.all_frames_cnt * 100:.2f}%",
-                    (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0))
-        comp_stack = cv2.cvtColor(comp_stack.astype(np.uint8), cv2.COLOR_BGR2RGB)
+                    (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (1 * RGB_TYPE.SIZE, 0, 0))
+        comp_stack = cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB)
         # cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
         cv2.imshow(title, comp_stack)
         cv2.waitKey(41)  # 1/24
@@ -2194,8 +2193,8 @@ class InterpWorkFlow:
                         f"Auto Scale {'on' if self.ARGS.use_rife_auto_scale else 'off'}, "
                         f"interlace inference mode: {self.ARGS.rife_interlace_inference}")
 
-            test_img0, test_img1 = np.random.randint(0, int(RGB_TYPE.SIZE), size=(h, w, 3)).astype(RGB_TYPE.DTYPE), \
-                                   np.random.randint(0, int(RGB_TYPE.SIZE), size=(h, w, 3)).astype(RGB_TYPE.DTYPE)
+            test_img0, test_img1 = np.random.randint(0, int(RGB_TYPE.SIZE), size=(h, w, 3), dtype=RGB_TYPE.DTYPE), \
+                                   np.random.randint(0, int(RGB_TYPE.SIZE), size=(h, w, 3), dtype=RGB_TYPE.DTYPE)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
             logger.info(f"Interpolation VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
@@ -2394,12 +2393,6 @@ class InterpWorkFlow:
                 if img1 is None:
                     self.__feed_to_render([None], is_end=True)
                     break
-
-                # if all(self.ARGS.resize_param):
-                #     img0 = cv2.resize(img0, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
-                #                       interpolation=cv2.INTER_LANCZOS4)
-                #     img1 = cv2.resize(img1, (self.ARGS.resize_param[0], self.ARGS.resize_param[1]),
-                #                       interpolation=cv2.INTER_LANCZOS4)
 
                 frames_list = [img0]
                 if self.ARGS.is_scdet_mix and add_scene:

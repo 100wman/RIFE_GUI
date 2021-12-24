@@ -78,23 +78,20 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.9.0"
+    gui_version = "3.9.1"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.0"
+    ols_version = "7.4.1"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Optimize Frame Extraction to fix color shifting and color banding in HDR case
-    - Add 16bit Mode
-    - Refactor CudaSuperResolutionModule
-    - Optimize Decode Time Display
-    - Update Output Filename Rule
-    - Fix Color Tag miss tagged when concating videos
-    - Fix output png sequence number missing in extract mode
-    - Fix Malfunction of resize after crop with assigning output resolution
+    - Update RIFE Reversed Flow Mode
+    - Optimize Extract Extract Method
+    - Optimize Taskkill at task end 
+    - Fix High Precision Workflow's Preview
+    - Fix High Precision's Test
     """
 
     path_len_limit = 230
@@ -379,10 +376,11 @@ class Tools:
 
     @staticmethod
     def get_norm_img(img1, resize=True):
+        img1 = img1.astype(np.uint8)
         if resize:
             img1 = cv2.resize(img1, Tools.resize_param)
         img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
-        img1 = cv2.equalizeHist((img1 / RGB_TYPE.SIZE * 255.).astype(np.uint8))  # 进行直方图均衡化
+        img1 = cv2.equalizeHist(img1)  # 进行直方图均衡化
         # img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         # _, img1 = cv2.threshold(img1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return img1
@@ -549,15 +547,14 @@ class Tools:
 
     @staticmethod
     def kill_svfi_related():
-        pids = Tools.get_pids()
-        for pid, pname in pids.items():
-            if pname in ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
-                         'SvtHevcEncApp.exe', 'SvtVp9EncApp.exe', 'SvtAv1EncApp.exe']:
-                try:
-                    os.kill(pid, signal.SIGABRT)
-                except Exception as e:
-                    traceback.print_exc()
-                print(f"Warning: Kill Process before exit: {pname}")
+        kill_im_lists = ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
+                         'SvtHevcEncApp.exe', 'SvtVp9EncApp.exe', 'SvtAv1EncApp.exe']
+        for pname in kill_im_lists:
+            try:
+                os.system(f"taskkill /im {pname} /f")
+            except Exception as e:
+                traceback.print_exc()
+            # print(f"Warning: Kill Process before exit: {pname}")
 
     @staticmethod
     def get_plural(i: int):

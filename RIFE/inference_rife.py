@@ -229,7 +229,7 @@ class RifeMultiInterpolation(RifeInterpolation):
                           forward_ensemble=self.ARGS.use_rife_forward_ensemble, tta=self.tta_mode)
             model.load_model(self.model_path, -1)
             self.model_version = 4
-            self.logger.info("RIFE 4.0 model loaded.")
+            self.logger.info("RIFE 4.x model loaded.")
             pass
         self.model = model
         self.model.eval()
@@ -251,6 +251,7 @@ class RifeMultiInterpolation(RifeInterpolation):
         i2 = self._generate_torch_img(img2, padding)
         if self.ARGS.is_rife_reverse:
             mids = self.model.inference(i2, i1, scale, n)
+            mids.reverse()
         else:
             mids = self.model.inference(i1, i2, scale, n)
         del i1, i2
