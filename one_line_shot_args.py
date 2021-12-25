@@ -1179,9 +1179,10 @@ class RenderFlow(IOFlow):
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
+            resize_width, resize_height = self.__get_crop_resize()
             img_io = ImageWrite(self.logger, folder=self.ARGS.output_dir, start_frame=start_frame,
                                 exp=self.ARGS.rife_exp,
-                                resize=self.ARGS.resize_param, output_ext=self.ARGS.output_ext, )
+                                resize=(resize_width, resize_height), output_ext=self.ARGS.output_ext, )
             return img_io
 
         """HDR Check"""
@@ -1215,12 +1216,8 @@ class RenderFlow(IOFlow):
             vf_args = f"scale=out_color_matrix={output_dict['-colorspace']},{vf_args}"
         output_dict.update({"-vf": vf_args})
 
-        if all(self.ARGS.resize_param):
-            resize_width, resize_height = self.ARGS.resize_param
-            if resize_width - self.ARGS.crop_width * 2 and resize_height - self.ARGS.crop_height * 2:
-                resize_width = resize_width - self.ARGS.crop_width * 2
-                resize_height = resize_height - self.ARGS.crop_height * 2
-
+        resize_width, resize_height = self.__get_crop_resize()
+        if resize_height and resize_width:
             output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
                                 "-s": f"{resize_width}x{resize_height}"})
 
@@ -1531,6 +1528,15 @@ class RenderFlow(IOFlow):
                              verbosity=self.ARGS.debug)
         return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
                             verbosity=self.ARGS.debug)
+
+    def __get_crop_resize(self):
+        if not all(self.ARGS.resize_param):
+            return self.ARGS.resize_param
+        resize_width, resize_height = self.ARGS.resize_param
+        if resize_width - self.ARGS.crop_width * 2 and resize_height - self.ARGS.crop_height * 2:
+            resize_width = resize_width - self.ARGS.crop_width * 2
+            resize_height = resize_height - self.ARGS.crop_height * 2
+        return resize_width, resize_height
 
     def convert_encc_color_tag(self, ffmpeg_param_dict: dict, encc_param_dict: dict):
         if '-color_range' in ffmpeg_param_dict:
@@ -2052,7 +2058,7 @@ class ProgressUpdateFlow(IOFlow):
             return
         screen_h, screen_w = self.ARGS.get_screen_size()
         title = f"SVFI Preview of Interpolated/Uplifted Frame"
-        comp_stack = (preview_imgs[len(preview_imgs) // 2]).astype(RGB_TYPE.DTYPE)
+        comp_stack = ((preview_imgs[len(preview_imgs) // 2]) / RGB_TYPE.SIZE * 255).astype(np.uint8)
 
         preview_w = screen_w // 2
         stack_h, stack_w, _ = comp_stack.shape
@@ -2061,7 +2067,7 @@ class ProgressUpdateFlow(IOFlow):
 
         cv2.putText(comp_stack,
                     f"Frame {now_frame}, {now_frame / self.ARGS.all_frames_cnt * 100:.2f}%",
-                    (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (1 * RGB_TYPE.SIZE, 0, 0))
+                    (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0))
         comp_stack = cv2.cvtColor(comp_stack, cv2.COLOR_BGR2RGB)
         # cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
         cv2.imshow(title, comp_stack)

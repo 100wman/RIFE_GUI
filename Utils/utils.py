@@ -78,16 +78,17 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.9.1"
+    gui_version = "3.9.2"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.2"
+    ols_version = "7.4.4"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Restore Old Taskkill at task end
+    - Fix Output PNG Sequence with incorrect resolution with Crop parameters
+    - Fix Normalization of Image failure during non-output process (scene detection)
     """
 
     path_len_limit = 230
@@ -372,7 +373,7 @@ class Tools:
 
     @staticmethod
     def get_norm_img(img1, resize=True):
-        img1 = img1.astype(np.uint8)
+        img1 = (img1 / RGB_TYPE.SIZE * 255).astype(np.uint8)
         if resize:
             img1 = cv2.resize(img1, Tools.resize_param)
         img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
