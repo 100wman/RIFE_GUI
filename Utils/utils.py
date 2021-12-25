@@ -81,17 +81,13 @@ class ArgumentManager:
     gui_version = "3.9.1"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.1"
+    ols_version = "7.4.2"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Update RIFE Reversed Flow Mode
-    - Optimize Extract Extract Method
-    - Optimize Taskkill at task end 
-    - Fix High Precision Workflow's Preview
-    - Fix High Precision's Test
+    - Restore Old Taskkill at task end
     """
 
     path_len_limit = 230
@@ -547,14 +543,15 @@ class Tools:
 
     @staticmethod
     def kill_svfi_related():
-        kill_im_lists = ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
-                         'SvtHevcEncApp.exe', 'SvtVp9EncApp.exe', 'SvtAv1EncApp.exe']
-        for pname in kill_im_lists:
-            try:
-                os.system(f"taskkill /im {pname} /f")
-            except Exception as e:
-                traceback.print_exc()
-            # print(f"Warning: Kill Process before exit: {pname}")
+        pids = Tools.get_pids()
+        for pid, pname in pids.items():
+            if pname in ['ffmpeg.exe', 'ffprobe.exe', 'one_line_shot_args.exe', 'QSVEncC64.exe', 'NVEncC64.exe',
+                         'SvtHevcEncApp.exe', 'SvtVp9EncApp.exe', 'SvtAv1EncApp.exe']:
+                try:
+                    os.kill(pid, signal.SIGABRT)
+                except Exception as e:
+                    traceback.print_exc()
+                print(f"Warning: Kill Process before exit: {pname}")
 
     @staticmethod
     def get_plural(i: int):
