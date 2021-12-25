@@ -529,12 +529,11 @@ class ReadFlow(IOFlow):
                     output_dict.update({"-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
 
         scale_args = ""
+        if '-colorspace' in output_dict:
+            scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
         if not frame_check and not self.ARGS.is_quick_extract:
-            if '-colorspace' in output_dict:
-                scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
-            """Quick Extraction"""
             scale_args = f",format=yuv444p10le{scale_args},format=rgb48be"
-            if RGB_TYPE.SIZE == 255.:  # 24
+            if RGB_TYPE.DTYPE == np.uint8:  # 24
                 scale_args += ",format=rgb24"
             output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
         vf_args += f"{scale_args},minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
@@ -1038,7 +1037,13 @@ class ReadFlow(IOFlow):
         :param is_end:是否是任务结束
         :return:
         """
+        def normalize_dtype(img):
+            if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
+                img = img.astype(np.float32)
+            return img
         scale = self.__get_auto_scale(img0, img1)
+        img0 = normalize_dtype(img0)
+        img1 = normalize_dtype(img1)
         self.__update_decode_process_time()
         self._output_queue.put(
             {"now_frame": now_frame, "img0": img0, "img1": img1, "n": n, "scale": scale,
@@ -1939,7 +1944,7 @@ class SuperResolutionFlow(IOFlow):
 
             self.logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
 
-            test_img0 = np.random.randint(0, RGB_TYPE.SIZE, size=(h, w, 3)).astype(RGB_TYPE.DTYPE)
+            test_img0 = np.random.randint(0, 255, size=(h, w, 3), dtype=np.uint8)
             self.sr_module.svfi_process(test_img0)
             self.logger.info(f"SR VRAM Test Success")
             self._release_vram_check_lock()
@@ -2193,8 +2198,8 @@ class InterpWorkFlow:
                         f"Auto Scale {'on' if self.ARGS.use_rife_auto_scale else 'off'}, "
                         f"interlace inference mode: {self.ARGS.rife_interlace_inference}")
 
-            test_img0, test_img1 = np.random.randint(0, int(RGB_TYPE.SIZE), size=(h, w, 3), dtype=RGB_TYPE.DTYPE), \
-                                   np.random.randint(0, int(RGB_TYPE.SIZE), size=(h, w, 3), dtype=RGB_TYPE.DTYPE)
+            test_img0, test_img1 = np.random.randint(0, 255, size=(h, w, 3), dtype=np.uint8), \
+                                   np.random.randint(0, 255, size=(h, w, 3), dtype=np.uint8)
             self.vfi_core.generate_n_interp(test_img0, test_img1, 1, self.ARGS.rife_scale)
             logger.info(f"Interpolation VRAM Test Success, Resume of workflow ahead")
             del test_img0, test_img1
