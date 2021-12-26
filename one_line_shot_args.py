@@ -1038,8 +1038,8 @@ class ReadFlow(IOFlow):
         :return:
         """
         def normalize_dtype(img):
-            if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
-                img = img.astype(np.float32)
+            # if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
+            #     img = img.astype(np.float32)
             return img
         scale = self.__get_auto_scale(img0, img1)
         img0 = normalize_dtype(img0)

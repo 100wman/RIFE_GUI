@@ -167,12 +167,13 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         """
 
         try:
-            img_torch = torch.from_numpy(img).to(self.device, non_blocking=True).permute(2, 0, 1).unsqueeze(
-                0)
+            img = self.get_u1_from_u2_img(img)
+            img_torch = torch.from_numpy(img).to(self.device, non_blocking=True).permute(2, 0, 1).unsqueeze(0)
+            IMG_SIZE_MAX = 255. if img_torch.max() <= 255 else 65535.
             if self.ARGS.use_rife_fp16:
-                img_torch = img_torch.half() / RGB_TYPE.SIZE
+                img_torch = img_torch.half() / IMG_SIZE_MAX
             else:
-                img_torch = img_torch.float() / RGB_TYPE.SIZE
+                img_torch = img_torch.float() / IMG_SIZE_MAX
             if self.ARGS.use_rife_multi_cards and self.device_count > 1:
                 if self.device_count % 2 == 0:
                     batch = 2
@@ -184,6 +185,11 @@ class RifeInterpolation(VideoFrameInterpolationBase):
             print(img)
             traceback.print_exc()
             raise e
+
+    def get_u1_from_u2_img(self, img):
+        if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
+            img = img.view(np.uint8)[:, :, ::2]  # default to uint8
+        return img
 
     def _pad_image(self, img, padding):
         # if self.ARGS.use_rife_fp16:
@@ -279,8 +285,10 @@ if __name__ == "__main__":
     _inference_module = RifeMultiInterpolation(
         ArgumentManager({'rife_model': os.path.join(appDir, 'train_log', 'official_4.0')}), Tools.get_logger("", ""))
     _inference_module.initiate_algorithm()
-    for i in range(60):
-        _imid = _inference_module.generate_n_interp(_i0, _i1, 2, 1.0)
-    for _mid_index, _mid in enumerate(_imid):
-        cv2.imwrite(os.path.join(_image_path, f'n=2_model=4.0_scale=1_{_mid_index}.png'), _mid)
-    pass
+    from skimage.metrics._structural_similarity import structural_similarity as compare_ssim
+
+    # for i in range(60):
+    #     _imid = _inference_module.generate_n_interp(_i0, _i1, 2, 1.0)
+    # for _mid_index, _mid in enumerate(_imid):
+    #     cv2.imwrite(os.path.join(_image_path, f'n=2_model=4.0_scale=1_{_mid_index}.png'), _mid)
+    # pass

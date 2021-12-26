@@ -78,16 +78,16 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.9.3"
+    gui_version = "3.9.4"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.5"
+    ols_version = "7.4.6"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix Color banding in low precision mode with HDR input
+    - Optimize Frame Extraction in high precision mode with HDR input
     """
 
     path_len_limit = 230
@@ -371,11 +371,21 @@ class Tools:
             return False
 
     @staticmethod
+    def get_u1_from_u2_img(img: np.ndarray):
+        if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
+            img = img.view(np.uint8)[:, :, ::2]  # default to uint8
+        return img
+
+    @staticmethod
     def get_norm_img(img1, resize=True):
-        img1 = (img1 / RGB_TYPE.SIZE * 255).astype(np.uint8)
-        if resize:
+        img1 = Tools.get_u1_from_u2_img(img1)
+        if img1.shape[0] > 1000:
+            img1 = img1[::4, ::4, 0]
+        else:
+            img1 = img1[::2, ::2, 0]
+        if resize and img1.shape[0] > Tools.resize_param[0]:
             img1 = cv2.resize(img1, Tools.resize_param)
-        img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
+        # img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
         img1 = cv2.equalizeHist(img1)  # 进行直方图均衡化
         # img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         # _, img1 = cv2.threshold(img1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -390,7 +400,7 @@ class Tools:
         :param img2: cv2
         :return: float
         """
-        if (img1 == img2).all():
+        if (img1[::4, ::4, 0] == img2[::4, ::4, 0]).all():
             return 0
         img1 = Tools.get_norm_img(img1, resize)
         img2 = Tools.get_norm_img(img2, resize)
