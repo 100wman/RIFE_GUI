@@ -123,19 +123,6 @@ class CudaSuperResolutionBase:
     def enhance(self, img, outscale=None, alpha_upsampler='realesrgan'):
         # img: numpy
         img = img / RGB_TYPE.SIZE
-        if len(img.shape) == 2:  # gray image
-            img_mode = 'L'
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-        elif img.shape[2] == 4:  # RGBA image with alpha channel
-            img_mode = 'RGBA'
-            alpha = img[:, :, 3]
-            img = img[:, :, 0:3]
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            if alpha_upsampler == 'realesrgan':
-                alpha = cv2.cvtColor(alpha, cv2.COLOR_GRAY2RGB)
-        else:
-            img_mode = 'RGB'
-            # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         # ------------------- process image (without the alpha channel) ------------------- #
         self.pre_process(img)
@@ -146,4 +133,4 @@ class CudaSuperResolutionBase:
         output_img = self.post_process()
         output_img = output_img.data.squeeze().float().clamp_(0, 1)  # .cpu().numpy()
         output = (output_img * RGB_TYPE.SIZE).float().cpu().numpy().transpose(1, 2, 0)
-        return output, img_mode
+        return output, "RGB"

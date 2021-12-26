@@ -78,17 +78,16 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.9.2"
+    gui_version = "3.9.3"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.4"
+    ols_version = "7.4.5"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix Output PNG Sequence with incorrect resolution with Crop parameters
-    - Fix Normalization of Image failure during non-output process (scene detection)
+    - Fix Color banding in low precision mode with HDR input
     """
 
     path_len_limit = 230

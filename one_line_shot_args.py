@@ -533,7 +533,7 @@ class ReadFlow(IOFlow):
             scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
         if not frame_check and not self.ARGS.is_quick_extract:
             scale_args = f",format=yuv444p10le{scale_args},format=rgb48be"
-            if RGB_TYPE.DTYPE == np.uint8:  # 24
+            if RGB_TYPE.DTYPE == np.uint8 and self.ARGS.hdr_mode == HDR_STATE.NONE:  # No format filter for hdr in 8bit
                 scale_args += ",format=rgb24"
             output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
         vf_args += f"{scale_args},minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"

@@ -114,10 +114,7 @@ class RifeInterpolation(VideoFrameInterpolationBase):
         else:
             mid = self.model.inference(i1, i2, scale, iter_time=self.tta_iter)
         del i1, i2
-        if RGB_TYPE.DTYPE == np.uint16:
-            mid = ((mid[0] * RGB_TYPE.SIZE).int().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
-        else:
-            mid = ((mid[0] * RGB_TYPE.SIZE).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
+        mid = ((mid[0] * RGB_TYPE.SIZE).float().cpu().numpy().transpose(1, 2, 0))[:h, :w].copy()
         return mid
 
     def _make_n_inference(self, img1, img2, scale, n):
@@ -257,10 +254,7 @@ class RifeMultiInterpolation(RifeInterpolation):
         else:
             mids = self.model.inference(i1, i2, scale, n)
         del i1, i2
-        if RGB_TYPE.DTYPE == np.uint16:
-            mids = [((mid[0] * RGB_TYPE.SIZE).int().cpu().numpy().transpose(1, 2, 0))[:h, :w] for mid in mids]
-        else:
-            mids = [((mid[0] * RGB_TYPE.SIZE).byte().cpu().numpy().transpose(1, 2, 0))[:h, :w] for mid in mids]
+        mids = [((mid[0] * RGB_TYPE.SIZE).float().cpu().numpy().transpose(1, 2, 0))[:h, :w] for mid in mids]
         return mids
 
     def _make_n_inference(self, img1, img2, scale, n):
