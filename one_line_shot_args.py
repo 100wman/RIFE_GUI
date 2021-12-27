@@ -1037,10 +1037,12 @@ class ReadFlow(IOFlow):
         :param is_end:是否是任务结束
         :return:
         """
+
         def normalize_dtype(img):
             # if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
             #     img = img.astype(np.float32)
             return img
+
         scale = self.__get_auto_scale(img0, img1)
         img0 = normalize_dtype(img0)
         img1 = normalize_dtype(img1)
@@ -2058,9 +2060,16 @@ class ProgressUpdateFlow(IOFlow):
             return
         screen_h, screen_w = self.ARGS.get_screen_size()
         title = f"SVFI Preview of Interpolated/Uplifted Frame"
-        comp_stack = ((preview_imgs[len(preview_imgs) // 2]) / RGB_TYPE.SIZE * 255).astype(np.uint8)
-
         preview_w = screen_w // 2
+
+        comp_stack = preview_imgs[len(preview_imgs) // 2]
+        h, w, _ = comp_stack.shape
+        if w > preview_w * 4:
+            comp_stack = comp_stack[::4, ::4, :]
+        elif w > preview_w * 2:
+            comp_stack = comp_stack[::2, ::2, :]
+        comp_stack = (comp_stack / RGB_TYPE.SIZE * 255.).astype(np.uint8)
+
         stack_h, stack_w, _ = comp_stack.shape
         preview_h = int(stack_h / stack_w * preview_w)
         comp_stack = cv2.resize(comp_stack, (preview_w, preview_h))

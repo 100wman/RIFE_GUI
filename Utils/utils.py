@@ -78,10 +78,10 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.9.4"
+    gui_version = "3.9.5"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.6"
+    ols_version = "7.4.7"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
@@ -355,7 +355,7 @@ class Tools:
     @staticmethod
     def check_pure_img(img1):
         try:
-            if np.var(img1) < 10:
+            if np.var(img1[::4, ::4, 0]) < 10:
                 return True
             return False
         except:
@@ -385,10 +385,7 @@ class Tools:
             img1 = img1[::2, ::2, 0]
         if resize and img1.shape[0] > Tools.resize_param[0]:
             img1 = cv2.resize(img1, Tools.resize_param)
-        # img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
         img1 = cv2.equalizeHist(img1)  # 进行直方图均衡化
-        # img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-        # _, img1 = cv2.threshold(img1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return img1
 
     @staticmethod
@@ -1368,7 +1365,7 @@ class TransitionDetection_ST:
         if use_diff != -1:
             diff = use_diff
         else:
-            diff = self.utils.get_norm_img_diff(img1, img2)
+            diff = self.utils.get_norm_img_diff(self.img1, self.img2)
 
         if self.use_fixed_scdet:
             if diff < self.scdet_threshold:
