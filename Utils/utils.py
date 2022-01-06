@@ -1321,7 +1321,7 @@ class TransitionDetection_ST:
                                     interpolation=cv2.INTER_AREA)
             cv2.putText(comp_stack,
                         title,
-                        (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0))
+                        (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (int(RGB_TYPE.SIZE), 0, 0))
             if "pure" in title.lower():
                 path = f"{self.scdet_cnt:08d}_pure.png"
             elif "band" in title.lower():
