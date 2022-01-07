@@ -100,7 +100,7 @@ class RetailValidation(ValidationBase):
         try:
             self._is_validate_start = self._regist()  # This method has to be called in order for the wrapper to become functional!
         except Exception as e:
-            self._is_validate_start = False
+            self._is_validate_start = False  # debug
             self._validate_error = e
             self.logger.error('Failed to initiate Retail License. Shutting down.')
             return

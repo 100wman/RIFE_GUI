@@ -13,7 +13,6 @@ import sys
 import time
 import traceback
 
-import cv2
 import psutil
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication, Qt
@@ -23,7 +22,7 @@ from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QMessageBox, QFi
 
 from Utils import SVFI_UI, SVFI_help, SVFI_about, SVFI_preference, SVFI_preview_args
 from Utils.LicenseModule import RetailValidation, SteamValidation
-from Utils.RIFE_GUI_Custom import SVFI_Config_Manager, SVFITranslator, StateTooltip
+from Utils.RIFE_GUI_Custom import SVFITranslator, StateTooltip, InputItemModel
 from Utils.StaticParameters import appDir, TASKBAR_STATE, SupportFormat, EncodePresetAssemply, INVALID_CHARACTERS
 from Utils.utils import Tools, ArgumentManager, ImageWrite
 
@@ -93,6 +92,7 @@ class UiPreviewArgsDialog(QDialog, SVFI_preview_args.Ui_Dialog):
         Generate String for Label of Arguments' Preview
         :return:
         """
+        # TODO Refactor
         args_string = str(self.default_args)
         for arg_key in self.args_list:
             arg_data = appData.value(arg_key, "")
@@ -225,8 +225,8 @@ class UiRun(QThread):
 
     def build_command(self, item_data: dict) -> (str, str):
         global appData
-        config_manager = SVFI_Config_Manager(item_data, appDir)
-        config_path = config_manager.FetchConfig()
+        task_model = InputItemModel(item_data['input_path'], item_data['task_id'])
+        config_path = task_model.get_config_path()
         if config_path is None:
             logger.error(f"Invalid Task: {item_data}")
             return None, ""
@@ -479,7 +479,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.check_gpu = False  # 是否检查过gpu
         self.current_failed = False  # 当前任务失败flag
         self.pause = False  # 当前任务是否暂停
-        self.last_item = None  # 上一次点击的条目
+        self.last_item_model = None  # 上一次点击的条目
 
         """Preference Maintainer"""
         self.rife_cuda_cnt = 0
@@ -716,8 +716,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 """What the fuck is SWIG?"""
                 complete_msg += _translate('', '成功！')
                 os.startfile(self.OutputFolder.text())
+                self.function_disable_inputfilename_connection()
                 self.InputFileName.refreshTasks()
                 self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
+                self.function_enable_inputfilename_connection()
             else:
                 # if not self.DebugChecker.isChecked():
                 _msg1 = _translate('', '失败, 返回码：')
@@ -840,7 +842,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.DebugChecker.setVisible(False)
 
     def settings_update_pack(self, item_update=False, template_update=False):
-        self.settings_initiation(item_update=item_update, template_update=False)
+        self.settings_initiation(item_update=item_update, template_update=template_update)
         self.settings_update_gpu_info(item_update=item_update)  # Flush GPU Info, 1
         self.on_UseNCNNButton_clicked(silent=True)  # G2
         self.settings_update_rife_model_info()
@@ -861,7 +863,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_TtaModeSelector_currentTextChanged()
         self.on_ExpertMode_changed()
         self.on_ModuleSelector_currentTextChanged()
-        self.settings_initiation(item_update=item_update, template_update=False)
+        self.settings_initiation(item_update=item_update, template_update=template_update)
         pass
 
     def settings_initiation(self, item_update=False, template_update=False):
@@ -880,11 +882,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 input_list_data = json.loads(appPref.value("gui_inputs", ""))
                 if not self.InputFileName.count():
                     for item_data in input_list_data['inputs']:
-                        config_maintainer = SVFI_Config_Manager(item_data, appDir)
-                        input_path = config_maintainer.FetchConfig()
-                        if input_path is not None and os.path.exists(input_path):
-                            self.InputFileName.addFileItem(item_data['input_path'],
-                                                           item_data['task_id'])  # resume previous tasks
+                        self.InputFileName.addFileItem(item_data['input_path'], item_data['task_id'])
             except json.decoder.JSONDecodeError:
                 logger.error("Could Not Find Valid GUI Inputs from appData, leave blank")
 
@@ -903,7 +901,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.InterpExpReminder.setChecked(appData.value("is_exp_prior", True, type=bool))
             self.ExpSelecter.setCurrentText("x" + str(2 ** int(appData.value("rife_exp", "1"))))
             self.ImgOutputChecker.setChecked(appData.value("is_img_output", False, type=bool))
-            appData.setValue("is_img_input", appData.value("is_img_input", False))
             self.KeepChunksChecker.setChecked(not appData.value("is_output_only", True, type=bool))
             self.StartPoint.setTime(QTime.fromString(appData.value("input_start_point", "00:00:00"), "HH:mm:ss"))
             self.EndPoint.setTime(QTime.fromString(appData.value("input_end_point", "00:00:00"), "HH:mm:ss"))
@@ -918,8 +915,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         """Output Resize Configuration"""
         self.CropHeightSettings.setValue(appData.value("crop_height", 0, type=int))
         self.CropWidthpSettings.setValue(appData.value("crop_width", 0, type=int))
-        self.ResizeHeightSettings.setValue(appData.value("resize_height", 0, type=int))
-        self.ResizeWidthSettings.setValue(appData.value("resize_width", 0, type=int))
+        if self.ResizeTemplate.currentIndex() == 0:
+            self.ResizeHeightSettings.setValue(appData.value("resize_height", 0, type=int))
+            self.ResizeWidthSettings.setValue(appData.value("resize_width", 0, type=int))
         self.TransferWidthSettings.setValue(appData.value("transfer_width", 0, type=int))
         self.TransferHeightSettings.setValue(appData.value("transfer_height", 0, type=int))
         self.ResizeTemplate.setCurrentIndex(appData.value("resize_settings_index", 0, type=int))
@@ -1254,16 +1252,17 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             current_item = self.InputFileName.currentItem()
         output_dir = self.OutputFolder.text()
 
-        widget_data = self.InputFileName.getWidgetData(current_item)
-        input_path = widget_data.get('input_path')
-        task_id = widget_data.get('task_id')
+        item_model = self.InputFileName.itemWidget(current_item).get_task_model()
+        input_path = item_model.get_input_path()
+        task_id = item_model.get_task_id()
+
         project_dir = os.path.join(output_dir,
                                    f"{Tools.get_filename(input_path)}_{task_id}")
         if not os.path.exists(project_dir):
             os.mkdir(project_dir)
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
-            self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{widget_data['row'] + 1}{_msg2}", 3)
+            self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
             self.settings_set_start_info(0, 1, False)  # start from zero
             return
 
@@ -1281,7 +1280,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             else:
                 _msg1 = _translate('', '未找到与第')
                 _msg2 = _translate('', '个任务相关的进度信息')
-                self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{widget_data['row'] + 1}{_msg2}", 3)
+                self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
                 self.settings_set_start_info(-1, -1, False)
             return
 
@@ -1289,7 +1288,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not len(chunk_paths):
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
-            self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{widget_data['row'] + 1}{_msg2}", 3)
+            self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
             logger.info("AutoSet find None to resume interpolation")
             self.settings_set_start_info(0, 1, False)
             return
@@ -1313,32 +1312,27 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData = QSettings(config_path, QSettings.IniFormat)
         appData.setIniCodec("UTF-8")
 
-    def settings_maintain_item_settings(self, widget_data: dict):
+    def settings_maintain_item_settings(self, item_model: InputItemModel):
         global appData
         use_global_settings = appPref.value("use_global_settings", False, type=bool)
         if use_global_settings:
             """First detect using use global settings"""
             self.settings_load_config(appDataPath)  # change to root settings
         self.settings_load_current()  # 保存跳转前设置
-        initiated = True
-        if self.last_item is None:
-            initiated = False
-            self.last_item = widget_data
-        config_maintainer = SVFI_Config_Manager(self.last_item, appDir)
-        if initiated:
-            # 仅在初始化的第一个任务时
-            config_maintainer.DuplicateConfig()  # 将当前设置保存到上一任务的配置文件，并准备跳转到新任务
+        is_initiation = False  # Default: Not initiation for the whole software
+        if self.last_item_model is None:
+            is_initiation = True
+            self.last_item_model = item_model
+        if not is_initiation:  # Not initiation, we can save current profile, not losing the last profile
+            self.last_item_model.initiate_config()
+            # 将当前设置保存到上一任务的配置文件，并准备跳转到新任务
+            # 如果是全局设置模式，将全局设置保存至旧任务
         if not use_global_settings:
-            """使用已存在的（上一）任务配置文件载入设置"""
-            config_maintainer = SVFI_Config_Manager(widget_data, appDir)
-            config_path = config_maintainer.FetchConfig()
-            if config_path is None:
-                config_maintainer.DuplicateConfig()  # 利用当前系统全局设置保存当前任务配置
-                # config_path = config_maintainer.FetchConfig()
-            config_maintainer.UpdateRootConfig()
+            """Use new Profile to load settings"""
+            item_model.apply_config()
             self.settings_load_config(appDataPath)
             self.settings_update_pack(item_update=not use_global_settings)
-        self.last_item = widget_data
+        self.last_item_model = item_model
 
     @pyqtSlot(bool)
     def settings_load_settings_templates(self):
@@ -1484,20 +1478,17 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)  # 置顶
 
-    def settings_maintain_io(self, widget_data: dict):
-        input_path = widget_data.get('input_path')
-        if os.path.isfile(input_path):
-            input_fps = Tools.get_fps(input_path)
-            self.InputFPS.setText(f"{input_fps:.5f}")
-            if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
-                try:
-                    exp = int(self.ExpSelecter.currentText()[1:])
-                    self.OutputFPS.setText(f"{input_fps * exp:.5f}")
-                except Exception:
-                    pass
-        else:
-            if not len(self.InputFPS.text()):
-                self.InputFPS.setText("0")
+    def settings_maintain_io(self, item_model: InputItemModel):
+        input_fps = item_model.get_fps()
+        if not input_fps:
+            input_fps = float(appData.value("input_fps", "0"))
+        self.InputFPS.setText(f"{input_fps:.5f}")
+        if self.InterpExpReminder.isChecked():  # use exp to calculate outputfps
+            try:
+                exp = int(self.ExpSelecter.currentText()[1:])
+                self.OutputFPS.setText(f"{input_fps * exp:.5f}")
+            except Exception:
+                pass
 
     def function_generate_log(self, mode=0):
         """
@@ -1533,12 +1524,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         :return:
         """
         widgetres = []
-        count = self.InputFileName.count()
-        for i in range(count):
-            try:
-                widgetres.append(self.InputFileName.itemWidget(self.InputFileName.item(i)).input_path)
-            except:
-                pass
+        for item in self.InputFileName.getListItems():
+            model = self.InputFileName.itemWidget(item).get_task_model()
+            widgetres.append(model.get_input_path())
         return widgetres
 
     def function_update_task_bar_value(self, complete_cnt: int, total_cnt: int):
@@ -1702,9 +1690,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if path_type == 1:
             return os.path.join(sr_ncnn_dir, key_word, "models")
 
-    def function_load_tasks_settings(self, load_all=False, load_one=False):
-        task_data = self.InputFileName.getItems()
-        if not len(task_data):
+    def function_load_tasks_rows(self, load_all=False, load_one=False):
+        """
+
+        :param load_all:
+        :param load_one:
+        :return: Rows of tasks item to start
+        """
+        items = self.InputFileName.getListItems()
+        if not len(items):
             """Task List Is Empty"""
             if not load_all:
                 self.function_send_msg("Input is Empty!",
@@ -1714,9 +1708,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         task_list = list()
         self.function_disable_inputfilename_connection()
         self.function_show_pending_dialog("Saving Settings...", _translate("", "保存当前设置中..."))
-        for t in task_data:
-            if self.InputFileName.itemWidget(t).iniCheck.isChecked():
-                row_ = self.InputFileName.getWidgetData(t)['row']
+        for item in items:
+            itemWidget = self.InputFileName.itemWidget(item)
+            if itemWidget.is_checked():
+                row_ = self.InputFileName.row(item)
                 self.InputFileName.setCurrentRow(row_)
                 self.on_InputFileName_currentItemChanged()
                 task_list.append(row_)
@@ -1737,7 +1732,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.on_InputFileName_currentItemChanged()
             task_list.clear()
             if task_current_item is not None:
-                task_list.append(self.InputFileName.getWidgetData(task_current_item)['row'])
+                task_list.append(self.InputFileName.row(task_current_item))
             pass
 
         self.function_enable_inputfilename_connection()
@@ -1775,20 +1770,19 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     # @pyqtSlot(bool)
     def on_InputFileName_currentItemChanged(self):
-        current_item = self.InputFileName.currentItem()
+        current_item = self.InputFileName.currentItem()  # the new task jumped into
         if current_item is None:
-            item_count = len(self.InputFileName.getItems())
+            item_count = self.InputFileName.count()
             if item_count:
-                current_item = self.InputFileName.item(0)
+                current_item = self.InputFileName.item(item_count - 1)  # update last input task
             else:
                 return
         if self.InputFileName.itemWidget(current_item) is None:  # check if exists this item in InputFileName
             return
-        widget_data = self.InputFileName.getWidgetData(current_item)
-        if widget_data is not None:
-            self.settings_maintain_item_settings(widget_data)  # 保存当前设置，并准备跳转到新任务的历史设置（可能没有）
-
-        self.settings_maintain_io(widget_data)
+        item_model = self.InputFileName.itemWidget(current_item).get_task_model()
+        if item_model is not None:
+            self.settings_maintain_item_settings(item_model)  # 保存当前设置，并准备跳转到新任务的历史设置（可能没有）
+        self.settings_maintain_io(item_model)
         return
 
     def on_InputFileName_failImport(self, fail_code: int):
@@ -1840,7 +1834,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         懒人式启动补帧按钮
         :return:
         """
-        task_list = self.function_load_tasks_settings()
+        task_list = self.function_load_tasks_rows()
         if not self.settings_check_args():
             return
         self.settings_load_current()  # update settings
@@ -1854,7 +1848,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         _msg5 = _translate('', '请确保上述三者皆不为空(-1为自动)，任务计数不为0。\n是否执行补帧？')
         _msg4 = ""
         try:
-            current_path = self.InputFileName.itemWidget(self.InputFileName.currentItem()).input_path
+            current_path = self.InputFileName.itemWidget(self.InputFileName.currentItem()).get_input_path()
             current_ext = os.path.splitext(current_path)[1]
             selected_ext = "." + self.ExtSelector.currentText()
             if current_ext != selected_ext:
@@ -1905,9 +1899,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         self.settings_load_config(appDataPath)  # appoint appData to root
         self.settings_load_current()  # update appData to current Settings
-        template_config = SVFI_Config_Manager({'input_path': 'Template',
-                                               'task_id': f'Template_{template_name}'}, appDir, logger)
-        template_config.DuplicateConfig()  # write template settings
+        template_model = InputItemModel(template_name, f'Template_{template_name}')
+        template_model.initiate_config()  # write template settings
         self.SettingsTemplateSelector.addItem(template_name)
         _msg1 = _translate('', '已保存指定预设：')
         self.function_send_msg("New Template Saved", f"{_msg1}{template_name}", 2)
@@ -1917,11 +1910,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not self.SettingsTemplateSelector.count():
             self.function_send_msg("No Templates", _translate('', "预设为空~"))
             return
-        template_config = SVFI_Config_Manager({'input_path': 'Template',
-                                               'task_id': f'Template_{self.SettingsTemplateSelector.currentText()}'},
-                                              appDir, logger)
+        template_name = self.SettingsTemplateSelector.currentText()
+        template_model = InputItemModel(template_name, f'Template_{template_name}')
+        template_model.delete()  # write template settings
         self.SettingsTemplateSelector.removeItem(self.SettingsTemplateSelector.currentIndex())
-        template_config.RemoveConfig()
         self.function_send_msg("Remove Template", _translate('', "已移除指定预设~"), 2)
 
     @pyqtSlot(bool)
@@ -1933,13 +1925,13 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if template_name is None:
             self.function_send_msg("Invalid Template", _translate('', "请先指定预设~"))
             return
-        template_config = SVFI_Config_Manager({'input_path': 'Template',
-                                               'task_id': f'Template_{template_name}'}, appDir, logger)
-        config_path = template_config.FetchConfig()
+        template_name = self.SettingsTemplateSelector.currentText()
+        template_model = InputItemModel(template_name, f'Template_{template_name}')
+        config_path = template_model.get_config_path()
         if config_path is None:
             self.function_send_msg("Invalid Config", _translate('', "指定预设不见啦~"))
             return
-        template_config.UpdateRootConfig()
+        template_model.apply_config()  # load template config to root config
         self.settings_load_config(appDataPath)
         self.settings_initiation(item_update=True, template_update=True)
         self.function_send_msg("Config Loaded", _translate('', "已载入指定预设~"), 2)
@@ -2111,9 +2103,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         自定义输出分辨率
         :return:
         """
-        current_template = self.ResizeTemplate.currentText()
-        if "custom" in current_template.lower():
+        current_template = self.ResizeTemplate.currentText().lower()
+        if "custom" in current_template:
+            self.ResizeHeightSettings.setEnabled(True)
+            self.ResizeWidthSettings.setEnabled(True)
             return
+        else:
+            self.ResizeHeightSettings.setEnabled(False)
+            self.ResizeWidthSettings.setEnabled(False)
+
         width, height = 0, 0
         if "480p" in current_template:
             width, height = 480, 270
@@ -2131,25 +2129,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if current_item is None:
                 # self.function_send_msg('Select a item first!', _translate('', '未选中输入项'))
                 return
-            row = self.InputFileName.getWidgetData(current_item)['row']
-            input_files = self.function_get_input_paths()
-            sample_file = input_files[row]
-            try:
-                if not os.path.isfile(sample_file):
-                    height, width = 0, 0
-                else:
-                    input_stream = cv2.VideoCapture(sample_file)
-                    width = input_stream.get(cv2.CAP_PROP_FRAME_WIDTH)
-                    height = input_stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            except Exception:
-                height, width = 0, 0
+            item_model = self.InputFileName.itemWidget(current_item).get_task_model()
+            width, height = item_model.get_resolution()
             ratio = int(current_template[:-1]) / 100
             width, height = width * ratio, height * ratio
             self.resize_exp = ratio
         self.ResizeWidthSettings.setValue(width)
         self.ResizeHeightSettings.setValue(height)
         if self.UseAiSR.isChecked() and self.AiSrModuleExpDisplay.text() != "Unknown":
-            sr_exp = int(self.AiSrModuleExpDisplay.text()[:-1])
+            sr_exp = int(self.AiSrModuleExpDisplay.text()[:-1])  # use sr model params
             if self.TransferWidthSettings.value() == 0 and self.TransferHeightSettings.value() == 0:
                 self.TransferWidthSettings.setValue(width // sr_exp)
                 self.TransferHeightSettings.setValue(height // sr_exp)
@@ -2285,7 +2273,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Concat Existed Chunks
         :return:
         """
-        task_list = self.function_load_tasks_settings(load_one=True)
+        task_list = self.function_load_tasks_rows(load_one=True)
         self.settings_load_current()  # update settings
         self.ConcatAllButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -2303,7 +2291,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Extract Frames from current input
         :return:
         """
-        task_list = self.function_load_tasks_settings(load_one=True)
+        task_list = self.function_load_tasks_rows(load_one=True)
         self.settings_load_current()
         self.StartExtractButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -2322,7 +2310,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         Only Render Input based on current settings
         :return:
         """
-        task_list = self.function_load_tasks_settings()
+        task_list = self.function_load_tasks_rows()
         self.settings_load_current()
         self.StartRenderButton.setEnabled(False)
         self.tabWidget.setCurrentIndex(1)
@@ -2537,7 +2525,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         reply = self.function_send_msg("Quit", _translate('', "是否保存当前设置？"), 3)
         if reply == QMessageBox.Yes:
-            self.function_load_tasks_settings(load_all=True)
+            self.function_load_tasks_rows(load_all=True)
             self.settings_load_config(appDataPath)
             self.settings_load_current()
             if appPref.value("is_rude_exit", False, type=bool):

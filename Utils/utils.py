@@ -78,7 +78,7 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.9.5"
+    gui_version = "3.10.0"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
     ols_version = "7.4.7"
@@ -87,7 +87,9 @@ class ArgumentManager:
     update_log = f"""
     {version_tag}
     Update Log
-    - Optimize Frame Extraction in high precision mode with HDR input
+    - UI(Frontend) MVCed, Optimize Item Selection, enhance speed
+    - Fix failure of configs update after changing task_id
+    - Fix scene detection too sensitive by increase dead threshold to 80
     """
 
     path_len_limit = 230

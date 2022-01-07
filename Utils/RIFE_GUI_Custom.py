@@ -7,17 +7,140 @@ import re
 import shutil
 import time
 
+import cv2
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QPainter, QPixmap
 from PyQt5.QtWidgets import *
 
-from Utils.StaticParameters import INVALID_CHARACTERS
+from Utils.StaticParameters import INVALID_CHARACTERS, appDir
 from Utils.utils import Tools, ArgumentManager
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(os.path.dirname(abspath))
 ddname = os.path.dirname(abspath)
+
+
+class InputItemModel:
+    root_config_path = os.path.join(appDir, "SVFI.ini")
+    config_dirname = os.path.join(appDir, "Configs")
+
+    def __init__(self, input_path, task_id=None):
+        self.input_path = input_path
+        self.task_id = task_id
+        self.fps = 0
+        self.resolution = (0,0)
+        self.config_path = ""
+        self.is_property_loaded = False
+        self.is_config_loaded = False
+
+        if self.task_id is None:
+            self.__generate_new_task_id()
+        else:
+            """check previous config"""
+            config_path = self.generate_config_path()
+            if os.path.exists(config_path):
+                self.initiate_config(config_path)
+
+    def generate_config_path(self):
+        config_path = os.path.join(self.config_dirname, f"SVFI_Config_{self.task_id}.ini")
+        return config_path
+
+    def __generate_new_task_id(self):
+        if not os.path.exists(self.input_path):
+            return "TPE_000000"
+        path_md5 = Tools.md5(self.input_path)[:3]
+        path_id = random.randrange(100000, 999999)
+        task_id = f"{path_md5}_{path_id}"
+        self.task_id = task_id
+
+    def initiate_property(self, fps=0, resolution=None):
+        if not fps and resolution is None:
+            self.initiate_input_prop()
+        else:
+            assert type(resolution) is tuple
+            self.resolution = resolution
+            self.fps = fps
+            self.is_property_loaded = True
+
+    def initiate_config(self, config_path=None):
+        if config_path is not None and os.path.exists(config_path):
+            """Duplicate from previous config"""
+            if not len(self.config_path):  # new model
+                self.config_path = config_path
+            if config_path != self.config_path:
+                shutil.copy(config_path, self.config_path)
+        else:
+            # Update from root config to generate new task config or template
+            assert os.path.exists(self.root_config_path)  # TODO Throw Error here
+            self.config_path = self.generate_config_path()
+            shutil.copy(self.root_config_path, self.config_path)
+        self.is_config_loaded = True
+
+    def initiate_input_prop(self):
+        try:
+            if not os.path.isfile(self.input_path):
+                height, width, fps = 0, 0, 0
+            else:
+                input_stream = cv2.VideoCapture(self.input_path)
+                width = input_stream.get(cv2.CAP_PROP_FRAME_WIDTH)
+                height = input_stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                fps = input_stream.get(cv2.CAP_PROP_FPS)
+        except Exception:
+            height, width, fps = 0, 0, 0
+        self.resolution = (int(width), int(height))
+        self.fps = fps
+        self.is_property_loaded = True
+
+    def get_task_id(self):
+        return self.task_id
+
+    def get_input_path(self):
+        return self.input_path
+
+    def get_task_info(self):
+        return {"input_path": self.input_path, "task_id": self.task_id}
+
+    def get_resolution(self):
+        return self.resolution
+
+    def get_fps(self):
+        return self.fps
+
+    def get_config_path(self):
+        if not os.path.exists(self.config_path):
+            return
+        return self.config_path
+
+    def update_task_id(self, task_id):
+        len_old_id = len(self.task_id)
+        self.task_id = task_id
+        new_config_path = os.path.splitext(self.config_path)[0][:-len_old_id] + self.task_id + ".ini"
+        if os.path.exists(self.config_path):
+            if self.config_path != new_config_path:
+                shutil.copy(self.config_path, new_config_path)
+        else:
+            self.initiate_config()
+        self.config_path = new_config_path
+
+    def copy(self):
+        new_item = InputItemModel(self.input_path)
+        new_item.mock(self)
+        return new_item
+
+    def mock(self, _InputItemModel):
+        self.initiate_property(_InputItemModel.get_fps(), _InputItemModel.get_resolution())
+        self.initiate_config(_InputItemModel.get_config_path())
+
+    def apply_config(self):
+        if os.path.exists(self.config_path):
+            shutil.copy(self.config_path, self.root_config_path)
+
+    def delete(self):
+        self.config_path = os.path.join(self.config_dirname, f"SVFI_Config_{self.task_id}.ini")
+        if os.path.exists(self.config_path):
+            os.remove(self.config_path)
+        pass
 
 
 class SVFITranslator(QTranslator):
@@ -44,8 +167,9 @@ class SVFITranslator(QTranslator):
 
 
 class MyListWidgetItem(QWidget):
-    dupSignal = pyqtSignal(dict)
-    remSignal = pyqtSignal(dict)
+    dupSignal = pyqtSignal(InputItemModel)
+    remSignal = pyqtSignal(InputItemModel)
+    renSignal = pyqtSignal(InputItemModel)
 
     def __init__(self, parent=None):
         """
@@ -107,24 +231,26 @@ class MyListWidgetItem(QWidget):
         self.DuplicateItemButton.clicked.connect(self.on_DuplicateItemButton_clicked)
         self.TaskIdDisplay.editingFinished.connect(self.on_TaskIdDisplay_editingFinished)
         """Item Data Settings"""
-        self.task_id = None
-        self.input_path = None
+        self.InputItemModel = None
         self.last_click_time = time.time()
 
-    def setTask(self, input_path: str, task_id: str):
-        self.task_id = task_id
-        self.input_path = input_path
-        len_cut = 60
-        if len(self.input_path) > len_cut:
-            self.filename.setText(self.input_path[:len_cut] + "...")
+    def setTask(self, _InputItemModel: InputItemModel):
+        self.InputItemModel = _InputItemModel
+        input_path = self.InputItemModel.get_input_path()
+        task_id = self.InputItemModel.get_task_id()
+        len_cut = 80
+        if len(input_path) > len_cut:
+            input_path = os.path.split(input_path)[1]
+            if len(input_path) > len_cut:
+                input_path = input_path[:len_cut-3] + "..."
+            self.filename.setText(input_path[:len_cut])
         else:
-            self.filename.setText(self.input_path)
+            self.filename.setText(input_path)
         self.task_id_reminder.setText("  id:")
-        self.TaskIdDisplay.setText(f"{self.task_id}")
+        self.TaskIdDisplay.setText(f"{task_id}")
 
-    def get_task_info(self):
-        self.task_id = self.TaskIdDisplay.text()
-        return {"task_id": self.task_id, "input_path": self.input_path}
+    def get_task_model(self):
+        return self.InputItemModel
 
     def on_DuplicateItemButton_clicked(self, e):
         """
@@ -135,28 +261,25 @@ class MyListWidgetItem(QWidget):
         :param e:
         :return:
         """
-        emit_data = self.get_task_info()
-        emit_data.update({"action": 1})
-        self.dupSignal.emit(emit_data)
+        self.dupSignal.emit(self.InputItemModel)
         pass
 
     def on_RemoveItemButton_clicked(self, e):
-        emit_data = self.get_task_info()
-        emit_data.update({"action": 0})
-        self.dupSignal.emit(emit_data)
+        self.remSignal.emit(self.InputItemModel)
         pass
 
     def on_TaskIdDisplay_editingFinished(self):
-        previous_task_id = self.task_id
-        emit_data = self.get_task_info()  # update task id by the way
-        emit_data.update({"previous_task_id": previous_task_id, "action": 3})
-        self.dupSignal.emit(emit_data)  # update
+        self.InputItemModel.update_task_id(self.TaskIdDisplay.text())
+        self.renSignal.emit(self.InputItemModel)  # update
 
     @pyqtSlot(bool)
     def on_iniCheck_toggled(self):
         if time.time() - self.last_click_time > 0.1:
             self.iniCheck.setChecked(not self.iniCheck.isChecked())
             self.last_click_time = time.time()
+
+    def is_checked(self):
+        return self.iniCheck.isChecked()
 
 
 class MyLineWidget(QtWidgets.QLineEdit):
@@ -182,40 +305,26 @@ class MyListWidget(QListWidget):
         self.setAcceptDrops(True)
         self.task_dict = list()
 
-    def checkTaskId(self, input_path, task_id):
+    def checkTaskId(self, task_id):
         """
         Check Task Id Availability
-        :param input_path:
         :param task_id:
         :return: bool
         """
-        potential_config = SVFI_Config_Manager({'input_path': input_path, "task_id": task_id}, dname)
-        if potential_config.FetchConfig() is not None:
+        potential_config_path = os.path.join(InputItemModel.config_dirname, f"SVFI_Config_{task_id}.ini")
+        if not os.path.exists(potential_config_path):
             return False
-        if task_id in self.task_dict:
-            return False
-        self.task_dict.append(task_id)
         return True
-
-    def generateTaskId(self, input_path: str):
-        path_md5 = Tools.md5(input_path)[:6]
-        while True:
-            path_id = random.randrange(100000, 999999)
-            task_id = f"{path_md5}_{path_id}"
-            if self.checkTaskId(input_path, task_id):
-                break
-        return task_id
 
     def saveTasks(self):
         """
         return tasks information in strings of json format
-        :return: {"inputs": [{"task_id": self.task_id, "input_path": self.input_path}]}
+        :return: {"inputs": [{"task_id": self.task_id, "input_path": self.get_input_path()}]}
         """
         data = list()
-        for item in self.getItems():
-            widget = self.itemWidget(item)
-            item_data = widget.get_task_info()
-            data.append(item_data)
+        for item in self.getListItems():
+            item_model = self.itemWidget(item).get_task_model()
+            data.append({"task_id": item_model.get_task_id(), "input_path": item_model.get_input_path()})
         return json.dumps({"inputs": data})
 
     def dropEvent(self, e):
@@ -229,22 +338,7 @@ class MyListWidget(QListWidget):
     def dragEnterEvent(self, e):
         self.dropEvent(e)
 
-    def getWidgetData(self, item):
-        """
-        Get widget data from item's widget
-        :param item: item
-        :return: dict of widget data, including row
-        """
-        try:
-            widget = self.itemWidget(item)
-            # widget.on_iniCheck_toggled()
-            item_data = widget.get_task_info()
-            item_data.update({"row": self.row(item)})
-        except AttributeError:
-            return None
-        return item_data
-
-    def getItems(self):
+    def getListItems(self) -> [MyListWidgetItem]:
         """
         获取listwidget中条目数
         :return: list of items
@@ -257,14 +351,12 @@ class MyListWidget(QListWidget):
         return widgetres
 
     def refreshTasks(self):
-        items = [self.getWidgetData(item) for item in self.getItems()]
+        item_models = [self.itemWidget(item).get_task_model() for item in self.getListItems()]
         self.clear()
         try:
-            for item in items:
-                new_item_data = self.addFileItem(item['input_path'])  # do not use previous task id
-                config_maintainer = SVFI_Config_Manager(new_item_data, dname)
-                config_maintainer.DuplicateConfig(item)  # use previous item data to establish config file
-
+            for model in item_models:
+                new_item_model, new_item_widget = self.addFileItem(model.get_input_path(), silent=True)  # do not use previous task id
+                new_item_model.mock(model)
         except RuntimeError:
             pass
 
@@ -285,25 +377,41 @@ class MyListWidget(QListWidget):
                 return input_path, task_id
         return None, None
 
-    def addFileItem(self, input_path: str, task_id=None) -> dict:
+    def addFileItem(self, input_path: str, task_id=None, silent=False):
+        """
+
+        :param input_path:
+        :param task_id:
+        :param silent: avoid activating itemChanged Event in Backend
+        :return:
+        """
         input_path = input_path.strip('"')
         if len(input_path) > ArgumentManager.path_len_limit:
             self.failSignal.emit(1)  # path too long
-            return {"input_path": input_path, "task_id": task_id}
+            return None, None
         if ArgumentManager.is_free:  # in free version, only one task available
             if self.count() >= 1:
                 self.failSignal.emit(2)  # community version does not support multi import
-                return {"input_path": input_path, "task_id": task_id}
+                return None, None
         if any([i in input_path for i in INVALID_CHARACTERS]):
             self.failSignal.emit(3)  # path has invalid character
-            return {"input_path": input_path, "task_id": task_id}
-        # input_path, task_id = self.addConfigItem(input_path, task_id)
-        if task_id is None:
-            task_id = self.generateTaskId(input_path)
+            return None, None
+
+        if task_id is not None and not self.checkTaskId(task_id):
+            return None, None
         taskListItem = MyListWidgetItem()
-        taskListItem.setTask(input_path, task_id)
-        taskListItem.dupSignal.connect(self.itemActionResponse)
-        taskListItem.remSignal.connect(self.itemActionResponse)
+        _InputItemModel = InputItemModel(input_path, task_id)
+        _InputItemModel.initiate_input_prop()
+        potential_config_path = None
+        if task_id is not None:
+            # if exists previous config, use it to initiate
+            potential_config_path = _InputItemModel.generate_config_path()
+        _InputItemModel.initiate_config(potential_config_path)
+
+        taskListItem.setTask(_InputItemModel)
+        taskListItem.dupSignal.connect(self.duplicateItem)
+        taskListItem.remSignal.connect(self.removeItem)
+        taskListItem.renSignal.connect(self.renameItem)
         # Create QListWidgetItem
         taskListWidgetItem = QListWidgetItem(self)
         # Set size hint
@@ -311,42 +419,27 @@ class MyListWidget(QListWidget):
         # Add QListWidgetItem into QListWidget
         self.addItem(taskListWidgetItem)
         self.setItemWidget(taskListWidgetItem, taskListItem)
-        item_data = {"input_path": input_path, "task_id": task_id}
-        self.addSignal.emit(self.count())
-        return item_data
+        if not silent:
+            self.addSignal.emit(self.count())
+        return _InputItemModel, taskListWidgetItem
 
-    def itemActionResponse(self, e: dict):
-        """
-        Respond to item's action(click on buttons)
-        :param e:
-        :return:
-        """
-        """
-        self.dupSignal.emit({"task_id": self.task_id, "input_path": self.input_path, "action": 1})
-        """
-        task_id = e.get('task_id')
-        target_item = None
-        # find target task
-        for item in self.getItems():
-            task_data = self.itemWidget(item).get_task_info()  # if modify, get task info from new item
-            if task_data['task_id'] == task_id:
-                target_item = item
-                break
-        if target_item is None:
-            return
-        if e.get("action") == 1:  # dupSignal
-            input_path = self.itemWidget(target_item).input_path
-            new_item_data = self.addFileItem(input_path)
-            config_maintainer = SVFI_Config_Manager(new_item_data, dname)  # use new id
-            config_maintainer.DuplicateConfig(self.getWidgetData(target_item))
-            pass
-        elif e.get("action") == 0:  # removeSignal
-            self.takeItem(self.row(target_item))
-        elif e.get("action") == 3:  # modifySignal
-            item_data = self.getWidgetData(target_item)
-            config_maintainer = SVFI_Config_Manager(item_data, dname)
-            previous_item_data = {"input_path": item_data['input_path'], "task_id": e.get("previous_task_id")}
-            config_maintainer.DuplicateConfig(previous_item_data)
+    def duplicateItem(self, _InputItemModel: InputItemModel):
+        input_path = _InputItemModel.get_input_path()
+        new_item_model, new_item_widget = self.addFileItem(input_path)
+        new_item_model.mock(_InputItemModel)
+        self.setCurrentItem(new_item_widget)
+        return
+
+    def removeItem(self, _InputItemModel: InputItemModel):
+        task_id = _InputItemModel.get_task_id()
+        for ListItem in self.getListItems():
+            possible_item_model = self.itemWidget(ListItem).get_task_model()
+            if possible_item_model.get_task_id() == task_id:
+                self.takeItem(self.row(ListItem))
+        return
+
+    def renameItem(self, _InputItemModel: InputItemModel):
+        return
 
     def keyPressEvent(self, e):
         current_item = self.currentItem()
@@ -546,81 +639,3 @@ class StateTooltip(QWidget):
             painter.drawPixmap(
                 14, 13, self.doneImage.width(), self.doneImage.height(), self.doneImage
             )
-
-
-class SVFI_Config_Manager:
-    """
-    SVFI 配置文件管理类
-    """
-
-    def __init__(self, item_data: dict, app_dir: str, _logger=None):
-
-        self.input_path = item_data['input_path']
-        self.task_id = item_data['task_id']
-        self.dirname = os.path.join(app_dir, "Configs")
-        if not os.path.exists(self.dirname):
-            os.mkdir(self.dirname)
-        self.SVFI_config_path = os.path.join(app_dir, "SVFI.ini")
-        self.config_path = self.__generate_config_path()
-        if _logger is None:
-            self.logger = Tools.get_logger("ConfigManager", "")
-        else:
-            self.logger = _logger
-        pass
-
-    def FetchConfig(self):
-        """
-        根据输入文件名获得配置文件路径
-        :return:
-        """
-        if os.path.exists(self.config_path):
-            return self.config_path
-        else:
-            return None
-
-    def DuplicateConfig(self, item_data=None):
-        """
-        复制配置文件
-        :return:
-        """
-        if not os.path.exists(self.SVFI_config_path):
-            self.logger.warning("Not find Basic Config")
-            return False
-        if os.path.exists(self.config_path):
-            os.remove(self.config_path)
-        if item_data is not None:
-            """Duplicate from previous item_data"""
-            previous_config_manager = SVFI_Config_Manager(item_data, dname)
-            previous_config_path = previous_config_manager.FetchConfig()
-            if previous_config_path is not None:
-                """Previous Item Data is not None"""
-                shutil.copy(previous_config_path, self.config_path)
-        else:
-            shutil.copy(self.SVFI_config_path, self.config_path)
-        return True
-
-    def RemoveConfig(self):
-        """
-        移除配置文件
-        :return:
-        """
-        if os.path.exists(self.config_path):
-            os.remove(self.config_path)
-        else:
-            self.logger.warning("Not find Config to remove, guess executed directly from main file")
-        pass
-
-    def UpdateRootConfig(self):
-        """
-        维护配置文件,在LoadSettings后维护
-        :return:
-        """
-        if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, self.SVFI_config_path)
-            return True
-        else:
-            return False
-        pass
-
-    def __generate_config_path(self):
-        return os.path.join(self.dirname, f"SVFI_Config_{self.task_id}.ini")

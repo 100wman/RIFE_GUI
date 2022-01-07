@@ -450,16 +450,6 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QRadioButton" name="OutputFPSReminder">
-                      <property name="text">
-                       <string>输出帧率</string>
-                      </property>
-                      <property name="checked">
-                       <bool>false</bool>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
                      <widget class="MyLineWidget" name="OutputFPS">
                       <property name="enabled">
                        <bool>true</bool>
@@ -804,7 +794,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>3</number>
+                      <number>2</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -1835,208 +1825,37 @@
                         <x>0</x>
                         <y>0</y>
                         <width>378</width>
-                        <height>696</height>
+                        <height>718</height>
                        </rect>
                       </property>
                       <attribute name="label">
                        <string>输出质量设置</string>
                       </attribute>
                       <layout class="QGridLayout" name="gridLayout_29">
-                       <item row="3" column="0">
-                        <widget class="QGroupBox" name="RenderSettingsGroup">
-                         <property name="title">
-                          <string/>
+                       <item row="5" column="0">
+                        <spacer name="verticalSpacer_4">
+                         <property name="orientation">
+                          <enum>Qt::Vertical</enum>
                          </property>
-                         <layout class="QGridLayout" name="gridLayout_27">
-                          <item row="0" column="0">
-                           <layout class="QGridLayout" name="gridLayout_12">
-                            <item row="14" column="0">
-                             <widget class="QLabel" name="CustomRenderParamsLabel">
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;专业选项，必须输入和编码器对应的参数（FFmpeg、EnCc系列或SVT）&lt;/p&gt;&lt;p&gt;此参数将替换用于压制的部分参数，&lt;/p&gt;&lt;p&gt;参数之间用“||”间隔&lt;/p&gt;&lt;p&gt;e.g.&lt;/p&gt;&lt;p&gt;&amp;quot;-x265-params||loseless=1 ||-preset:v||placebo&amp;quot;&lt;/p&gt;&lt;p&gt;&amp;quot;-an&amp;quot;&lt;/p&gt;&lt;p&gt;&amp;quot;-||-an&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>自定义压制参数： (?)</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="5" column="0">
-                             <layout class="QHBoxLayout" name="horizontalLayout_28">
-                              <item>
-                               <widget class="MySpinBox" name="BufferSizeSelector">
-                                <property name="enabled">
-                                 <bool>false</bool>
-                                </property>
-                                <property name="sizePolicy">
-                                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                                  <horstretch>0</horstretch>
-                                  <verstretch>0</verstretch>
-                                 </sizepolicy>
-                                </property>
-                                <property name="toolTip">
-                                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;防止爆内存，一般不用勾选。&lt;span style=&quot; font-weight:600;&quot;&gt;专业人士自用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                                </property>
-                                <property name="minimum">
-                                 <number>1</number>
-                                </property>
-                                <property name="maximum">
-                                 <number>500</number>
-                                </property>
-                                <property name="singleStep">
-                                 <number>1</number>
-                                </property>
-                                <property name="value">
-                                 <number>1</number>
-                                </property>
-                               </widget>
-                              </item>
-                              <item>
-                               <widget class="QLabel" name="label_28">
-                                <property name="sizePolicy">
-                                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                                  <horstretch>0</horstretch>
-                                  <verstretch>0</verstretch>
-                                 </sizepolicy>
-                                </property>
-                                <property name="text">
-                                 <string>G</string>
-                                </property>
-                                <property name="alignment">
-                                 <set>Qt::AlignCenter</set>
-                                </property>
-                               </widget>
-                              </item>
-                             </layout>
-                            </item>
-                            <item row="3" column="0">
-                             <layout class="QHBoxLayout" name="horizontalLayout_26">
-                              <item>
-                               <widget class="MySpinBox" name="RenderGapSelector">
-                                <property name="sizePolicy">
-                                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                                  <horstretch>0</horstretch>
-                                  <verstretch>0</verstretch>
-                                 </sizepolicy>
-                                </property>
-                                <property name="minimum">
-                                 <number>100</number>
-                                </property>
-                                <property name="maximum">
-                                 <number>999999999</number>
-                                </property>
-                                <property name="singleStep">
-                                 <number>100</number>
-                                </property>
-                                <property name="value">
-                                 <number>1000</number>
-                                </property>
-                               </widget>
-                              </item>
-                              <item>
-                               <widget class="QLabel" name="label_27">
-                                <property name="sizePolicy">
-                                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                                  <horstretch>0</horstretch>
-                                  <verstretch>0</verstretch>
-                                 </sizepolicy>
-                                </property>
-                                <property name="text">
-                                 <string>帧</string>
-                                </property>
-                                <property name="alignment">
-                                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                                </property>
-                               </widget>
-                              </item>
-                             </layout>
-                            </item>
-                            <item row="4" column="0">
-                             <widget class="QCheckBox" name="MBufferChecker">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用指定的内存量进行补帧任务，避免内存不足，一般不需勾选。&lt;span style=&quot; font-weight:600;&quot;&gt;专业人士自用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>手动指定缓冲区内存大小： (?)</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="10" column="0">
-                             <widget class="QCheckBox" name="slowmotion">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用指定帧率输出。效果等同于PR、AE的&lt;span style=&quot; font-weight:600;&quot;&gt;时间重映射&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输出将与右项帧率相同，输出时长与原视频时长的&lt;span style=&quot; font-weight:600;&quot;&gt;比&lt;/span&gt;等于左边的&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率/该项帧率&lt;/span&gt;&lt;/p&gt;&lt;p&gt;e.g.&lt;/p&gt;&lt;p&gt;输出帧率=60fps&lt;/p&gt;&lt;p&gt;时间重映射帧率=30fps&lt;/p&gt;&lt;p&gt;最终输出将为30fps，时长为原输入的两倍&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="whatsThis">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;补帧帧率 = 输入帧率 * 补帧倍率&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="layoutDirection">
-                               <enum>Qt::LeftToRight</enum>
-                              </property>
-                              <property name="text">
-                               <string>时间重映射： (?)</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="2" column="0">
-                             <widget class="QLabel" name="label_26">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;每一chunk的帧数大小&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;使用QSVENCC编码器时此值过高可能导致渲染卡死&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>单一输出区块大小： (!)</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="11" column="0">
-                             <widget class="MyLineWidget" name="SlowmotionFPS">
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="layoutDirection">
-                               <enum>Qt::LeftToRight</enum>
-                              </property>
-                              <property name="placeholderText">
-                               <string>输入被映射至的帧率</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="15" column="0">
-                             <widget class="MyLineWidget" name="FFmpegCustomer">
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
-                              <property name="placeholderText">
-                               <string>如输入“-crf 9” 会替换渲染质量的值</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="13" column="0">
-                             <widget class="Line" name="line">
-                              <property name="orientation">
-                               <enum>Qt::Horizontal</enum>
-                              </property>
-                             </widget>
-                            </item>
-                           </layout>
-                          </item>
-                         </layout>
-                        </widget>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>20</width>
+                           <height>40</height>
+                          </size>
+                         </property>
+                        </spacer>
                        </item>
                        <item row="0" column="0">
                         <widget class="QLabel" name="EncodeSettingsLabel">
                          <property name="text">
                           <string>编码质量</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="3" column="0">
+                        <widget class="QLabel" name="RenderSettingsLabel">
+                         <property name="text">
+                          <string>渲染设置</string>
                          </property>
                         </widget>
                        </item>
@@ -2463,25 +2282,206 @@
                          </layout>
                         </widget>
                        </item>
-                       <item row="2" column="0">
-                        <widget class="QLabel" name="RenderSettingsLabel">
-                         <property name="text">
-                          <string>渲染设置</string>
+                       <item row="4" column="0">
+                        <widget class="QGroupBox" name="RenderSettingsGroup">
+                         <property name="title">
+                          <string/>
                          </property>
+                         <layout class="QGridLayout" name="gridLayout_27">
+                          <item row="0" column="0">
+                           <layout class="QGridLayout" name="gridLayout_12">
+                            <item row="14" column="0">
+                             <widget class="QLabel" name="CustomRenderParamsLabel">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;专业选项，必须输入和编码器对应的参数（FFmpeg、EnCc系列或SVT）&lt;/p&gt;&lt;p&gt;此参数将替换用于压制的部分参数，&lt;/p&gt;&lt;p&gt;参数之间用“||”间隔&lt;/p&gt;&lt;p&gt;e.g.&lt;/p&gt;&lt;p&gt;&amp;quot;-x265-params||loseless=1 ||-preset:v||placebo&amp;quot;&lt;/p&gt;&lt;p&gt;&amp;quot;-an&amp;quot;&lt;/p&gt;&lt;p&gt;&amp;quot;-||-an&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>自定义压制参数： (?)</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="5" column="0">
+                             <layout class="QHBoxLayout" name="horizontalLayout_28">
+                              <item>
+                               <widget class="MySpinBox" name="BufferSizeSelector">
+                                <property name="enabled">
+                                 <bool>false</bool>
+                                </property>
+                                <property name="sizePolicy">
+                                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                  <horstretch>0</horstretch>
+                                  <verstretch>0</verstretch>
+                                 </sizepolicy>
+                                </property>
+                                <property name="toolTip">
+                                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;防止爆内存，一般不用勾选。&lt;span style=&quot; font-weight:600;&quot;&gt;专业人士自用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                </property>
+                                <property name="minimum">
+                                 <number>1</number>
+                                </property>
+                                <property name="maximum">
+                                 <number>500</number>
+                                </property>
+                                <property name="singleStep">
+                                 <number>1</number>
+                                </property>
+                                <property name="value">
+                                 <number>1</number>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QLabel" name="label_28">
+                                <property name="sizePolicy">
+                                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                                  <horstretch>0</horstretch>
+                                  <verstretch>0</verstretch>
+                                 </sizepolicy>
+                                </property>
+                                <property name="text">
+                                 <string>G</string>
+                                </property>
+                                <property name="alignment">
+                                 <set>Qt::AlignCenter</set>
+                                </property>
+                               </widget>
+                              </item>
+                             </layout>
+                            </item>
+                            <item row="3" column="0">
+                             <layout class="QHBoxLayout" name="horizontalLayout_26">
+                              <item>
+                               <widget class="MySpinBox" name="RenderGapSelector">
+                                <property name="sizePolicy">
+                                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                  <horstretch>0</horstretch>
+                                  <verstretch>0</verstretch>
+                                 </sizepolicy>
+                                </property>
+                                <property name="minimum">
+                                 <number>100</number>
+                                </property>
+                                <property name="maximum">
+                                 <number>999999999</number>
+                                </property>
+                                <property name="singleStep">
+                                 <number>100</number>
+                                </property>
+                                <property name="value">
+                                 <number>1000</number>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QLabel" name="label_27">
+                                <property name="sizePolicy">
+                                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                                  <horstretch>0</horstretch>
+                                  <verstretch>0</verstretch>
+                                 </sizepolicy>
+                                </property>
+                                <property name="text">
+                                 <string>帧</string>
+                                </property>
+                                <property name="alignment">
+                                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                                </property>
+                               </widget>
+                              </item>
+                             </layout>
+                            </item>
+                            <item row="4" column="0">
+                             <widget class="QCheckBox" name="MBufferChecker">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用指定的内存量进行补帧任务，避免内存不足，一般不需勾选。&lt;span style=&quot; font-weight:600;&quot;&gt;专业人士自用&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>手动指定缓冲区内存大小： (?)</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="10" column="0">
+                             <widget class="QCheckBox" name="slowmotion">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用指定帧率输出。效果等同于PR、AE的&lt;span style=&quot; font-weight:600;&quot;&gt;时间重映射&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输出将与右项帧率相同，输出时长与原视频时长的&lt;span style=&quot; font-weight:600;&quot;&gt;比&lt;/span&gt;等于左边的&lt;span style=&quot; font-weight:600;&quot;&gt;输出帧率/该项帧率&lt;/span&gt;&lt;/p&gt;&lt;p&gt;e.g.&lt;/p&gt;&lt;p&gt;输出帧率=60fps&lt;/p&gt;&lt;p&gt;时间重映射帧率=30fps&lt;/p&gt;&lt;p&gt;最终输出将为30fps，时长为原输入的两倍&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="whatsThis">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;补帧帧率 = 输入帧率 * 补帧倍率&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="layoutDirection">
+                               <enum>Qt::LeftToRight</enum>
+                              </property>
+                              <property name="text">
+                               <string>时间重映射： (?)</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="2" column="0">
+                             <widget class="QLabel" name="label_26">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;每一chunk的帧数大小&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;注意：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;使用QSVENCC编码器时此值过高可能导致渲染卡死&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>单一输出区块大小： (!)</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="11" column="0">
+                             <widget class="MyLineWidget" name="SlowmotionFPS">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="layoutDirection">
+                               <enum>Qt::LeftToRight</enum>
+                              </property>
+                              <property name="placeholderText">
+                               <string>输入被映射至的帧率</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="15" column="0">
+                             <widget class="MyLineWidget" name="FFmpegCustomer">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="placeholderText">
+                               <string>如输入“-crf 9” 会替换渲染质量的值</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="13" column="0">
+                             <widget class="Line" name="line">
+                              <property name="orientation">
+                               <enum>Qt::Horizontal</enum>
+                              </property>
+                             </widget>
+                            </item>
+                           </layout>
+                          </item>
+                         </layout>
                         </widget>
                        </item>
-                       <item row="4" column="0">
-                        <spacer name="verticalSpacer_4">
-                         <property name="orientation">
-                          <enum>Qt::Vertical</enum>
+                       <item row="2" column="0">
+                        <widget class="QRadioButton" name="OutputFPSReminder">
+                         <property name="text">
+                          <string>输出帧率</string>
                          </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>20</width>
-                           <height>40</height>
-                          </size>
+                         <property name="checked">
+                          <bool>false</bool>
                          </property>
-                        </spacer>
+                        </widget>
                        </item>
                       </layout>
                      </widget>
