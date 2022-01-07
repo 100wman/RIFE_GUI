@@ -545,7 +545,6 @@ class ReadFlow(IOFlow):
 
     def __run_rest(self, run_time: float):
         rest_exp = 3600
-        # TODO Check here
         if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
                 time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
             self.logger.info(
@@ -676,6 +675,7 @@ class ReadFlow(IOFlow):
             check_frame = Tools.gen_next(videogen_check)
             if check_frame is None:
                 break
+            check_frame = Tools.get_u1_from_u2_img(check_frame)
             if len(check_frame_list):  # len>1
                 diff_result = Tools.get_norm_img_diff(check_frame_data[check_frame_list[-1]], check_frame)
                 if diff_result < 0.001:
@@ -2322,7 +2322,7 @@ class InterpWorkFlow:
                     f"Duration: {datetime.datetime.now() - self.run_all_time}")
         logger.info("Please Note That Commercial Use of SVFI's Output is Strictly PROHIBITED, "
                     "Check EULA for more details")
-        pass
+        return 0
 
     def task_failed(self):
         self.read_flow.kill()
@@ -2331,6 +2331,7 @@ class InterpWorkFlow:
         self.update_progress_flow.kill()
         logger.error(f"\n\n\nProgram Failed at {datetime.datetime.now()}: "
                      f"Duration: {datetime.datetime.now() - self.run_all_time}")
+        return 1
         # if self.ARGS.get_main_error():
         #     raise self.ARGS.get_main_error()
 
@@ -2356,12 +2357,11 @@ class InterpWorkFlow:
         """Go through the process"""
         if self.ARGS.concat_only:
             self.render_flow.concat_all()
-            self.task_finish()
-            return
+            return self.task_finish()
+
         """Concat Already / Mission Conflict Check & Dolby Vision Sort"""
         if self.render_flow.check_concat_result():
-            self.task_finish()
-            return
+            return self.task_finish()
 
         """Start Process"""
         try:
@@ -2460,13 +2460,13 @@ class InterpWorkFlow:
             self.ARGS.save_main_error(e)
         if self.ARGS.get_main_error() is not None:
             """Shit happened after receiving None as end signal"""
-            self.task_failed()
-            return
+            return self.task_failed()
+
         while self.render_flow.is_alive() or self.sr_flow.is_alive() or self.read_flow.is_alive():
             """等待渲染线程结束"""
             time.sleep(1)
         self.update_progress_flow.kill()
-        self.task_finish()
+        return self.task_finish()
 
     def __update_rife_progress(self, now_frame, task_acquire_time, process_time, ):
         update_dict = {'rife_now_frame': now_frame,

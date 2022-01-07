@@ -321,6 +321,7 @@ class UiRun(QThread):
                                                  universal_newlines=True, startupinfo=startupinfo)
 
                     flush_lines = ""
+                    task_fail = False
                     while self.current_proc.poll() is None:
                         if self.kill:
                             break
@@ -366,6 +367,7 @@ class UiRun(QThread):
                                 flush_lines = ""
                                 if any([i.lower() in flush_lines.lower() for i in must_kill_sign]):
                                     self.kill_proc_exec()
+                                task_fail = True
 
                             elif len(flush_lines) and time.time() - interval_time > 0.1:
                                 interval_time = time.time()
@@ -391,10 +393,12 @@ class UiRun(QThread):
                 self.update_status(True, f"\nTask List is Empty!\n{_msg}",
                                    returncode=404)
                 return
-
-            self.update_status(True, returncode=self.current_proc.returncode)
+            returncode = self.current_proc.returncode
+            if task_fail:
+                returncode = 1 if not returncode else returncode
+            self.update_status(True, returncode=returncode)
             logger.info("Tasks Finished")
-            if self.current_proc.returncode == 0:
+            if returncode == 0:
                 """Finish Normally"""
                 if appData.value("after_mission", type=int) == 1:
                     logger.info("Task Finished Normally, User Request to Shutdown")
@@ -2124,7 +2128,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         elif "3840p" in current_template:
             width, height = 7680, 4320
         elif "%" in current_template:
-            # TODO Optimize here by reading h,w from task item instead of here, refactor step
             current_item = self.InputFileName.currentItem()
             if current_item is None:
                 # self.function_send_msg('Select a item first!', _translate('', '未选中输入项'))

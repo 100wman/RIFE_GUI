@@ -78,18 +78,18 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.0"
+    gui_version = "3.10.1"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.7"
+    ols_version = "7.4.8"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - UI(Frontend) MVCed, Optimize Item Selection, enhance speed
-    - Fix failure of configs update after changing task_id
-    - Fix scene detection too sensitive by increase dead threshold to 80
+    - Fix 16bit support for 1-N Dedup Mode and scene blend function
+    - Fix Failure of Failure Request by OLS received by Backend
+    - Remove Plural limit for crop parameters 
     """
 
     path_len_limit = 230
@@ -149,8 +149,8 @@ class ArgumentManager:
         self.transfer_height = Tools.get_plural(args.get("transfer_height", 0))
         self.transfer_param = [self.transfer_width, self.transfer_height]  # crop parameter, 裁切参数
 
-        self.crop_width = Tools.get_plural(args.get("crop_width", 0))
-        self.crop_height = Tools.get_plural(args.get("crop_height", 0))
+        self.crop_width = args.get("crop_width", 0)
+        self.crop_height = args.get("crop_height", 0)
         self.crop_param = [self.crop_width, self.crop_height]  # crop parameter, 裁切参数
 
         self.use_sr = args.get("use_sr", False)
@@ -461,6 +461,13 @@ class Tools:
         step = 1 / n
         beta = 0
         output = list()
+        def normalize_img(img):
+            if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
+                img = img.view(np.uint16)
+            return img
+
+        img0 = normalize_img(img0)
+        img1 = normalize_img(img1)
         for _ in range(n - 1):
             beta += step
             alpha = 1 - beta

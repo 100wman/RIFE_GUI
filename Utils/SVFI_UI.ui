@@ -450,6 +450,16 @@
                      </widget>
                     </item>
                     <item>
+                     <widget class="QRadioButton" name="OutputFPSReminder">
+                      <property name="text">
+                       <string>输出帧率</string>
+                      </property>
+                      <property name="checked">
+                       <bool>false</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
                      <widget class="MyLineWidget" name="OutputFPS">
                       <property name="enabled">
                        <bool>true</bool>
@@ -794,7 +804,7 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>2</number>
+                      <number>3</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
@@ -1351,7 +1361,7 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-60</y>
                         <width>365</width>
                         <height>468</height>
                        </rect>
@@ -1823,9 +1833,9 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
+                        <y>-305</y>
                         <width>378</width>
-                        <height>718</height>
+                        <height>696</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2471,16 +2481,6 @@
                            </layout>
                           </item>
                          </layout>
-                        </widget>
-                       </item>
-                       <item row="2" column="0">
-                        <widget class="QRadioButton" name="OutputFPSReminder">
-                         <property name="text">
-                          <string>输出帧率</string>
-                         </property>
-                         <property name="checked">
-                          <bool>false</bool>
-                         </property>
                         </widget>
                        </item>
                       </layout>
