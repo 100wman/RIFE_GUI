@@ -26,7 +26,7 @@ import psutil
 from skimage.metrics._structural_similarity import structural_similarity as compare_ssim
 from sklearn import linear_model
 
-from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE, RT_RATIO, SR_TILESIZE_STATE
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE, RT_RATIO, SR_TILESIZE_STATE, LUTS_TYPE
 from skvideo.utils import check_output
 
 
@@ -78,17 +78,19 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.2"
+    gui_version = "3.10.3"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.8"
+    ols_version = "7.4.9"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Truly Fix Scene Detection too sensitive by increasing dead threshold
-    - Optimize Super Resolution Settings Structure by adding more selective options
+    - Add BT709 - BT2020 HDR10 Function
+    - Optimize High Precision Workflow Efficiency by normalizing input to 16bit at skvideo module
+    - Optimize Cuda SR Module VRAM Occupation
+    - Fix Apply Presets Not covering all options
     """
 
     path_len_limit = 230
@@ -176,6 +178,7 @@ class ArgumentManager:
         self.use_render_encoder_default_preset = args.get("use_render_encoder_default_preset", False)
         self.is_encode_audio = args.get("is_encode_audio", False)
         self.is_quick_extract = args.get("is_quick_extract", True)
+        self.hdr_cube_mode = LUTS_TYPE(args.get("hdr_cube_index", 0))
         self.is_float32_workflow = args.get("is_float32_workflow", True)
         self.hdr_mode = args.get("hdr_mode", 0)
         if self.hdr_mode == 0:  # AUTO
@@ -193,6 +196,7 @@ class ArgumentManager:
         self.is_render_slow_motion = args.get("is_render_slow_motion", False)
         self.render_slow_motion_fps = args.get("render_slow_motion_fps", 0)
         self.use_deinterlace = args.get("use_deinterlace", False)
+        self.is_keep_head = args.get("is_keep_head", False)
 
         self.use_ncnn = args.get("use_ncnn", False)
         self.ncnn_thread = args.get("ncnn_thread", 4)
@@ -462,13 +466,7 @@ class Tools:
         step = 1 / n
         beta = 0
         output = list()
-        def normalize_img(img):
-            if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
-                img = img.view(np.uint16)
-            return img
 
-        img0 = normalize_img(img0)
-        img1 = normalize_img(img1)
         for _ in range(n - 1):
             beta += step
             alpha = 1 - beta
@@ -1072,7 +1070,9 @@ class DoviProcessor:
 
 
 class VideoInfoProcessor:
-    def __init__(self, input_file: str, logger, project_dir: str, interp_exp=0, **kwargs):
+    StandardBt2020ColorData = {'color_range': 'tv', 'color_transfer': 'smpte2084',
+                                'color_space': 'bt2020nc', 'color_primaries': 'bt2020'}
+    def __init__(self, input_file: str, logger, project_dir: str, interp_exp=0, hdr_cube_mode=LUTS_TYPE.NONE, **kwargs):
         """
 
         :param input_file:
@@ -1101,6 +1101,7 @@ class VideoInfoProcessor:
         self.duration = 0
         self.video_info = {'color_range': '', 'color_transfer': '',
                            'color_space': '', 'color_primaries': ''}
+        self.hdr_cube_mode = hdr_cube_mode
         self.audio_info = dict()
         self.hdr10plus_metadata_path = None
         self.update_info()
@@ -1139,6 +1140,15 @@ class VideoInfoProcessor:
         elif "arib-std-b67" in color_trc:
             self.hdr_mode = HDR_STATE.HLG  # HLG
             self.logger.warning("HLG Content Detected")
+
+        if self.hdr_cube_mode != LUTS_TYPE.NONE:
+            if self.hdr_mode == HDR_STATE.NONE:  # BT709
+                self.logger.warning(f"One Click HDR Applying: {self.hdr_cube_mode.name}")
+                self.hdr_mode = HDR_STATE.HDR10
+                self.video_info.update(self.StandardBt2020ColorData)
+            else:
+                self.logger.warning(f"HDR Content Detected, Neglect Applying One Click HDR")
+
         pass
 
     def update_frames_info_ffprobe(self):
@@ -1326,12 +1336,12 @@ class TransitionDetection_ST:
         if not self.scdet_output:
             return
         try:
-            comp_stack = np.hstack((self.img1, self.img2))
+            comp_stack = np.hstack((self.img1, self.img2)).astype(np.uint8)
             comp_stack = cv2.resize(comp_stack, (960, int(960 * comp_stack.shape[0] / comp_stack.shape[1])),
                                     interpolation=cv2.INTER_AREA)
             cv2.putText(comp_stack,
                         title,
-                        (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (int(RGB_TYPE.SIZE), 0, 0))
+                        (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0))
             if "pure" in title.lower():
                 path = f"{self.scdet_cnt:08d}_pure.png"
             elif "band" in title.lower():

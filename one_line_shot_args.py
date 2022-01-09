@@ -16,7 +16,7 @@ import psutil
 import tqdm
 
 from Utils.LicenseModule import EULAWriter
-from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE, RT_RATIO
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE, RT_RATIO, LUTS_TYPE
 from Utils.utils import ArgumentManager, DefaultConfigParser, Tools, VideoInfoProcessor, \
     ImageRead, ImageWrite, TransitionDetection_ST, \
     VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, \
@@ -98,7 +98,8 @@ class TaskArgumentManager(ArgumentManager):
         self.__set_ffmpeg_path()
         self.video_info_instance = VideoInfoProcessor(input_file=self.input, logger=logger,
                                                       project_dir=self.project_dir,
-                                                      interp_exp=self.rife_exp)
+                                                      interp_exp=self.rife_exp,
+                                                      hdr_cube_mode=self.hdr_cube_mode)
         self.__update_hdr_mode()
         self.__update_io_info()
         self.__update_frames_cnt()
@@ -165,7 +166,7 @@ class TaskArgumentManager(ArgumentManager):
             mem = psutil.virtual_memory()
             free_mem = round(mem.free / 1024 / 1024)
         self.frames_queue_len = round(free_mem / (sys.getsizeof(
-            np.random.rand(3, self.frame_size[0], self.frame_size[1])) / 1024 / 1024))
+            np.random.rand(3, self.frame_size[0], self.frame_size[1])) / 1024 / 1024)) // 3
         if not self.use_manual_buffer:
             self.frames_queue_len = int(max(10.0, self.frames_queue_len))
         self.dup_skip_limit = int(0.5 * self.input_fps) + 1  # 当前跳过的帧计数超过这个值，将结束当前判断循环
@@ -504,6 +505,7 @@ class ReadFlow(IOFlow):
         # vf_args = f"lut3d=PQ400.cube"
         vf_args = f"copy"
 
+        """Checking Start Time"""
         if start_frame not in [-1, 0]:
             # not start from the beginning
             if self.ARGS.risk_resume_mode:
@@ -512,13 +514,17 @@ class ReadFlow(IOFlow):
             else:
                 vf_args += f",trim=start={start_frame / self.ARGS.target_fps:.3f}"
 
-        if self.ARGS.use_deinterlace:
-            vf_args += f",yadif=parity=auto"
-
         if frame_check:
-            """用以一拍二一拍N除重模式的预处理"""
+            """用以文件检查或一拍N除重模式的预处理"""
             output_dict.update({"-s": f"300x300"})
         else:
+            """Normal Input Process"""
+
+            """Deinterlace"""
+            if self.ARGS.use_deinterlace:
+                vf_args += f",yadif=parity=auto"
+
+            """Checking Input Resolution"""
             if not self.ARGS.use_sr:
                 """直接用最终输出分辨率"""
                 if self.ARGS.frame_size != self.ARGS.resize_param and all(self.ARGS.resize_param):
@@ -529,15 +535,25 @@ class ReadFlow(IOFlow):
                     w, h = RT_RATIO.get_modified_resolution(self.ARGS.frame_size, self.ARGS.transfer_ratio)
                     output_dict.update({"-s": f"{w}x{h}"})
 
-        scale_args = ""
-        if '-colorspace' in output_dict:
-            scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
-        if not frame_check and not self.ARGS.is_quick_extract:
-            scale_args = f",format=yuv444p10le{scale_args},format=rgb48be"
-            if RGB_TYPE.DTYPE == np.uint8 and self.ARGS.hdr_mode == HDR_STATE.NONE:  # No format filter for hdr in 8bit
-                scale_args += ",format=rgb24"
-            output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
-        vf_args += f"{scale_args},minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
+            """Applying One Click HDR"""
+            if self.ARGS.hdr_cube_mode != LUTS_TYPE.NONE:
+                lut_path = LUTS_TYPE.get_lut_path(self.ARGS.hdr_cube_mode)
+                if not os.path.exists(lut_path):
+                    self.logger.warning("Could not find target cube, skip applying one click HDR")
+                else:
+                    vf_args += f",lut3d={lut_path}"
+
+            """Checking Color Management"""
+            scale_args = ""
+            if '-colorspace' in output_dict:
+                scale_args = f",scale=in_color_matrix={output_dict['-colorspace']}:out_color_matrix={output_dict['-colorspace']}"
+            if not frame_check and not self.ARGS.is_quick_extract:
+                scale_args = f",format=yuv444p10le{scale_args},format=rgb48be"
+                if RGB_TYPE.DTYPE == np.uint8 and self.ARGS.hdr_mode == HDR_STATE.NONE:  # No format filter for hdr in 8bit
+                    scale_args += ",format=rgb24"
+                output_dict.update({"-sws_flags": "+bicubic+full_chroma_int+accurate_rnd", })
+            vf_args += scale_args
+        vf_args += f",minterpolate=fps={self.ARGS.target_fps:.3f}:mi_mode=dup"
 
         """Update video filters"""
         output_dict["-vf"] = vf_args
@@ -1615,6 +1631,8 @@ class RenderFlow(IOFlow):
             output_filepath += f".DI"
         if self.ARGS.use_fast_denoise:
             output_filepath += f".DN"
+        if self.ARGS.hdr_cube_mode != LUTS_TYPE.NONE:
+            output_filepath += f".OCHDR"
 
         if not self.ARGS.render_only:
             """RIFE"""

@@ -33,8 +33,10 @@ class UpCunet(nn.Module):
 
     # @profile
     def forward(self, x):
-        # x = np.pad(x, [(18, 18 ), (18, 18), (0, 0)], mode='reflect')#训练不支持奇数，反正切好了偶数的
-        x = F.pad(x, (18, 18, 18, 18), 'reflect')
+        try:
+            x = F.pad(x, (18, 18, 18, 18), 'reflect')
+        except:
+            x = F.pad(x, (18, 18, 18, 18), 'constant')
         x = self.cunet_unet1.forward(x)
         x0 = self.cunet_unet2.forward(x)
         x1 = self.spatial_zero_padding(x)
@@ -200,7 +202,6 @@ class SvfiWaifuCuda:
     def svfi_process(self, img):
         if self.scale > 1:
             cur_scale = 1
-            # TODO Remove Torch Transfer Here (Transfer Once, for the rest except the first round, keep padding insteam of torch.from_numpy
             while cur_scale < self.scale:
                 img = self.process(img)
                 cur_scale *= self.scale_exp

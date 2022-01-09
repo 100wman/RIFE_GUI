@@ -23,14 +23,13 @@ class CudaSuperResolutionBase:
         self.model_path = model_path
 
     def pre_process(self, img):
-        img = torch.from_numpy(np.transpose(img, (2, 0, 1))).float()
-        self.img = img.unsqueeze(0).to(self.device)
+        self.img = np.expand_dims(np.transpose(img, (2, 0, 1)), 0)
         if self.half:
-            self.img = self.img.half()
+            self.img = self.img.astype(np.float16)
 
         # pre_pad
         if self.pre_pad != 0:
-            self.img = F.pad(self.img, (0, self.pre_pad, 0, self.pre_pad), 'reflect')
+            self.img = np.pad(self.img, ((0,0), (0,0), (0,self.pre_pad), (0,self.pre_pad)), 'reflect')
         # mod pad
         if self.scale == 2:
             self.mod_scale = 2
@@ -38,15 +37,21 @@ class CudaSuperResolutionBase:
             self.mod_scale = 4
         if self.mod_scale is not None:
             self.mod_pad_h, self.mod_pad_w = 0, 0
-            _, _, h, w = self.img.size()
+            _, _, h, w = self.img.shape
             if (h % self.mod_scale != 0):
                 self.mod_pad_h = (self.mod_scale - h % self.mod_scale)
             if (w % self.mod_scale != 0):
                 self.mod_pad_w = (self.mod_scale - w % self.mod_scale)
-            self.img = F.pad(self.img, (0, self.mod_pad_w, 0, self.mod_pad_h), 'reflect')
+            self.img = np.pad(self.img, ((0, 0), (0, 0), (0, self.mod_pad_h), (0, self.mod_pad_w)), 'reflect')
 
+    @torch.no_grad()
     def process(self):
+        self.img = torch.from_numpy(self.img).to(self.device)
+        if self.half:
+            self.img = self.img.half()
         self.output = self.model(self.img)
+        self.output = self.output.data.float().clamp_(0, 1) * RGB_TYPE.SIZE
+        self.output = self.output.cpu().numpy()
 
     def tile_process(self):
         """Modified from: https://github.com/ata4/esrgan-launcher
@@ -57,7 +62,7 @@ class CudaSuperResolutionBase:
         output_shape = (batch, channel, output_height, output_width)
 
         # start with black image
-        self.output = self.img.new_zeros(output_shape)
+        self.output = np.zeros(output_shape)
         tiles_x = math.ceil(width / self.tile_size)
         tiles_y = math.ceil(height / self.tile_size)
 
@@ -87,7 +92,12 @@ class CudaSuperResolutionBase:
 
                 # upscale tile
                 with torch.no_grad():
+                    input_tile = torch.from_numpy(input_tile).to(self.device)
+                    if self.half:
+                        input_tile = input_tile.half()
                     output_tile = self.model(input_tile)
+                    output_tile = output_tile.data.float().clamp_(0, 1) * RGB_TYPE.SIZE
+                    output_tile = output_tile.cpu().numpy()
                 # print(f'\tTile {tile_idx}/{tiles_x * tiles_y}')
 
                 # output tile area on total image
@@ -110,12 +120,13 @@ class CudaSuperResolutionBase:
     def post_process(self):
         # remove extra pad
         if self.mod_scale is not None:
-            _, _, h, w = self.output.size()
+            _, _, h, w = self.output.shape
             self.output = self.output[:, :, 0:h - self.mod_pad_h * self.scale, 0:w - self.mod_pad_w * self.scale]
         # remove prepad
         if self.pre_pad != 0:
-            _, _, h, w = self.output.size()
+            _, _, h, w = self.output.shape
             self.output = self.output[:, :, 0:h - self.pre_pad * self.scale, 0:w - self.pre_pad * self.scale]
+        self.output = self.output.squeeze().transpose(1,2,0)
         return self.output
 
     @torch.no_grad()
@@ -130,7 +141,5 @@ class CudaSuperResolutionBase:
             self.tile_process()
         else:
             self.process()
-        output_img = self.post_process()
-        output_img = output_img.data.squeeze().float().clamp_(0, 1)  # .cpu().numpy()
-        output = (output_img * RGB_TYPE.SIZE).float().cpu().numpy().transpose(1, 2, 0)
+        output = self.post_process()
         return output, "RGB"

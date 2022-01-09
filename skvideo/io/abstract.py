@@ -280,6 +280,8 @@ class VideoReaderAbstract(object):
             self._terminate()
             err1 = str(err)
             raise RuntimeError("%s" % (err1,))
+        if arr.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
+            return arr.view(np.uint16)
         return arr
 
     def _readFrame(self):

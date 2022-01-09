@@ -770,8 +770,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AiSrMode.setVisible(False)
         self.SrModeLabel.setVisible(False)
         # self.FastDenoiseChecker.setVisible(False)
-        self.OneClickHDRField.setEnabled(False)
+        # self.OneClickHDRField.setEnabled(False)
         self.EvictFlickerChecker.setVisible(False)
+        self.KeepChunksChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -946,9 +947,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SaveAudioChecker.setChecked(appData.value("is_save_audio", True, type=bool))
         self.FastDenoiseChecker.setChecked(appData.value("use_fast_denoise", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
+        self.OneClickHDRModeSelector.setCurrentIndex(appData.value("hdr_cube_index", 0, type=int))
         self.Float32WorkflowChecker.setChecked(appData.value("is_float32_workflow", True, type=bool))
         self.QuickExtractChecker.setChecked(appData.value("is_quick_extract", False, type=bool))
         self.DeinterlaceChecker.setChecked(appData.value("use_deinterlace", False, type=bool))
+        self.KeepHeadFrameChecker.setChecked(appData.value("is_keep_head", False, type=bool))
 
         """Slowmotion Configuration"""
         self.slowmotion.setChecked(appData.value("is_render_slow_motion", False, type=bool))
@@ -1063,6 +1066,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_render_encoder_default_preset", self.DefaultEncodePresetChecker.isChecked())
         appData.setValue("is_encode_audio", self.EncodeAudioChecker.isChecked())
         appData.setValue("render_encode_thread", self.EncodeThreadSelector.value())
+        appData.setValue("hdr_cube_index", self.OneClickHDRModeSelector.currentIndex())
         appData.setValue("is_float32_workflow", self.Float32WorkflowChecker.isChecked())
         appData.setValue("is_quick_extract", self.QuickExtractChecker.isChecked())
         appData.setValue("hdr_mode", self.HDRModeSelector.currentIndex())
@@ -1079,6 +1083,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             appData.setValue("is_save_audio", False)
             self.SaveAudioChecker.setChecked(False)
         appData.setValue("use_deinterlace", self.DeinterlaceChecker.isChecked())
+        appData.setValue("is_keep_head", self.KeepHeadFrameChecker.isChecked())
 
         appData.setValue("resize_settings_index", self.ResizeTemplate.currentIndex())
         height, width = self.ResizeHeightSettings.value(), self.ResizeWidthSettings.value()
@@ -1394,13 +1399,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         return cuda_infos
 
     def settings_update_rife_model_info(self):
-        app_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        ncnn_dir = os.path.join(app_dir, "ncnn")
+        ncnn_dir = os.path.join(appDir, "ncnn")
         rife_ncnn_dir = os.path.join(ncnn_dir, "rife")
         if self.UseNCNNButton.isChecked():
             model_dir = os.path.join(rife_ncnn_dir, "models")
         else:
-            model_dir = os.path.join(app_dir, "train_log")
+            model_dir = os.path.join(appDir, "train_log")
         appData.setValue("rife_model_dir", model_dir)
 
         if not os.path.exists(model_dir):
@@ -1942,7 +1946,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         template_model.apply_config()  # load template config to root config
         self.settings_load_config(appDataPath)
-        self.settings_initiation(item_update=True, template_update=True)
+        self.settings_update_pack(item_update=True, template_update=True)
         self.function_send_msg("Config Loaded", _translate('', "已载入指定预设~"), 2)
         # if not appPref.value("is_gui_quiet", False, type=bool):
         #     SVFI_preview_args_form = UiPreviewArgsDialog(self)

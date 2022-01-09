@@ -161,3 +161,15 @@ class RGB_TYPE:
         if d8:
             RGB_TYPE.SIZE = 255.
             RGB_TYPE.DTYPE = np.uint8 if RGB_TYPE.SIZE == 255. else np.uint16
+
+
+class LUTS_TYPE(enum.Enum):
+    NONE = 0
+    PreserveSaturation = 1
+
+    @staticmethod
+    def get_lut_path(lut_type):
+        if lut_type is LUTS_TYPE.NONE:
+            return
+        elif lut_type is LUTS_TYPE.PreserveSaturation:
+            return "1x3d.cube"
