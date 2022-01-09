@@ -28,6 +28,87 @@ class HDR_STATE(enum.Enum):
     HLG = 5
 
 
+class RT_RATIO(enum.Enum):
+    """
+    Resolution Transfer Ratio
+    """
+    AUTO = 0
+    WHOLE = 1
+    THREE_QUARTERS = 2
+    HALF = 3
+    QUARTER = 4
+
+    @staticmethod
+    def get_auto_transfer_ratio(sr_times: float):
+        if sr_times >= 1:
+            return RT_RATIO.WHOLE
+        elif 0.75 <= sr_times < 1:
+            return RT_RATIO.THREE_QUARTERS
+        elif 0.5 <= sr_times < 0.75:
+            return RT_RATIO.HALF
+        else:
+            return RT_RATIO.QUARTER
+
+    @staticmethod
+    def get_surplus_sr_scale(scale: float, ratio):
+        if ratio == RT_RATIO.WHOLE:
+            return scale
+        elif ratio == RT_RATIO.THREE_QUARTERS:
+            return scale * (4 / 3) ** 2
+        elif ratio == RT_RATIO.HALF:
+            return scale * 2 ** 2
+        elif ratio == RT_RATIO.QUARTER:
+            return scale * 4 ** 2
+        else:
+            return scale
+
+    @staticmethod
+    def get_modified_resolution(params: tuple, ratio, keep_single=False):
+        w, h = params
+        if ratio == RT_RATIO.WHOLE:
+            w, h = int(w), int(h)
+        elif ratio == RT_RATIO.THREE_QUARTERS:
+            w, h = int(w / 4 * 3), int(h / 4 * 3)
+        elif ratio == RT_RATIO.HALF:
+            w, h = int(w / 2), int(h / 2)
+        elif ratio == RT_RATIO.QUARTER:
+            w, h = int(w / 4), int(h / 4)
+        else:
+            w, h = int(w), int(h)
+        if not keep_single:
+            if w % 2:
+                w += 1
+            if h % 2:
+                h += 1
+        return w, h
+
+
+class SR_TILESIZE_STATE(enum.Enum):
+    NONE = 0
+    CUSTOM = 1
+    VRAM_2G = 2
+    VRAM_4G = 3
+    VRAM_6G = 4
+    VRAM_8G = 5
+    VRAM_12G = 6
+
+    @staticmethod
+    def get_tilesize(state):
+        if state == SR_TILESIZE_STATE.NONE:
+            return 0
+        if state == SR_TILESIZE_STATE.VRAM_2G:
+            return 100
+        if state == SR_TILESIZE_STATE.VRAM_4G:
+            return 200
+        if state == SR_TILESIZE_STATE.VRAM_6G:
+            return 1000
+        if state == SR_TILESIZE_STATE.VRAM_8G:
+            return 1200
+        if state == SR_TILESIZE_STATE.VRAM_12G:
+            return 2000
+        return 100
+
+
 class SupportFormat:
     img_inputs = ['.png', '.tif', '.tiff', '.jpg', '.jpeg']
     img_outputs = ['.png', '.tiff', '.jpg']

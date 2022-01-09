@@ -26,7 +26,7 @@ import psutil
 from skimage.metrics._structural_similarity import structural_similarity as compare_ssim
 from sklearn import linear_model
 
-from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE, RT_RATIO, SR_TILESIZE_STATE
 from skvideo.utils import check_output
 
 
@@ -78,7 +78,7 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.1"
+    gui_version = "3.10.2"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
     ols_version = "7.4.8"
@@ -87,9 +87,8 @@ class ArgumentManager:
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix 16bit support for 1-N Dedup Mode and scene blend function
-    - Fix Failure of Failure Request by OLS received by Backend
-    - Remove Plural limit for crop parameters 
+    - Truly Fix Scene Detection too sensitive by increasing dead threshold
+    - Optimize Super Resolution Settings Structure by adding more selective options
     """
 
     path_len_limit = 230
@@ -140,24 +139,26 @@ class ArgumentManager:
         self.use_manual_buffer = args.get("use_manual_buffer", False)
         self.manual_buffer_size = args.get("manual_buffer_size", 1)
 
-        self.resize_width = Tools.get_plural(args.get("resize_width", 0))
-        self.resize_height = Tools.get_plural(args.get("resize_height", 0))
-        self.resize_param = [self.resize_width, self.resize_height]  # resize parameter, 输出分辨率参数
+        resize_width = Tools.get_plural(args.get("resize_width", 0))
+        resize_height = Tools.get_plural(args.get("resize_height", 0))
+        self.resize_param = [resize_width, resize_height]  # resize parameter, 输出分辨率参数
         self.resize_exp = args.get("resize_exp", 1)
 
-        self.transfer_width = Tools.get_plural(args.get("transfer_width", 0))
-        self.transfer_height = Tools.get_plural(args.get("transfer_height", 0))
-        self.transfer_param = [self.transfer_width, self.transfer_height]  # crop parameter, 裁切参数
+        self.transfer_ratio = RT_RATIO(args.get("transfer_ratio_index", 0))
 
-        self.crop_width = args.get("crop_width", 0)
-        self.crop_height = args.get("crop_height", 0)
-        self.crop_param = [self.crop_width, self.crop_height]  # crop parameter, 裁切参数
+        crop_width = args.get("crop_width", 0)
+        crop_height = args.get("crop_height", 0)
+        self.crop_param = [crop_width, crop_height]  # crop parameter, 裁切参数
 
         self.use_sr = args.get("use_sr", False)
         self.use_sr_algo = args.get("use_sr_algo", "")
         self.use_sr_model = args.get("use_sr_model", "")
         self.use_sr_mode = args.get("use_sr_mode", "")
+        self.sr_tilesize_mode = SR_TILESIZE_STATE(args.get("sr_tilesize_mode", 0))
         self.sr_tilesize = args.get("sr_tilesize", 200)
+        if self.sr_tilesize_mode != SR_TILESIZE_STATE.CUSTOM:
+            self.sr_tilesize = SR_TILESIZE_STATE.get_tilesize(self.sr_tilesize_mode)
+        self.sr_module_exp = args.get("sr_module_exp", 0)
         self.use_realesr_fp16 = args.get("use_realesr_fp16", False)
 
         self.render_gap = args.get("render_gap", 1000)
@@ -1266,7 +1267,7 @@ class TransitionDetection_ST:
         self.black_scene_queue = deque(maxlen=self.scene_stack_len)  # 黑场开场特判队列
         self.scene_checked_queue = deque(maxlen=self.scene_stack_len // 2)  # 已判断的转场absdiff特判队列
         self.utils = Tools
-        self.dead_thres = 60
+        self.dead_thres = 80
         self.born_thres = 2
         self.img1 = None
         self.img2 = None

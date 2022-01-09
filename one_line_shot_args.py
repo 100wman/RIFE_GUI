@@ -16,7 +16,7 @@ import psutil
 import tqdm
 
 from Utils.LicenseModule import EULAWriter
-from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE
+from Utils.StaticParameters import appDir, SupportFormat, HDR_STATE, RGB_TYPE, RT_RATIO
 from Utils.utils import ArgumentManager, DefaultConfigParser, Tools, VideoInfoProcessor, \
     ImageRead, ImageWrite, TransitionDetection_ST, \
     VideoFrameInterpolationBase, Hdr10PlusProcessor, DoviProcessor, \
@@ -445,7 +445,8 @@ class ReadFlow(IOFlow):
         if self.ARGS.is_img_input:
             resize_param = self.ARGS.resize_param
             if self.ARGS.use_sr:
-                resize_param = self.ARGS.transfer_param
+                # modify input resolution for super resolution
+                resize_param = RT_RATIO.get_modified_resolution(self.ARGS.frame_size, self.ARGS.transfer_ratio)
 
             img_reader = ImageRead(self.logger, folder=self.ARGS.input, start_frame=self.ARGS.interp_start,
                                    exp=self.ARGS.rife_exp, resize=resize_param, )
@@ -519,14 +520,14 @@ class ReadFlow(IOFlow):
             output_dict.update({"-s": f"300x300"})
         else:
             if not self.ARGS.use_sr:
-                # TODO Refactor here with crop parameters
                 """直接用最终输出分辨率"""
                 if self.ARGS.frame_size != self.ARGS.resize_param and all(self.ARGS.resize_param):
-                    output_dict.update({"-s": f"{self.ARGS.resize_width}x{self.ARGS.resize_height}"})
+                    output_dict.update({"-s": f"{self.ARGS.resize_param[0]}x{self.ARGS.resize_param[1]}"})
             else:
                 """超分"""
-                if self.ARGS.frame_size != self.ARGS.transfer_param and all(self.ARGS.transfer_param):
-                    output_dict.update({"-s": f"{self.ARGS.transfer_width}x{self.ARGS.transfer_height}"})
+                if self.ARGS.transfer_ratio not in [RT_RATIO.AUTO, RT_RATIO.WHOLE] and all(self.ARGS.frame_size):
+                    w, h = RT_RATIO.get_modified_resolution(self.ARGS.frame_size, self.ARGS.transfer_ratio)
+                    output_dict.update({"-s": f"{w}x{h}"})
 
         scale_args = ""
         if '-colorspace' in output_dict:
@@ -1181,7 +1182,7 @@ class RenderFlow(IOFlow):
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
-            resize_width, resize_height = self.__get_crop_resize()
+            resize_width, resize_height = self.__get_cropped_resize()
             img_io = ImageWrite(self.logger, folder=self.ARGS.output_dir, start_frame=start_frame,
                                 exp=self.ARGS.rife_exp,
                                 resize=(resize_width, resize_height), output_ext=self.ARGS.output_ext, )
@@ -1218,7 +1219,7 @@ class RenderFlow(IOFlow):
             vf_args = f"scale=out_color_matrix={output_dict['-colorspace']},{vf_args}"
         output_dict.update({"-vf": vf_args})
 
-        resize_width, resize_height = self.__get_crop_resize()
+        resize_width, resize_height = self.__get_cropped_resize()
         if resize_height and resize_width:
             output_dict.update({"-sws_flags": "bicubic+accurate_rnd+full_chroma_int",
                                 "-s": f"{resize_width}x{resize_height}"})
@@ -1531,13 +1532,13 @@ class RenderFlow(IOFlow):
         return FFmpegWriter(filename=output_path, inputdict=input_dict, outputdict=output_dict,
                             verbosity=self.ARGS.debug)
 
-    def __get_crop_resize(self):
+    def __get_cropped_resize(self):
         if not all(self.ARGS.resize_param):
             return self.ARGS.resize_param
         resize_width, resize_height = self.ARGS.resize_param
-        if resize_width - self.ARGS.crop_width * 2 and resize_height - self.ARGS.crop_height * 2:
-            resize_width = resize_width - self.ARGS.crop_width * 2
-            resize_height = resize_height - self.ARGS.crop_height * 2
+        if resize_width - self.ARGS.crop_param[0] * 2 and resize_height - self.ARGS.crop_param[1] * 2:
+            resize_width = resize_width - self.ARGS.crop_param[0] * 2
+            resize_height = resize_height - self.ARGS.crop_param[1] * 2
         return resize_width, resize_height
 
     def convert_encc_color_tag(self, ffmpeg_param_dict: dict, encc_param_dict: dict):
@@ -1883,27 +1884,43 @@ class SuperResolutionFlow(IOFlow):
         if not self.ARGS.use_sr:
             self._release_vram_check_lock()
             return
+
         sr_scale = self.ARGS.resize_exp
-        resize_param = self.ARGS.frame_size
-        if all(self.ARGS.transfer_param):
-            resize_param = self.ARGS.transfer_param
-        if all(resize_param) and all(self.ARGS.resize_param):  # if frame_size == 0,0, sr_scale remains untouched
-            sr_scale = (self.ARGS.resize_param[0] * self.ARGS.resize_param[1]) / (resize_param[0] * resize_param[1])
-            sr_scale = int(math.ceil(math.sqrt(sr_scale)))
-        if sr_scale == 1 and self.ARGS.resize_exp:
+        sr_module_exp = self.ARGS.sr_module_exp
+
+        if all(self.ARGS.resize_param) and all(self.ARGS.frame_size):
+            resize_resolution = self.ARGS.resize_param[0] * self.ARGS.resize_param[1]
+            original_resolution = self.ARGS.frame_size[0] * self.ARGS.frame_size[1]
+            sr_scale = resize_resolution / original_resolution
+        elif self.ARGS.resize_exp:
             sr_scale = self.ARGS.resize_exp
+        if sr_module_exp:
+            sr_times = sr_scale / sr_module_exp
+            ref_ratio = RT_RATIO.get_auto_transfer_ratio(sr_times)
+            if self.ARGS.transfer_ratio == RT_RATIO.AUTO:
+                self.ARGS.transfer_ratio = ref_ratio
+            elif sr_times < 1:
+                sr_scale = RT_RATIO.get_surplus_sr_scale(sr_scale, self.ARGS.transfer_ratio)
+
+        frame_size = self.ARGS.resize_param  # it's useless as redundant input parameters for api compatibility
+        sr_scale = int(math.ceil(math.sqrt(sr_scale)))
+
+        if any(self.ARGS.crop_param):
+            self.ARGS.crop_param = RT_RATIO.get_modified_resolution(self.ARGS.crop_param, self.ARGS.transfer_ratio,
+                                                                    keep_single=True)
+
         try:
             if self.ARGS.use_sr_algo == "waifu2x":
                 import SuperResolution.SuperResolutionModule
                 self.sr_module = SuperResolution.SuperResolutionModule.SvfiWaifu(model=self.ARGS.use_sr_model,
                                                                                  scale=sr_scale,
                                                                                  num_threads=self.ARGS.ncnn_thread,
-                                                                                 resize=resize_param)
+                                                                                 resize=frame_size)
             # elif self.ARGS.use_sr_algo == "realSR":
             #     import SuperResolution.SuperResolutionModule
             #     self.sr_module = SuperResolution.SuperResolutionModule.SvfiRealSR(model=self.ARGS.use_sr_model,
-            #                                                                       scale=sr_scale,
-            #                                                                       resize=resize_param)
+            #                                                                       scale=sr_times,
+            #                                                                       resize=frame_size)
             elif self.ARGS.use_sr_algo == "realESR":
                 import SuperResolution.RealESRModule
                 self.sr_module = SuperResolution.RealESRModule.SvfiRealESR(model=self.ARGS.use_sr_model,
@@ -1911,7 +1928,7 @@ class SuperResolutionFlow(IOFlow):
                                                                            # TODO Assign another card here
                                                                            scale=sr_scale, tile=self.ARGS.sr_tilesize,
                                                                            half=self.ARGS.use_realesr_fp16,
-                                                                           resize=resize_param)
+                                                                           resize=frame_size)
             elif self.ARGS.use_sr_algo == "waifuCuda":
                 import SuperResolution.WaifuCudaModule
                 self.sr_module = SuperResolution.WaifuCudaModule.SvfiWaifuCuda(model=self.ARGS.use_sr_model,
@@ -1919,10 +1936,15 @@ class SuperResolutionFlow(IOFlow):
                                                                                scale=sr_scale,
                                                                                tile=self.ARGS.sr_tilesize,
                                                                                half=self.ARGS.use_realesr_fp16,
-                                                                               resize=resize_param)
+                                                                               resize=frame_size)
+            if self.ARGS.transfer_ratio == RT_RATIO.AUTO:
+                self.ARGS.transfer_ratio = RT_RATIO.get_auto_transfer_ratio(sr_scale)
             self.logger.info(
                 f"Load Super Resolution Module at {self.ARGS.use_sr_algo}, "
-                f"Model at {self.ARGS.use_sr_model}, scale_times = output resolution / transfer resolution = {sr_scale}")
+                f"Model at {self.ARGS.use_sr_model}, "
+                f"transfer_mode = output resolution / transfer resolution = {self.ARGS.transfer_ratio.name}, "
+                f"sr_scale = {sr_scale}")
+
         except ImportError:
             self.logger.error(
                 f"Import SR Module failed\n"
@@ -1945,10 +1967,7 @@ class SuperResolutionFlow(IOFlow):
             self._release_vram_check_lock()
             return
         try:
-            if all(self.ARGS.transfer_param):
-                w, h = self.ARGS.transfer_param
-            else:
-                w, h = self.ARGS.frame_size
+            w, h = RT_RATIO.get_modified_resolution(self.ARGS.frame_size, self.ARGS.transfer_ratio)
 
             self.logger.info(f"Start Super Resolution VRAM Test: {w}x{h}")
 
@@ -2166,8 +2185,8 @@ class InterpWorkFlow:
         self.render_task_queue = Queue(maxsize=queue_len)
 
         self.validation_flow = ValidationFlow(self.ARGS)
-        self.read_flow = ReadFlow(self.ARGS, logger, self.read_task_queue)
         self.sr_flow = SuperResolutionFlow(self.ARGS, logger, self.read_task_queue, self.rife_task_queue)
+        self.read_flow = ReadFlow(self.ARGS, logger, self.read_task_queue)
         self.render_flow = RenderFlow(self.ARGS, logger, self.render_task_queue)
         self.update_progress_flow = ProgressUpdateFlow(self.ARGS, logger, self.read_flow)
 
@@ -2203,8 +2222,8 @@ class InterpWorkFlow:
             logger.debug("Waiting for SR Module VRAM Check Lock")
             self.sr_flow.acquire_vram_check_lock()
         try:
-            if self.ARGS.resize_width and self.ARGS.resize_height:
-                w, h = self.ARGS.resize_width, self.ARGS.resize_height
+            if all(self.ARGS.resize_param):
+                w, h = self.ARGS.resize_param
             else:
                 w, h = self.ARGS.frame_size
             if self.ARGS.use_rife_auto_scale:

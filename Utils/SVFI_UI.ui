@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1254</width>
-    <height>858</height>
+    <width>1252</width>
+    <height>849</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -742,8 +742,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>400</width>
-                    <height>737</height>
+                    <width>402</width>
+                    <height>730</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_10">
@@ -811,8 +811,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
-                        <height>408</height>
+                        <width>384</width>
+                        <height>419</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1089,8 +1089,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
-                        <height>408</height>
+                        <width>384</width>
+                        <height>419</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1361,9 +1361,9 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-60</y>
-                        <width>365</width>
-                        <height>468</height>
+                        <y>-31</y>
+                        <width>367</width>
+                        <height>459</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -1375,8 +1375,8 @@
                          <property name="title">
                           <string/>
                          </property>
-                         <layout class="QGridLayout" name="gridLayout_26">
-                          <item row="0" column="0">
+                         <layout class="QVBoxLayout" name="verticalLayout_2">
+                          <item>
                            <widget class="QLabel" name="label_8">
                             <property name="toolTip">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;waifu2x&lt;/span&gt;适用于2D动漫输入&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realSR&lt;/span&gt;适用于3D实拍&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;的GAN渲染效果更清晰，画面偏向细节保留，Net输出模糊，画面偏向涂抹与结构恢复&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;PS：realESR非常慢（是TVE的1/10速度），但动漫超分效果比TVE好，效果普适性极强&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1392,7 +1392,7 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="1" column="0">
+                          <item>
                            <widget class="MyComboBox" name="AiSrSelector">
                             <item>
                              <property name="text">
@@ -1406,7 +1406,7 @@
                             </item>
                            </widget>
                           </item>
-                          <item row="2" column="0">
+                          <item>
                            <widget class="QLabel" name="label_9">
                             <property name="acceptDrops">
                              <bool>false</bool>
@@ -1425,10 +1425,10 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="3" column="0">
+                          <item>
                            <widget class="MyComboBox" name="AiSrModelSelector"/>
                           </item>
-                          <item row="4" column="0">
+                          <item>
                            <layout class="QHBoxLayout" name="horizontalLayout_24">
                             <item>
                              <widget class="QLabel" name="AiSrModuleExpReminder">
@@ -1471,28 +1471,15 @@
                             </item>
                            </layout>
                           </item>
-                          <item row="5" column="0">
-                           <widget class="QLabel" name="AiSrTransferResolution">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;单位：像素&lt;/p&gt;&lt;p&gt;对输入进行超分前，将分辨率缩放到此分辨率再进行超分；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;输出分辨率 = 缩放分辨率 x 超分模型倍数&lt;/span&gt;&lt;/p&gt;&lt;p&gt;若此空未指定，则默认为输入分辨率；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;若已手动指定输出分辨率，则在经过超分的基础上再次缩放为指定输出分辨率输出&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                            <property name="text">
-                             <string>转移分辨率 (!)</string>
-                            </property>
-                            <property name="alignment">
-                             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="6" column="0">
-                           <layout class="QHBoxLayout" name="horizontalLayout_21">
+                          <item>
+                           <layout class="QHBoxLayout" name="horizontalLayout_22">
                             <item>
-                             <widget class="QLabel" name="label_6">
+                             <widget class="QLabel" name="AiSrTransferResolution">
                               <property name="toolTip">
-                               <string>只能是双数</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对输入源进行超分前，先将&lt;span style=&quot; font-weight:600;&quot;&gt;分辨率按比例缩放，缩放后的分辨率为转移分辨率&lt;/span&gt;；&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;转移分辨率比 = 转移分辨率 / 输入分辨率&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;自动：&lt;/span&gt;根据选择的超分模型自动选择缩放比例&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;100%：&lt;/span&gt;超分前不对输入源缩放&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;50%：&lt;/span&gt;超分前先将输入源缩放至50%&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;例：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;1.1 选择自动模式，当输出分辨率倍数为200%，选择2x模型，则此项自动选择100%；&lt;/p&gt;&lt;p&gt;1.2 选择自动模式，当输出分辨率倍数为200%，选择4x模型，则此项自动选择50%；&lt;/p&gt;&lt;p&gt;2.1 选择50%，当输出分辨率预设为200%，若选择4x模型，软件先对输入缩放50%，经超分4倍后变为两倍的输入分辨率&lt;/p&gt;&lt;p&gt;1080p -&amp;gt; 540p -&amp;gt; 2160p = 1080p * 2&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
-                               <string>宽</string>
+                               <string>转移分辨率比 (!)</string>
                               </property>
                               <property name="alignment">
                                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -1500,35 +1487,37 @@
                              </widget>
                             </item>
                             <item>
-                             <widget class="MySpinBox" name="TransferWidthSettings">
-                              <property name="maximum">
-                               <number>100000</number>
-                              </property>
-                             </widget>
-                            </item>
-                            <item>
-                             <widget class="QLabel" name="label_10">
-                              <property name="toolTip">
-                               <string>只能是双数</string>
-                              </property>
-                              <property name="text">
-                               <string>高</string>
-                              </property>
-                              <property name="alignment">
-                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                              </property>
-                             </widget>
-                            </item>
-                            <item>
-                             <widget class="MySpinBox" name="TransferHeightSettings">
-                              <property name="maximum">
-                               <number>100000</number>
-                              </property>
+                             <widget class="MyComboBox" name="TransferRatioSettings">
+                              <item>
+                               <property name="text">
+                                <string>自动</string>
+                               </property>
+                              </item>
+                              <item>
+                               <property name="text">
+                                <string>100%</string>
+                               </property>
+                              </item>
+                              <item>
+                               <property name="text">
+                                <string>75%</string>
+                               </property>
+                              </item>
+                              <item>
+                               <property name="text">
+                                <string>50%</string>
+                               </property>
+                              </item>
+                              <item>
+                               <property name="text">
+                                <string>25%</string>
+                               </property>
+                              </item>
                              </widget>
                             </item>
                            </layout>
                           </item>
-                          <item row="7" column="0">
+                          <item>
                            <widget class="QLabel" name="SrModeLabel">
                             <property name="text">
                              <string>超分模式</string>
@@ -1541,7 +1530,7 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="8" column="0">
+                          <item>
                            <widget class="MyComboBox" name="AiSrMode">
                             <item>
                              <property name="text">
@@ -1555,20 +1544,59 @@
                             </item>
                            </widget>
                           </item>
-                          <item row="9" column="0">
+                          <item>
                            <widget class="QLabel" name="TileSizeLabel">
                             <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR&lt;/span&gt;算法时使用，酌情使用。&lt;/p&gt;&lt;p&gt;6G显存设值100~200左右。该数过大会产生显存不足错误。合适的值将提升超分速度。&lt;/p&gt;&lt;p&gt;（其为超分输入矩阵的边长，推荐选择输入分辨率宽的缩小偶数倍数，如1080p的1/2, 960）&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;设置0为不切割输入直接喂入超分模型，若不爆显存则超分满速运行&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;使用&lt;span style=&quot; font-weight:600;&quot;&gt;realESR或waifuCuda超分算法&lt;/span&gt;时酌情使用。&lt;/p&gt;&lt;p&gt;选项说明：将输入进行超分前，会将输入切割为宽为“切割块大小”的正方形，经放大后拼接。&lt;/p&gt;&lt;p&gt;若不使用此选项，&lt;span style=&quot; font-weight:600;&quot;&gt;即选择“无”&lt;/span&gt;，输入将不经过切割，原样超分，最大发挥超分算法效能，&lt;span style=&quot; font-weight:600;&quot;&gt;此时超分满速运行、输出效果最佳&lt;/span&gt;，但爆显存可能较大（超分算法显存使用无上限）&lt;/p&gt;&lt;p&gt;该选项选择合适的值将提升超分速度。&lt;/p&gt;&lt;p&gt;选项已列出常用的超分不爆显存的切割块大小。&lt;/p&gt;&lt;p&gt;建议先选择无，若爆显存则使用其他值。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                             </property>
                             <property name="text">
-                             <string>TileSize (?)</string>
+                             <string>切割块大小 (!)</string>
                             </property>
                             <property name="alignment">
                              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                             </property>
                            </widget>
                           </item>
-                          <item row="10" column="0">
+                          <item>
+                           <widget class="MyComboBox" name="SrTileSizeSettings">
+                            <item>
+                             <property name="text">
+                              <string>无</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>自定义</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>2G显存-100</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>4G显存-400</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>6G显存-1000</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>8G显存-1200</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>12G显存-2000</string>
+                             </property>
+                            </item>
+                           </widget>
+                          </item>
+                          <item>
                            <widget class="MySpinBox" name="SrTileSizeSelector">
                             <property name="minimum">
                              <number>0</number>
@@ -1584,7 +1612,7 @@
                             </property>
                            </widget>
                           </item>
-                          <item row="11" column="0">
+                          <item>
                            <widget class="QCheckBox" name="RealESRFp16Checker">
                             <property name="toolTip">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;对RealESR超分算法开启半精度，有效提高超分速度，但可能带来画面精度3%的损失以及画面可能的纹理损失&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;建议开启&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1634,7 +1662,7 @@
                             <item row="5" column="0">
                              <widget class="QLabel" name="CropReminder">
                               <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;视频宽和高的黑边像素个数，上下-高，左右-宽分别对称&lt;/p&gt;&lt;p&gt;注意，这里的黑边长度相对于&lt;span style=&quot; font-weight:600;&quot;&gt;输出文件分辨率&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;视频宽和高的黑边像素个数，上下-高，左右-宽分别对称&lt;/p&gt;&lt;p&gt;当不启用AI超分时，&lt;/p&gt;&lt;p&gt;输出视频宽/高 = &lt;span style=&quot; font-weight:600;&quot;&gt;输出分辨率&lt;/span&gt;的宽/高 - 黑边宽/高 * 2&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;当启用AI超分时，&lt;/span&gt;&lt;/p&gt;&lt;p&gt;输出视频宽/高 = (&lt;span style=&quot; font-weight:600;&quot;&gt;源分辨率&lt;/span&gt;的宽/高 - 黑边宽/高) * &lt;span style=&quot; font-weight:600;&quot;&gt;转移分辨率比&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
                               <property name="text">
                                <string>黑边长度 (?)</string>
@@ -1833,9 +1861,9 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>-305</y>
-                        <width>378</width>
-                        <height>696</height>
+                        <y>0</y>
+                        <width>367</width>
+                        <height>666</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2489,9 +2517,9 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
-                        <width>365</width>
-                        <height>532</height>
+                        <y>-78</y>
+                        <width>367</width>
+                        <height>506</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -2928,8 +2956,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
-                        <height>408</height>
+                        <width>384</width>
+                        <height>419</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -3017,8 +3045,8 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
-                        <height>408</height>
+                        <width>384</width>
+                        <height>419</height>
                        </rect>
                       </property>
                       <attribute name="label">
@@ -3330,8 +3358,8 @@
                 <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'SimSun'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'SimSun'; font-size:7.2pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="textInteractionFlags">
                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -3450,7 +3478,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1254</width>
+     <width>1252</width>
      <height>22</height>
     </rect>
    </property>

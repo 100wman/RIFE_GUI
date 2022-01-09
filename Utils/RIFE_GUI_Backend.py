@@ -922,8 +922,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if self.ResizeTemplate.currentIndex() == 0:
             self.ResizeHeightSettings.setValue(appData.value("resize_height", 0, type=int))
             self.ResizeWidthSettings.setValue(appData.value("resize_width", 0, type=int))
-        self.TransferWidthSettings.setValue(appData.value("transfer_width", 0, type=int))
-        self.TransferHeightSettings.setValue(appData.value("transfer_height", 0, type=int))
+        self.TransferRatioSettings.setCurrentIndex(appData.value("transfer_ratio_index", 0, type=int))
         self.ResizeTemplate.setCurrentIndex(appData.value("resize_settings_index", 0, type=int))
 
         """Render Configuration"""
@@ -972,6 +971,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         """AI Super Resolution Configuration"""
         self.UseAiSR.setChecked(appData.value("use_sr", False, type=bool))
+        self.SrTileSizeSettings.setCurrentIndex(appData.value("sr_tilesize_mode", 0, type=int))
         self.SrTileSizeSelector.setValue(appData.value("sr_tilesize", 100, type=int))
         self.RealESRFp16Checker.setChecked(appData.value("use_realesr_fp16", False, type=bool))
         self.AiSrSelector.setCurrentText(appData.value("use_sr_algo", "realESR"))
@@ -981,6 +981,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.on_UseAiSR_clicked()
         self.AiSrMode.setCurrentIndex(appData.value("use_sr_mode", 0, type=int))
+        self.AiSrModuleExpDisplay.setText(f"{appData.value('sr_module_exp', 2)}x")
 
         """RIFE Configuration"""
         self.FP16Checker.setChecked(appData.value("use_rife_fp16", False, type=bool))
@@ -1086,9 +1087,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         width, height = self.CropWidthpSettings.value(), self.CropHeightSettings.value()
         appData.setValue("crop_width", width)
         appData.setValue("crop_height", height)
-        width, height = self.TransferWidthSettings.value(), self.TransferHeightSettings.value()
-        appData.setValue("transfer_width", width)
-        appData.setValue("transfer_height", height)
+        appData.setValue("transfer_ratio_index", self.TransferRatioSettings.currentIndex())
 
         """Scene Detection"""
         appData.setValue("is_no_scdet", not self.ScedetChecker.isChecked())
@@ -1115,6 +1114,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("use_sr_model", self.AiSrModelSelector.currentText())
         appData.setValue("use_sr_mode", self.AiSrMode.currentIndex())
         appData.setValue("sr_tilesize", self.SrTileSizeSelector.value())
+        appData.setValue("sr_tilesize_mode", self.SrTileSizeSettings.currentIndex())
+        SrExpTxt = self.AiSrModuleExpDisplay.text()
+        appData.setValue("sr_module_exp", int(SrExpTxt[:-1]) if 'x' in SrExpTxt else 0)
         appData.setValue("use_realesr_fp16", self.RealESRFp16Checker.isChecked())
         appData.setValue("resize_exp", self.resize_exp)
 
@@ -1266,7 +1268,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             os.mkdir(project_dir)
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
-            self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
+            self.function_send_msg(f"Failed to Resume Workflow",
+                                   f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
             self.settings_set_start_info(0, 1, False)  # start from zero
             return
 
@@ -1284,7 +1287,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             else:
                 _msg1 = _translate('', '未找到与第')
                 _msg2 = _translate('', '个任务相关的进度信息')
-                self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
+                self.function_send_msg(f"Failed to Resume Workflow",
+                                       f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
                 self.settings_set_start_info(-1, -1, False)
             return
 
@@ -1292,7 +1296,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not len(chunk_paths):
             _msg1 = _translate('', '未找到与第')
             _msg2 = _translate('', '个任务相关的进度信息')
-            self.function_send_msg(f"Failed to Resume Workflow", f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
+            self.function_send_msg(f"Failed to Resume Workflow",
+                                   f"{_msg1}{self.InputFileName.row(current_item) + 1}{_msg2}", 3)
             logger.info("AutoSet find None to resume interpolation")
             self.settings_set_start_info(0, 1, False)
             return
@@ -2089,9 +2094,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.settings_update_sr_model()
         bool_result = 'realESR' in self.AiSrSelector.currentText() or 'waifuCuda' in self.AiSrSelector.currentText()
         self.TileSizeLabel.setVisible(bool_result)
-        self.SrTileSizeSelector.setVisible(bool_result)
+        self.SrTileSizeSettings.setVisible(bool_result)
         self.RealESRFp16Checker.setVisible(bool_result)
         self.on_AiSrModelSelector_currentTextChanged()
+        self.on_SrTileSizeSettings_currentTextChanged()
+
+    @pyqtSlot(str)
+    def on_SrTileSizeSettings_currentTextChanged(self):
+        bool_result = self.SrTileSizeSettings.currentIndex() == 1  # custom
+        self.SrTileSizeSelector.setVisible(bool_result)
 
     @pyqtSlot(str)
     def on_AiSrModelSelector_currentTextChanged(self):
@@ -2099,7 +2110,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.AiSrModuleExpDisplay.setText('2x')  # realsr and waifu2x's model does not contain sr_exp info
         if 'x4' in current_model or '4x' in current_model:
             self.AiSrModuleExpDisplay.setText('4x')
-        self.on_ResizeTemplate_currentTextChanged()
+        # self.on_ResizeTemplate_currentTextChanged()
 
     @pyqtSlot(str)
     def on_ResizeTemplate_currentTextChanged(self):
@@ -2139,11 +2150,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.resize_exp = ratio
         self.ResizeWidthSettings.setValue(width)
         self.ResizeHeightSettings.setValue(height)
-        if self.UseAiSR.isChecked() and self.AiSrModuleExpDisplay.text() != "Unknown":
-            sr_exp = int(self.AiSrModuleExpDisplay.text()[:-1])  # use sr model params
-            if self.TransferWidthSettings.value() == 0 and self.TransferHeightSettings.value() == 0:
-                self.TransferWidthSettings.setValue(width // sr_exp)
-                self.TransferHeightSettings.setValue(height // sr_exp)
 
     @pyqtSlot(bool)
     def on_AutoInterpScaleChecker_clicked(self):
