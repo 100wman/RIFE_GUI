@@ -78,19 +78,19 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.3"
+    gui_version = "3.10.4"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.9"
+    ols_version = "7.4.10"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Add BT709 - BT2020 HDR10 Function
-    - Optimize High Precision Workflow Efficiency by normalizing input to 16bit at skvideo module
-    - Optimize Cuda SR Module VRAM Occupation
-    - Fix Apply Presets Not covering all options
+    - Fix skvideo not find proc attribute error
+    - Fix Cuda SR not supported full precision(float32)
+    - Add Batch Mode for Render and Extract Method
+    - Fix Scene Blend resulting in failed img
     """
 
     path_len_limit = 230
@@ -466,7 +466,13 @@ class Tools:
         step = 1 / n
         beta = 0
         output = list()
+        def normalize_img(img):
+            if img.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
+                img = img.astype(np.uint16)
+            return img
 
+        img0 = normalize_img(img0)
+        img1 = normalize_img(img1)
         for _ in range(n - 1):
             beta += step
             alpha = 1 - beta
@@ -1336,12 +1342,12 @@ class TransitionDetection_ST:
         if not self.scdet_output:
             return
         try:
-            comp_stack = np.hstack((self.img1, self.img2)).astype(np.uint8)
+            comp_stack = np.hstack((self.img1, self.img2))
             comp_stack = cv2.resize(comp_stack, (960, int(960 * comp_stack.shape[0] / comp_stack.shape[1])),
                                     interpolation=cv2.INTER_AREA)
             cv2.putText(comp_stack,
                         title,
-                        (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0))
+                        (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (int(RGB_TYPE.SIZE), 0, 0))
             if "pure" in title.lower():
                 path = f"{self.scdet_cnt:08d}_pure.png"
             elif "band" in title.lower():

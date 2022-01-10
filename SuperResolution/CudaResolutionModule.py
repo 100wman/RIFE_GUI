@@ -46,7 +46,7 @@ class CudaSuperResolutionBase:
 
     @torch.no_grad()
     def process(self):
-        self.img = torch.from_numpy(self.img).to(self.device)
+        self.img = torch.from_numpy(self.img).to(self.device).float()
         if self.half:
             self.img = self.img.half()
         self.output = self.model(self.img)
@@ -92,7 +92,7 @@ class CudaSuperResolutionBase:
 
                 # upscale tile
                 with torch.no_grad():
-                    input_tile = torch.from_numpy(input_tile).to(self.device)
+                    input_tile = torch.from_numpy(input_tile).to(self.device).float()
                     if self.half:
                         input_tile = input_tile.half()
                     output_tile = self.model(input_tile)

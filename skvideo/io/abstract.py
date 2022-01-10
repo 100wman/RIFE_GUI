@@ -54,6 +54,7 @@ class VideoReaderAbstract(object):
 
         """
         # check if FFMPEG exists in the path
+        self._proc = None
         assert _HAS_FFMPEG, "Cannot find installation of real FFmpeg (which comes with ffprobe)."
 
         self._filename = filename
@@ -245,7 +246,6 @@ class VideoReaderAbstract(object):
             self._proc.stdout.close()
             self._proc.stderr.close()
             self._terminate(0.2)
-        self._proc = None
 
     def _terminate(self, timeout=1.0):
         """ Terminate the sub process.
@@ -280,8 +280,6 @@ class VideoReaderAbstract(object):
             self._terminate()
             err1 = str(err)
             raise RuntimeError("%s" % (err1,))
-        if arr.dtype in (np.uint16, np.dtype('>u2'), np.dtype('<u2')):
-            return arr.view(np.uint16)
         return arr
 
     def _readFrame(self):
@@ -355,6 +353,8 @@ class VideoWriterAbstract(object):
         none
 
         """
+        self._proc = None
+        self._cmd = None
         self.DEVNULL = open(os.devnull, 'wb')
 
         filename = os.path.abspath(filename)
@@ -478,7 +478,6 @@ class VideoWriterAbstract(object):
         if self._proc.stdin:
             self._proc.stdin.close()
         self._proc.wait()
-        self._proc = None
         self.DEVNULL.close()
 
     def writeFrame(self, im):

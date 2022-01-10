@@ -722,6 +722,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 os.startfile(self.OutputFolder.text())
                 self.function_disable_inputfilename_connection()
                 self.InputFileName.refreshTasks()
+                self.on_InputFileName_currentItemChanged()
                 self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
                 self.function_enable_inputfilename_connection()
             else:
@@ -772,7 +773,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         # self.FastDenoiseChecker.setVisible(False)
         # self.OneClickHDRField.setEnabled(False)
         self.EvictFlickerChecker.setVisible(False)
-        self.KeepChunksChecker.setVisible(False)
+        self.KeepHeadFrameChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -1841,16 +1842,15 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         folder = self.function_select_file(_translate('', '要输出项目的文件夹'), folder=True)
         self.OutputFolder.setText(folder)
 
-    @pyqtSlot(bool)
-    def on_AllInOne_clicked(self):
+    def start_mission(self):
         """
-        懒人式启动补帧按钮
-        :return:
+        Initiate Start Data for ALlInOne(Interpolation), Render and Extract
+        :return: task list consisting task id
         """
         task_list = self.function_load_tasks_rows()
         if not self.settings_check_args():
             return
-        self.settings_load_current()  # update settings
+        self.on_InputFileName_currentItemChanged()  # update settings, even if no item is selected
 
         if appPref.value("is_preview_args", False, type=bool) and not appPref.value("is_gui_quiet", False, type=bool):
             SVFI_preview_args_form = UiPreviewArgsDialog(self)
@@ -1874,8 +1874,18 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                                        3)
         if reply == QMessageBox.No:
             return
+        return task_list
+
+    @pyqtSlot(bool)
+    def on_AllInOne_clicked(self):
+        """
+        懒人式启动补帧按钮
+        :return:
+        """
+        task_list = self.start_mission()
+        if task_list is None or not len(task_list):
+            return
         self.AllInOne.setEnabled(False)
-        self.InputFileName.setEnabled(False)
         self.progressBar.setValue(0)
         RIFE_thread = UiRun(task_list=task_list)
         RIFE_thread.run_signal.connect(self.process_update_rife)
@@ -1888,6 +1898,72 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.current_failed = False
         self.tabWidget.setCurrentIndex(1)  # redirect to info page
         self.steam_update_achv()
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
+
+    @pyqtSlot(bool)
+    def on_ConcatAllButton_clicked(self):
+        """
+        Only Concat Existed Chunks
+        :return:
+        """
+        task_list = self.start_mission()
+        if task_list is None or not len(task_list):
+            return
+        self.ConcatAllButton.setEnabled(False)
+        self.tabWidget.setCurrentIndex(1)
+        self.progressBar.setValue(0)
+        RIFE_thread = UiRun(concat_only=True, task_list=task_list)
+        RIFE_thread.run_signal.connect(self.process_update_rife)
+        RIFE_thread.start()
+
+        self.rife_thread = RIFE_thread
+        _msg1 = _translate('', '仅合并操作启动')
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
+        self.current_failed = False
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
+
+    @pyqtSlot(bool)
+    def on_StartExtractButton_clicked(self):
+        """
+        Only Extract Frames from current input
+        :return:
+        """
+        task_list = self.start_mission()
+        if task_list is None or not len(task_list):
+            return
+        self.StartExtractButton.setEnabled(False)
+        self.tabWidget.setCurrentIndex(1)
+        self.progressBar.setValue(0)
+        RIFE_thread = UiRun(extract_only=True, task_list=task_list)
+        RIFE_thread.run_signal.connect(self.process_update_rife)
+        RIFE_thread.start()
+
+        self.rife_thread = RIFE_thread
+        _msg1 = _translate('', '仅拆帧操作启动')
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
+        self.current_failed = False
+        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
+
+    @pyqtSlot(bool)
+    def on_StartRenderButton_clicked(self):
+        """
+        Only Render Input based on current settings, multi tasks enabled
+        :return:
+        """
+        task_list = self.start_mission()
+        if task_list is None or not len(task_list):
+            return
+        self.StartExtractButton.setEnabled(False)
+        self.tabWidget.setCurrentIndex(1)
+        self.progressBar.setValue(0)
+        RIFE_thread = UiRun(render_only=True, task_list=task_list)
+        RIFE_thread.run_signal.connect(self.process_update_rife)
+        RIFE_thread.start()
+
+        self.rife_thread = RIFE_thread
+        _msg1 = _translate('', '仅渲染操作启动')
+        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
+        self.current_failed = False
         self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
 
     @pyqtSlot(bool)
@@ -2279,62 +2355,6 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         self.function_quick_concat()
         pass
-
-    @pyqtSlot(bool)
-    def on_ConcatAllButton_clicked(self):
-        """
-        Only Concat Existed Chunks
-        :return:
-        """
-        task_list = self.function_load_tasks_rows(load_one=True)
-        self.settings_load_current()  # update settings
-        self.ConcatAllButton.setEnabled(False)
-        self.tabWidget.setCurrentIndex(1)
-        self.progressBar.setValue(0)
-        RIFE_thread = UiRun(concat_only=True, task_list=task_list)
-        RIFE_thread.run_signal.connect(self.process_update_rife)
-        RIFE_thread.start()
-        self.rife_thread = RIFE_thread
-        _msg1 = _translate('', '仅合并操作启动')
-        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
-
-    @pyqtSlot(bool)
-    def on_StartExtractButton_clicked(self):
-        """
-        Only Extract Frames from current input
-        :return:
-        """
-        task_list = self.function_load_tasks_rows(load_one=True)
-        self.settings_load_current()
-        self.StartExtractButton.setEnabled(False)
-        self.tabWidget.setCurrentIndex(1)
-        self.progressBar.setValue(0)
-        RIFE_thread = UiRun(extract_only=True, task_list=task_list)
-        RIFE_thread.run_signal.connect(self.process_update_rife)
-        RIFE_thread.start()
-        self.rife_thread = RIFE_thread
-        _msg1 = _translate('', '仅拆帧操作启动')
-        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
-        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
-
-    @pyqtSlot(bool)
-    def on_StartRenderButton_clicked(self):
-        """
-        Only Render Input based on current settings
-        :return:
-        """
-        task_list = self.function_load_tasks_rows()
-        self.settings_load_current()
-        self.StartRenderButton.setEnabled(False)
-        self.tabWidget.setCurrentIndex(1)
-        self.progressBar.setValue(0)
-        RIFE_thread = UiRun(render_only=True, task_list=task_list)
-        RIFE_thread.run_signal.connect(self.process_update_rife)
-        RIFE_thread.start()
-        self.rife_thread = RIFE_thread
-        _msg1 = _translate('', '仅渲染操作启动')
-        self.OptionCheck.setText(f"[SVFI {self.version} {_msg1}]")
-        self.function_update_task_bar_state(TASKBAR_STATE.TBPF_NOPROGRESS)
 
     @pyqtSlot(bool)
     def on_KillProcButton_clicked(self):
