@@ -33,11 +33,11 @@ except ImportError:
     MAC = False
 
 Utils = Tools()
-appDataPath = os.path.join(appDir, "SVFI.ini")
-appPrefPath = os.path.join(appDir, "SVFI_Preference.ini")
-appData = QSettings(appDataPath, QSettings.IniFormat)
+appRootConfigPath = os.path.join(appDir, "SVFI.ini")
+appPrefConfigPath = os.path.join(appDir, "SVFI_Preference.ini")
+appData = QSettings(appRootConfigPath, QSettings.IniFormat)
 appData.setIniCodec("UTF-8")
-appPref = QSettings(appPrefPath, QSettings.IniFormat)
+appPref = QSettings(appPrefConfigPath, QSettings.IniFormat)
 appPref.setIniCodec("UTF-8")
 
 logger = Utils.get_logger("GUI", appDir)
@@ -110,8 +110,9 @@ class UiPreviewArgsDialog(QDialog, SVFI_preview_args.Ui_Dialog):
 class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
     preference_signal = pyqtSignal(dict)
 
-    def __init__(self, parent=None):
+    def __init__(self, is_free, parent=None):
         super(UiPreferenceDialog, self).__init__(parent)
+        self.is_free = is_free
         self.setWindowIcon(QIcon(ico_path))
         self.setupUi(self)
         _app = QApplication.instance()  # 获取app实例
@@ -120,6 +121,14 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         self.update_preference()
         self.ExpertModeChecker.clicked.connect(self.request_preference)
         self.buttonBox.clicked.connect(self.request_preference)
+        self.settings_free_hide()
+
+    def settings_free_hide(self):
+        if not self.is_free:
+            return
+        self.PreviewVfiChecker.setChecked(False)
+        self.PreviewVfiChecker.setEnabled(False)
+        appPref.setValue("is_preview_imgs", self.PreviewVfiChecker.isChecked())
 
     def closeEvent(self, event):
         self.request_preference()
@@ -145,6 +154,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         self.WinOnTopChecker.setChecked(appPref.value("is_windows_ontop", False, type=bool))
         self.OneWayModeChecker.setChecked(appPref.value("use_clear_inputs", False, type=bool))
         self.UseGlobalSettingsChecker.setChecked(appPref.value("use_global_settings", False, type=bool))
+        self.settings_free_hide()
         pass
 
     def request_preference(self):
@@ -165,6 +175,7 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
         appPref.setValue("is_windows_ontop", self.WinOnTopChecker.isChecked())
         appPref.setValue("use_clear_inputs", self.OneWayModeChecker.isChecked())
         appPref.setValue("use_global_settings", self.UseGlobalSettingsChecker.isChecked())
+        self.settings_free_hide()
         self.preference_signal.emit({})
 
 
@@ -226,7 +237,12 @@ class UiRun(QThread):
     def build_command(self, item_data: dict) -> (str, str):
         global appData
         task_model = InputItemModel(item_data['input_path'], item_data['task_id'])
-        config_path = task_model.get_config_path()
+        use_global_settings = appPref.value("use_global_settings", False, type=bool)
+        if use_global_settings:
+            """First detect using use global settings"""
+            config_path = appRootConfigPath  # change to root settings
+        else:
+            config_path = task_model.get_config_path()
         if config_path is None:
             logger.error(f"Invalid Task: {item_data}")
             return None, ""
@@ -477,7 +493,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.ffmpeg = appData.value("ffmpeg", "")
 
-        if os.path.exists(appDataPath):
+        if os.path.exists(appRootConfigPath):
             logger.info("Previous Settings Found")
 
         self.check_gpu = False  # 是否检查过gpu
@@ -515,7 +531,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         else:
             self.Validation = RetailValidation(logger=logger)
         if not self.Validation.CheckValidateStart():
-            warning_title = _translate('', "登录验证出错！SVFI用不了啦！")
+            warning_title = _translate('', "登录验证出错！请检查网络连接！")
             error = self.Validation.GetValidateError()
             logger.error(f"Validation failed\n{error}")
             self.function_send_msg(warning_title, error)
@@ -523,7 +539,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not self.is_free:
             valid_response = self.Validation.CheckProDLC(0)
             if not valid_response:
-                warning_title = _translate('', "未购买专业版！SVFI用不了啦！")
+                warning_title = _translate('', "未购买专业版！")
                 warning_msg = _translate('', "请确保专业版DLC已安装")
                 self.function_send_msg(warning_title, warning_msg)
                 return
@@ -598,7 +614,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if self.current_failed:
                 return
             if "input file is not available" in now_text:
-                self.function_send_msg("Inputs Failed", _translate('', "你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符"), )
+                self.function_send_msg("Inputs Failed", _translate('', "你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符，并检查输入设置的输入范围（起始时间，起始帧）是否超过时长"), )
                 self.current_failed = True
                 return
             elif "json" in now_text:
@@ -611,23 +627,23 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 return
             elif "cuda out of memory" in now_text:
                 self.function_send_msg("CUDA Failed",
-                                       _translate('', "你的显存不够啦！去清一下后台占用显存的程序，或者去'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型~"), )
+                                       _translate('', "你的显存不够啦！请清理后台占用显存的程序，关闭杀毒软件和超频软件，或者前往'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型"), )
                 self.current_failed = True
                 return
             elif "cudnn" in now_text and "fail" in now_text:
-                self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx"), )
+                self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx，并关闭后台杀毒程序和超频程序"), )
                 self.current_failed = True
                 return
             elif 'error: unable to allocate' in now_text or 'buy new ram' in now_text:
-                self.function_send_msg("Memory Failed", _translate('', "申请内存失败，请关闭后台程序或增加虚拟内存"), )
+                self.function_send_msg("Memory Failed", _translate('', "申请内存失败，请清理后台程序或增加虚拟内存。或前往输出设置指定内存使用量"), )
                 self.current_failed = True
                 return
             elif "concat test error" in now_text or "concat error" in now_text:
-                self.function_send_msg("Concat Failed", _translate('', "区块合并音轨失败，请检查输出文件格式是否支持源文件音频"), )
+                self.function_send_msg("Concat Failed", _translate('', "区块合并音轨失败，请检查输出文件格式是否支持源文件音频，推荐使用和源文件相同的输出格式"), )
                 self.current_failed = True
                 return
             elif "broken pipe" in now_text:
-                self.function_send_msg("Render Failed", _translate('', "请检查渲染设置，确保输出分辨率宽高为偶数，尝试关闭硬件编码以解决问题"), )
+                self.function_send_msg("Render Failed", _translate('', "请检查渲染设置，推荐使用ProRes或H265编码"), )
                 self.current_failed = True
                 return
             elif "rife_ncnn_vulkan" in now_text:
@@ -728,7 +744,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             else:
                 # if not self.DebugChecker.isChecked():
                 _msg1 = _translate('', '失败, 返回码：')
-                _msg2 = _translate('', '请将弹出的文件夹内error.txt发送至交流群排疑，并尝试前往高级设置恢复补帧进度')
+                _msg2 = _translate('', '请将弹出文件夹内error.txt的内容复制并发帖至Steam讨论区，并尝试前往高级设置恢复补帧进度，推荐关闭风险模式')
                 complete_msg += f"{_msg1}{returncode}\n{_msg2}"
                 error_handle()
                 generate_error_log()
@@ -774,6 +790,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         # self.OneClickHDRField.setEnabled(False)
         self.EvictFlickerChecker.setVisible(False)
         self.KeepHeadFrameChecker.setVisible(False)
+        self.UseMultiCardsChecker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -825,7 +842,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         self.RenderSettingsGroup.setEnabled(False)
         self.UseMultiCardsChecker.setEnabled(False)
-        self.InterlaceInferenceChecker.setEnabled(False)
+        # self.InterlaceInferenceChecker.setEnabled(False)
         self.TtaModeSelector.setEnabled(False)
         self.TtaIterTimesSelector.setEnabled(False)
         self.TtaModeLabel.setEnabled(False)
@@ -838,12 +855,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.EncodeThreadField.setEnabled(False)
         self.HwaccelPresetLabel.setVisible(False)
         self.HwaccelPresetSelector.setVisible(False)
+        self.Bit16WorkflowChecker.setEnabled(False)
+        self.OneClickHDRField.setEnabled(False)
 
         self.GifBox.setEnabled(False)
         self.SettingsPresetBox.setEnabled(False)
 
-        self.StartExtractButton.setVisible(False)
-        self.StartRenderButton.setVisible(False)
+        self.StartExtractButton.setEnabled(False)
+        self.StartRenderButton.setEnabled(False)
 
         self.DebugChecker.setVisible(False)
 
@@ -855,6 +874,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_HwaccelSelector_currentTextChanged()  # Flush Encoder Sets, 1
         self.on_EncoderSelector_currentTextChanged()  # E2
         self.on_UseEncodeThread_clicked()  # E3
+        self.on_Bit16WorkflowChecker_toggled()
         self.on_slowmotion_clicked()
         self.on_MBufferChecker_clicked()
         self.on_DupRmMode_currentTextChanged()
@@ -949,7 +969,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.FastDenoiseChecker.setChecked(appData.value("use_fast_denoise", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
         self.OneClickHDRModeSelector.setCurrentIndex(appData.value("hdr_cube_index", 0, type=int))
-        self.Float32WorkflowChecker.setChecked(appData.value("is_float32_workflow", True, type=bool))
+        self.Bit16WorkflowChecker.setChecked(appData.value("is_16bit_workflow", True, type=bool))
         self.QuickExtractChecker.setChecked(appData.value("is_quick_extract", False, type=bool))
         self.DeinterlaceChecker.setChecked(appData.value("use_deinterlace", False, type=bool))
         self.KeepHeadFrameChecker.setChecked(appData.value("is_keep_head", False, type=bool))
@@ -1068,7 +1088,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("is_encode_audio", self.EncodeAudioChecker.isChecked())
         appData.setValue("render_encode_thread", self.EncodeThreadSelector.value())
         appData.setValue("hdr_cube_index", self.OneClickHDRModeSelector.currentIndex())
-        appData.setValue("is_float32_workflow", self.Float32WorkflowChecker.isChecked())
+        appData.setValue("is_16bit_workflow", self.Bit16WorkflowChecker.isChecked())
         appData.setValue("is_quick_extract", self.QuickExtractChecker.isChecked())
         appData.setValue("hdr_mode", self.HDRModeSelector.currentIndex())
         appData.setValue("render_ffmpeg_customized", self.FFmpegCustomer.text())
@@ -1163,8 +1183,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.sync()
         appPref.sync()
         try:
-            if not os.path.samefile(appData.fileName(), appDataPath):
-                shutil.copy(appData.fileName(), appDataPath)
+            if not os.path.samefile(appData.fileName(), appRootConfigPath):
+                shutil.copy(appData.fileName(), appRootConfigPath)
         except FileNotFoundError:
             logger.info("Unable to save Configs, probably permanent loss")
         pass
@@ -1228,7 +1248,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if self.slowmotion.isChecked():
                 float(self.SlowmotionFPS.text())
         except Exception:
-            self.function_send_msg("Wrong Inputs", _translate('', "请确认慢动作输入帧率"))
+            self.function_send_msg("Wrong Inputs", _translate('', "请确认慢动作输入帧率>0"))
             return False
 
         return True
@@ -1332,7 +1352,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         use_global_settings = appPref.value("use_global_settings", False, type=bool)
         if use_global_settings:
             """First detect using use global settings"""
-            self.settings_load_config(appDataPath)  # change to root settings
+            self.settings_load_config(appRootConfigPath)  # change to root settings
         self.settings_load_current()  # 保存跳转前设置
         is_initiation = False  # Default: Not initiation for the whole software
         if self.last_item_model is None:
@@ -1345,7 +1365,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not use_global_settings:
             """Use new Profile to load settings"""
             item_model.apply_config()
-            self.settings_load_config(appDataPath)
+            self.settings_load_config(appRootConfigPath)
             self.settings_update_pack(item_update=not use_global_settings)
         self.last_item_model = item_model
 
@@ -1384,7 +1404,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         if not len(cuda_infos):
             self.hasNVIDIA = False
-            self.function_send_msg("No Available NVIDIA Card Found", _translate('', "未找到N卡，将使用A卡或核显"))
+            self.function_send_msg("No Available NVIDIA Card Found", _translate('', "未找到符合条件的N卡，将使用A卡或核显补帧"))
             appData.setValue("use_ncnn", True)
             self.UseNCNNButton.setChecked(True)
             # self.UseNCNNButton.setEnabled(False)
@@ -1716,7 +1736,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             """Task List Is Empty"""
             if not load_all:
                 self.function_send_msg("Input is Empty!",
-                                       _translate("", "Input List Is Empty, Please Load one input file and retry!"))
+                                       _translate("", "输入列表为空，请至少载入一个视频文件或图片序列文件夹!"))
                 # TODO i18n
             return []
         task_list = list()
@@ -1815,9 +1835,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         elif fail_code == 3:
             """Path has invalid character"""
             self.function_send_msg("Path Has Invalid Character",
-                                   _translate('', "Your Input File Consists Invalid Characters like ") +
+                                   _translate('', "输入文件路径包含不支持的字符如") +
                                    ", ".join(INVALID_CHARACTERS) +
-                                   _translate('', " please rename your input file and retry"))
+                                   _translate('', "请重命名输入文件并重试"))
 
     @pyqtSlot(bool)
     def on_InputButton_clicked(self):
@@ -1986,7 +2006,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if template_name in self.function_get_templates():
             self.function_send_msg("Invalid Template Name", _translate('', "预设名不能与已有预设重复~"))
             return
-        self.settings_load_config(appDataPath)  # appoint appData to root
+        self.settings_load_config(appRootConfigPath)  # appoint appData to root
         self.settings_load_current()  # update appData to current Settings
         template_model = InputItemModel(template_name, f'Template_{template_name}')
         template_model.initiate_config()  # write template settings
@@ -2021,14 +2041,14 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.function_send_msg("Invalid Config", _translate('', "指定预设不见啦~"))
             return
         template_model.apply_config()  # load template config to root config
-        self.settings_load_config(appDataPath)
+        self.settings_load_config(appRootConfigPath)
         self.settings_update_pack(item_update=True, template_update=True)
         self.function_send_msg("Config Loaded", _translate('', "已载入指定预设~"), 2)
         # if not appPref.value("is_gui_quiet", False, type=bool):
         #     SVFI_preview_args_form = UiPreviewArgsDialog(self)
         #     SVFI_preview_args_form.setWindowTitle("Preview SVFI Arguments")
         #     SVFI_preview_args_form.exec_()
-        # self.settings_load_config(appDataPath)  # 将appData指针指回root
+        # self.settings_load_config(appRootConfigPath)  # 将appData指针指回root
 
     @pyqtSlot(bool)
     def on_SettingsPresetsApplyButton_clicked(self):
@@ -2134,7 +2154,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
     def on_UseNCNNButton_clicked(self, clicked=True, silent=False):
         if self.hasNVIDIA and self.UseNCNNButton.isChecked() and not silent:
             reply = self.function_send_msg(_translate('', f"确定使用NCNN？"),
-                                           _translate('', f"你有N卡，确定使用A卡/核显？"), 3)
+                                           _translate('', f"你有N卡，确定使用A卡/核显模式？"), 3)
             if reply == QMessageBox.Yes:
                 logger.debug("Switch To NCNN Mode: %s" % self.UseNCNNButton.isChecked())
             else:
@@ -2314,6 +2334,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         for preset in presets:
             self.PresetSelector.addItem(preset)
 
+    @pyqtSlot(bool)
+    def on_Bit16WorkflowChecker_toggled(self):
+        bool_result = not self.Bit16WorkflowChecker.isChecked()
+        self.FastDenoiseChecker.setEnabled(bool_result)
+
     @pyqtSlot(int)
     def on_tabWidget_currentChanged(self, tab_index):
         if tab_index in [2, 3]:
@@ -2439,7 +2464,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(bool)
     def on_actionPreferences_triggered(self):
-        self.SVFI_Preference_form = UiPreferenceDialog()
+        self.SVFI_Preference_form = UiPreferenceDialog(self.is_free)
         self.SVFI_Preference_form.setWindowTitle("Preference")
         self.SVFI_Preference_form.preference_signal.connect(self.on_Preference_changed)
         self.SVFI_Preference_form.show()
@@ -2547,7 +2572,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 os.startfile(f'"{tutorial_path}"')
             except:
                 self.function_send_msg("Unable to open tutorial",
-                                       _translate("", "未能打开SVFI教程，请安装pdf阅读器后重试，或在软件根目录下寻找SVFI_tutorial.pdf阅读"))
+                                       _translate("", "未能打开SVFI教程，请安装PDF阅读器后重试，或在软件根目录下寻找SVFI_tutorial.pdf阅读"))
         else:
             self.function_send_msg("Not Find Tutorial", _translate("", "未能找到SVFI教程"))
 
@@ -2559,7 +2584,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         reply = self.function_send_msg("Quit", _translate('', "是否保存当前设置？"), 3)
         if reply == QMessageBox.Yes:
             self.function_load_tasks_rows(load_all=True)
-            self.settings_load_config(appDataPath)
+            self.settings_load_config(appRootConfigPath)
             self.settings_load_current()
             if appPref.value("is_rude_exit", False, type=bool):
                 Tools.kill_svfi_related()

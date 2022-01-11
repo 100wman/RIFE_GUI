@@ -148,7 +148,7 @@ class TaskArgumentManager(ArgumentManager):
             if not self.target_fps:  # 未找到用户的输出帧率
                 self.target_fps = (2 ** self.rife_exp) * self.input_fps  # default
             if self.is_img_input or not len(self.video_info_instance.audio_info):  # 图片序列输入，不保留音频（也无音频可保留
-                logger.warning("Image Sequence input found or Video does not contain audio, will not mux audio")
+                logger.warning("Image Sequence input is found or Video does not contain audio, will not mux audio")
                 self.is_save_audio = False
 
         """Set interpolation exp related to hdr mode"""
@@ -409,7 +409,7 @@ class ReadFlow(IOFlow):
         """
         _debug = False
         chunk_cnt, start_frame = self.check_chunk()  # start_frame = 0
-        self.logger.info("Resuming Video Frames...")
+        self.logger.info("Resuming Checkpoint...")
 
         """Get Frames to interpolate"""
         # TODO Optimize this since progress bar started after reading initiation is complete
@@ -452,7 +452,7 @@ class ReadFlow(IOFlow):
             img_reader = ImageRead(self.logger, folder=self.ARGS.input, start_frame=self.ARGS.interp_start,
                                    exp=self.ARGS.rife_exp, resize=resize_param, )
             self.ARGS.all_frames_cnt = img_reader.get_frames_cnt()
-            self.logger.info(f"This is Img Input, update frames count to {self.ARGS.all_frames_cnt}")
+            self.logger.info(f"Img Input Found, update frames count to {self.ARGS.all_frames_cnt}")
             return img_reader
 
         """If input is a video"""
@@ -565,7 +565,7 @@ class ReadFlow(IOFlow):
         if self.ARGS.multi_task_rest and self.ARGS.multi_task_rest_interval and \
                 time.time() - run_time > self.ARGS.multi_task_rest_interval * rest_exp:
             self.logger.info(
-                f"\n\nINFO - Time to Rest for 5 minutes! Rest for every {self.ARGS.multi_task_rest_interval} hour. ")
+                f"\n\nINFO - Time to Rest for 10 minutes! Rest for every {self.ARGS.multi_task_rest_interval} hour. ")
             time.sleep(600)
             return time.time()
         return run_time
@@ -679,7 +679,7 @@ class ReadFlow(IOFlow):
         scene_frame_list = list()  # 转场图片帧数序列,key,和check_frame_list同步
         check_frame_data = dict()  # 用于判断的采样图片数据
         if init:
-            self.logger.info("Initiating Duplicated Frames Removal Process...This might take some time")
+            self.logger.info("Initiating Duplicated Frames Removal(Dedup) Process...This might take some time")
             pbar = tqdm.tqdm(total=check_queue_size, unit="frames")
         else:
             pbar = None
@@ -780,7 +780,7 @@ class ReadFlow(IOFlow):
         :return:
         """
 
-        self.logger.info("Activate Any FPS Mode without Dedup(or scene detection)")
+        self.logger.info("Activate Any-FPS Mode without Dedup/Scene Detection)")
         chunk_cnt, now_frame, videogen, _ = self.__input_check(dedup=False)
         img1 = self.__crop(Tools.gen_next(videogen))
         self.logger.info("Input Frames loaded")
@@ -1621,7 +1621,7 @@ class RenderFlow(IOFlow):
 
         if self.ARGS.is_render_slow_motion:  # 慢动作
             output_filepath += f".SLM={self.ARGS.render_slow_motion_fps}fps"
-        if self.ARGS.is_float32_workflow:
+        if self.ARGS.is_16bit_workflow:
             output_filepath += f".16bit"
         if self.ARGS.is_quick_extract:
             output_filepath += f".QE"
@@ -1680,7 +1680,7 @@ class RenderFlow(IOFlow):
 
         os.chdir(self.ARGS.project_dir)
         concat_path = os.path.join(self.ARGS.project_dir, "concat.ini")
-        self.logger.info("Final Interpolation Round is Finished, Start Concating")
+        self.logger.info("Final Interpolation Round is Finished, Start Concating Chunks")
         concat_list = list()
 
         for f in os.listdir(self.ARGS.project_dir):
@@ -1772,7 +1772,7 @@ class RenderFlow(IOFlow):
     def check_concat_result(self):
         concat_filepath, output_ext = self.get_output_path()
         if os.path.exists(concat_filepath):
-            self.logger.warning("Project with same task_id is already finished, "
+            self.logger.warning("Project with same Task ID is already finished, "
                                 "Jump to Dolby Vision Check")
             if self.ARGS.hdr_mode == HDR_STATE.DOLBY_VISION:
                 """Dolby Vision"""
@@ -1835,7 +1835,7 @@ class RenderFlow(IOFlow):
                 now_frame = frame_data[0]
                 frame = frame_data[1]
                 frame = frame.astype(RGB_TYPE.DTYPE)
-                if self.ARGS.use_fast_denoise:
+                if self.ARGS.use_fast_denoise and not self.ARGS.is_16bit_workflow:
                     frame = cv2.fastNlMeansDenoising(frame)
                 _over_time_reminder_task = OverTimeReminderTask(15, "Encoder",
                                                                 "Low Encoding speed detected (>15s per image), Please check your encode settings to avoid performance issues")
@@ -1960,8 +1960,8 @@ class SuperResolutionFlow(IOFlow):
             self.logger.info(
                 f"Load Super Resolution Module at {self.ARGS.use_sr_algo}, "
                 f"Model at {self.ARGS.use_sr_model}, "
-                f"transfer_mode = output resolution / transfer resolution = {self.ARGS.transfer_ratio.name}, "
-                f"sr_scale = {sr_scale}")
+                f"Transfer Mode = output resolution / transfer resolution = {self.ARGS.transfer_ratio.name}, "
+                f"scale = {sr_scale}")
 
         except ImportError:
             self.logger.error(

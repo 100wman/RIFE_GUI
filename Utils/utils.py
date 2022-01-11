@@ -78,19 +78,19 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.4"
+    gui_version = "3.10.5"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.10"
+    ols_version = "7.4.11"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix skvideo not find proc attribute error
-    - Fix Cuda SR not supported full precision(float32)
-    - Add Batch Mode for Render and Extract Method
-    - Fix Scene Blend resulting in failed img
+    - Update Software Instructions
+    - Update UI Description and Widgets' Tootips
+    - Update Free_Hide
+    - Fix Global Settings Unable to apply at the last items
     """
 
     path_len_limit = 230
@@ -179,14 +179,14 @@ class ArgumentManager:
         self.is_encode_audio = args.get("is_encode_audio", False)
         self.is_quick_extract = args.get("is_quick_extract", True)
         self.hdr_cube_mode = LUTS_TYPE(args.get("hdr_cube_index", 0))
-        self.is_float32_workflow = args.get("is_float32_workflow", True)
+        self.is_16bit_workflow = args.get("is_16bit_workflow", False)
         self.hdr_mode = args.get("hdr_mode", 0)
         if self.hdr_mode == 0:  # AUTO
             self.hdr_mode = HDR_STATE(-2)
         else:
             self.hdr_mode = HDR_STATE(self.hdr_mode)
 
-        if not self.is_float32_workflow:  # change to 8bit
+        if not self.is_16bit_workflow:  # change to 8bit
             RGB_TYPE.change_8bit(True)
 
         self.render_ffmpeg_customized = args.get("render_ffmpeg_customized", "").strip('"').strip("'")
