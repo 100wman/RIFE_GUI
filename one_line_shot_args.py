@@ -1158,15 +1158,14 @@ class RenderFlow(IOFlow):
                      'keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
                      'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:'
                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                     'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
-                     "max-cll=1000,100:hdr10-opt=1:repeat-headers=1:info=0",
+                     'hdr10-opt=1:repeat-headers=1:info=0',
             "hdr10+": 'ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:'
                       'subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:'
                       'keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
                       'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:'
                       'range=limited:colorprim=9:transfer=16:colormatrix=9:'
                       'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
-                      f"max-cll=1000,100:dhdr10-info='{hdr10plus_metadata_path}'"
+                      'hdr10-opt=1:repeat-headers=1:info=0',
         }
 
         params_libx264s = {
@@ -1195,6 +1194,10 @@ class RenderFlow(IOFlow):
                 params_libx264s[k] = f"bitrate={self.ARGS.render_bitrate * 1024:.0f}:" + params_libx264s[k]
             for k in params_libx265s:
                 params_libx265s[k] = f"bitrate={self.ARGS.render_bitrate * 1024:.0f}:" + params_libx265s[k]
+
+        if self.ARGS.use_render_avx512:
+            for k in params_libx265s:
+                params_libx265s[k] = f"asm=avx512:" + params_libx265s[k]
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
@@ -1230,7 +1233,7 @@ class RenderFlow(IOFlow):
                 input_dict.update({"-r": f"{self.ARGS.target_fps:.3f}"})
             output_dict.pop("-r")
 
-        vf_args = "format=yuv444p10le"  # debug
+        vf_args = "format=yuv444p10le"
         if '-colorspace' in output_dict:
             vf_args = f"scale=out_color_matrix={output_dict['-colorspace']},{vf_args}"
         output_dict.update({"-vf": vf_args})
@@ -1271,11 +1274,14 @@ class RenderFlow(IOFlow):
                                         "-x265-params": params_libx265s["10bit"]})
                 if 'fast' in self.ARGS.render_encoder_preset:
                     output_dict.update({"-x265-params": params_libx265s["fast"]})
-                if self.ARGS.hdr_mode in [HDR_STATE.HDR10, HDR_STATE.HDR10_PLUS]:
+                if self.ARGS.hdr_mode == HDR_STATE.HDR10:
                     """HDR10"""
                     output_dict.update({"-x265-params": params_libx265s["hdr10"]})
-                    if os.path.exists(hdr10plus_metadata_path):
-                        output_dict.update({"-x265-params": params_libx265s["hdr10+"]})
+                elif self.ARGS.hdr_mode == HDR_STATE.HDR10_PLUS:
+                    hdr_param = params_libx265s["hdr10+"]
+                    if os.path.isfile(hdr10plus_metadata_path):
+                        hdr_param += f":dhdr10-info='{hdr10plus_metadata_path}'"
+                    output_dict.update({"-x265-params": hdr_param})
                 if self.ARGS.use_render_encoder_default_preset:
                     output_dict.pop('-x265-params')
             elif "AV1" in self.ARGS.render_encode_format:
@@ -1357,11 +1363,13 @@ class RenderFlow(IOFlow):
                 """HDR10"""
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10",
-                                     "--tier": "main", "-b": "5",
-                                     "--max-cll": "1000,100",
-                                     "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"})
-                if os.path.exists(hdr10plus_metadata_path):
-                    _output_dict.update({"--dhdr10-info": hdr10plus_metadata_path})
+                                     "--tier": "main", "-b": "5",})
+                if self.ARGS.hdr_mode == HDR_STATE.HDR10_PLUS:
+                    _output_dict.update({"--max-cll": "1000,100",
+                                         "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"})
+                    if os.path.isfile(hdr10plus_metadata_path):
+                        _output_dict.update({"--dhdr10-info": hdr10plus_metadata_path})
+
             else:
                 if self.ARGS.render_encoder_preset != "loseless":
                     _output_dict.update({"--preset": self.ARGS.render_encoder_preset})
@@ -1400,9 +1408,10 @@ class RenderFlow(IOFlow):
                 _output_dict.update({"-c": "hevc",
                                      "--profile": "main10" if "10bit" in self.ARGS.render_encode_format else "main",
                                      "--tier": "main", "--sao": "luma", "--ctu": "64",
-                                     "--max-cll": "1000,100",
-                                     "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"
                                      })
+                if self.ARGS.hdr_mode == HDR_STATE.HDR10_PLUS:
+                    _output_dict.update({"--max-cll": "1000,100",
+                                         "--master-display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)"})
             _output_dict.update({"--quality": self.ARGS.render_encoder_preset})
 
             input_dict = _input_dict

@@ -78,19 +78,19 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.5"
+    gui_version = "3.10.6"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.11"
+    ols_version = "7.4.12"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Update Software Instructions
-    - Update UI Description and Widgets' Tootips
-    - Update Free_Hide
-    - Fix Global Settings Unable to apply at the last items
+    - Fix some minor bugs on UI
+    - Update HDR10/HDR10+ Metadata
+    - Disable IFNET HDv4 auto scale downgrade to avoid oscillation
+    - Add AVX512 for CPU-ffmpeg-HEVC Encoder
     """
 
     path_len_limit = 230
@@ -171,6 +171,7 @@ class ArgumentManager:
         self.render_encode_format = args.get("render_encoder", "")
         self.render_encoder = args.get("render_hwaccel_mode", "")
         self.render_encoder_preset = args.get("render_encoder_preset", "slow")
+        self.use_render_avx512 = args.get("use_render_avx512", False)
         self.render_nvenc_preset = args.get("render_hwaccel_preset", "")
         self.use_hwaccel_decode = args.get("use_hwaccel_decode", True)
         self.use_manual_encode_thread = args.get("use_manual_encode_thread", False)

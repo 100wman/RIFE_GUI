@@ -91,14 +91,6 @@ class IFNet(nn.Module):
             else:
                 f0, m0 = block[i](torch.cat((warped_img0[:, :3], warped_img1[:, :3], timestep, mask), 1), flow,
                                   scale=scale_list[i])
-                if i == 1 and f0[:, :2].abs().max() > 32 and f0[:, 2:4].abs().max() > 32 and not training:
-                    for k in range(4):
-                        scale_list[k] *= 2
-                    flow, mask = block[0](torch.cat((img0[:, :3], img1[:, :3], timestep), 1), None, scale=scale_list[0])
-                    warped_img0 = warp(img0, flow[:, :2])
-                    warped_img1 = warp(img1, flow[:, 2:4])
-                    f0, m0 = block[i](torch.cat((warped_img0[:, :3], warped_img1[:, :3], timestep, mask), 1), flow,
-                                      scale=scale_list[i])
                 if ensemble:
                     f1, m1 = block[i](torch.cat((warped_img1[:, :3], warped_img0[:, :3], 1 - timestep, -mask), 1),
                                       torch.cat((flow[:, 2:4], flow[:, :2]), 1), scale=scale_list[i])

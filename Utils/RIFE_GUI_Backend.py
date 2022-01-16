@@ -866,9 +866,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
         self.DebugChecker.setVisible(False)
 
-    def settings_update_pack(self, item_update=False, template_update=False):
-        self.settings_initiation(item_update=item_update, template_update=template_update)
-        self.settings_update_gpu_info(item_update=item_update)  # Flush GPU Info, 1
+    def settings_update_pack(self, is_item_update=False, is_template_update=False):
+        self.settings_initiation(item_update=is_item_update, template_update=is_template_update)
+        self.settings_update_gpu_info(item_update=is_item_update)  # Flush GPU Info, 1
         self.on_UseNCNNButton_clicked(silent=True)  # G2
         self.settings_update_rife_model_info()
         self.on_HwaccelSelector_currentTextChanged()  # Flush Encoder Sets, 1
@@ -889,7 +889,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.on_TtaModeSelector_currentTextChanged()
         self.on_ExpertMode_changed()
         self.on_ModuleSelector_currentTextChanged()
-        self.settings_initiation(item_update=item_update, template_update=template_update)
+        self.settings_initiation(item_update=is_item_update, template_update=is_template_update)
         pass
 
     def settings_initiation(self, item_update=False, template_update=False):
@@ -897,7 +897,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         初始化用户选项载入
         从配置文件中读取上一次设置并初始化页面
         添加新选项/变量 1/3 appData -> Options
-        :item_update: if inputs' current item changed, activate this
+        :is_item_update: if inputs' current item changed, activate this
         :return:
         """
         global appData
@@ -967,6 +967,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.RenderGapSelector.setValue(appData.value("render_gap", 1000, type=int))
         self.SaveAudioChecker.setChecked(appData.value("is_save_audio", True, type=bool))
         self.FastDenoiseChecker.setChecked(appData.value("use_fast_denoise", False, type=bool))
+        self.UseAVX512Checker.setChecked(appData.value("use_render_avx512", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
         self.OneClickHDRModeSelector.setCurrentIndex(appData.value("hdr_cube_index", 0, type=int))
         self.Bit16WorkflowChecker.setChecked(appData.value("is_16bit_workflow", True, type=bool))
@@ -1094,6 +1095,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("render_ffmpeg_customized", self.FFmpegCustomer.text())
         appData.setValue("no_concat", False)  # always concat
         appData.setValue("use_fast_denoise", self.FastDenoiseChecker.isChecked())
+        appData.setValue("use_render_avx512", self.UseAVX512Checker.isChecked())
 
         """Special Render Effect"""
         appData.setValue("gif_loop", self.GifLoopChecker.isChecked())
@@ -1366,7 +1368,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             """Use new Profile to load settings"""
             item_model.apply_config()
             self.settings_load_config(appRootConfigPath)
-            self.settings_update_pack(item_update=not use_global_settings)
+            self.settings_update_pack(is_item_update=not use_global_settings)
         self.last_item_model = item_model
 
     @pyqtSlot(bool)
@@ -2042,7 +2044,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             return
         template_model.apply_config()  # load template config to root config
         self.settings_load_config(appRootConfigPath)
-        self.settings_update_pack(item_update=True, template_update=True)
+        self.settings_update_pack(is_item_update=True, is_template_update=True)
         self.function_send_msg("Config Loaded", _translate('', "已载入指定预设~"), 2)
         # if not appPref.value("is_gui_quiet", False, type=bool):
         #     SVFI_preview_args_form = UiPreviewArgsDialog(self)
@@ -2139,6 +2141,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ForwardEnsembleChecker.setChecked(self.ForwardEnsembleChecker.isChecked() if EN_enable else False)
         self.ForwardEnsembleChecker.setEnabled(EN_enable)
         self.InterpScaleSelector.setEnabled(DS_enable)
+        self.on_AutoInterpScaleChecker_clicked()
         self.InterpScaleReminder.setEnabled(DS_enable)
         self.settings_free_hide()
 
@@ -2308,7 +2311,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(str)
     def on_HwaccelSelector_currentTextChanged(self):
-        logger.debug("Switch To HWACCEL Mode: %s" % self.HwaccelSelector.currentText())
+        """
+        It's actually selector for Encoder
+        :return:
+        """
+        logger.debug("Switch To Encoder: %s" % self.HwaccelSelector.currentText())
         check = self.HwaccelSelector.currentText() == "NVENC"
         if not self.is_free:
             self.HwaccelPresetLabel.setVisible(check)
@@ -2327,12 +2334,20 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     @pyqtSlot(str)
     def on_EncoderSelector_currentTextChanged(self):
+        """
+        It's actually Render_Encode_Format Selector (e.g. H265
+        :return:
+        """
         self.PresetSelector.clear()
         currentHwaccel = self.HwaccelSelector.currentText()
         currentEncoder = self.EncoderSelector.currentText()
         presets = EncodePresetAssemply.encoder[currentHwaccel][currentEncoder]
         for preset in presets:
             self.PresetSelector.addItem(preset)
+        if 'H265' in self.EncoderSelector.currentText() and 'CPU' in self.HwaccelSelector.currentText():
+            self.UseAVX512Checker.setVisible(True)
+        else:
+            self.UseAVX512Checker.setVisible(False)
 
     @pyqtSlot(bool)
     def on_Bit16WorkflowChecker_toggled(self):
@@ -2487,6 +2502,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.ScdetUseMix.setVisible(expert_mode)
         self.DeinterlaceChecker.setVisible(expert_mode)
         self.FastDenoiseChecker.setVisible(expert_mode)
+        self.UseAVX512Checker.setVisible(expert_mode)
         self.EncodeThreadField.setVisible(expert_mode)
 
         self.settings_free_hide()

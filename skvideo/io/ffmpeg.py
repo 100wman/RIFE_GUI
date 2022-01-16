@@ -58,7 +58,7 @@ class FFmpegReader(VideoReaderAbstract):
         if verbosity > 0:
             cmd = [_FFMPEG_PATH + "/" + _FFMPEG_APPLICATION] + iargs + ['-i', self._filename] + oargs + ['-']
             try:
-                print("FFmpeg Read Command:", self._cmd)
+                print("FFmpeg Read Command:", " ".join(cmd))
             except UnicodeEncodeError:
                 print("FFmpeg Read Command: NON-ASCII character exists in command, not shown")
             self._proc = sp.Popen(cmd, stdin=sp.PIPE,
