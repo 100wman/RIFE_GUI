@@ -502,7 +502,6 @@ class ReadFlow(IOFlow):
 
         output_dict.update(self._get_color_tag_dict())
 
-        # vf_args = f"lut3d=PQ400.cube"
         vf_args = f"copy"
 
         """Checking Start Time"""

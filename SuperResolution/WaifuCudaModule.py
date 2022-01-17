@@ -9,7 +9,7 @@ from basicsr.utils.registry import ARCH_REGISTRY
 from torch import nn as nn
 from torch.nn import functional as F
 
-from SuperResolution.CudaResolutionModule import CudaSuperResolutionBase
+from SuperResolution.CudaResolutionModule import CudaSuperResolutionBase, LicenseCudaModel
 from Utils.utils import overtime_reminder_deco, Tools
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -174,7 +174,8 @@ class WaifuCudaer(CudaSuperResolutionBase):
     def __init__(self, scale, model_path, tile=0, tile_pad=10, pre_pad=10, half=False):
         super().__init__(scale, model_path, tile, tile_pad, pre_pad, half)
         model = UpCunet()
-        loadnet = torch.load(model_path, map_location='cpu')
+        self.LCM = LicenseCudaModel()
+        loadnet = torch.load(self.LCM.load_decrypted_model(model_path), map_location='cpu')
         model.load_state_dict(loadnet, strict=True)
         model.eval()
         if self.half:

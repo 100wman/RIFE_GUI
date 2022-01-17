@@ -205,7 +205,10 @@ def check_output(*popenargs, **kwargs):
         closeNULL = 0
     except ImportError:
         import os
-        DEVNULL = open(os.devnull, 'wb')
+        try:
+            DEVNULL = open(os.devnull, 'wb')
+        except FileNotFoundError:
+            DEVNULL = open('null', 'wb')
         closeNULL = 1
     startupinfo = sp.STARTUPINFO()
     startupinfo.dwFlags = sp.CREATE_NEW_CONSOLE | sp.STARTF_USESHOWWINDOW

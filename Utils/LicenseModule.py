@@ -1,14 +1,15 @@
 import base64
 import os
 import pickle
+from binascii import b2a_hex, a2b_hex
 
 import wmi
-from Crypto.Cipher import PKCS1_v1_5 as Cipher_pkcs1_v1_5
+from Crypto.Cipher import PKCS1_v1_5 as Cipher_pkcs1_v1_5, AES
 from Crypto.PublicKey import RSA
 
 import steamworks
-from Utils.utils import ArgumentManager
 from Utils.StaticParameters import appDir
+from Utils.utils import ArgumentManager
 from steamworks import GenericSteamException
 
 
@@ -54,6 +55,47 @@ class RSACipher(object):
         _cipher = Cipher_pkcs1_v1_5.new(_rsa_key)
         _text = _cipher.decrypt(base64.b64decode(_cipher_text), "ERROR")
         return _text.decode(encoding="utf-8")
+
+
+class AESCipher(object):
+    def __init__(self):
+        self.key = ''.encode('utf-8')
+        self.mode = AES.MODE_CBC
+        self.iv = b''  # TODO Notion default
+
+    @staticmethod
+    def _add_to_16(text: bytes):
+        """
+        如果text不足16位的倍数就用空格补足为16位
+        :param text:
+        :return:
+        """
+        if len(text) % 16:
+            add = 16 - (len(text) % 16)
+        else:
+            add = 0
+        text = text + (b'\0' * add)
+        return text
+
+    def _encrypt(self, text: bytes):
+        """
+        加密函数
+        :return:
+        """
+        text = self._add_to_16(text)
+        cryptos = AES.new(self.key, self.mode, self.iv)
+        cipher_text = cryptos.encrypt(text)
+        # 因为AES加密后的字符串不一定是ascii字符集的，输出保存可能存在问题，所以这里转为16进制字符串
+        return b2a_hex(cipher_text)
+
+    def _decrypt(self, text):
+        """
+        解密后，去掉补足的空格用strip() 去掉
+        :return:
+        """
+        cryptos = AES.new(self.key, self.mode, self.iv)
+        plain_text = cryptos.decrypt(a2b_hex(text))
+        return plain_text
 
 
 class ValidationBase:

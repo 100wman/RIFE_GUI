@@ -614,7 +614,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             if self.current_failed:
                 return
             if "input file is not available" in now_text:
-                self.function_send_msg("Inputs Failed", _translate('', "你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符，并检查输入设置的输入范围（起始时间，起始帧）是否超过时长"), )
+                self.function_send_msg("Inputs Failed", _translate('',
+                                                                   "你的输入文件有问题！请检查输入文件是否能够播放，路径有无特殊字符，并检查输入设置的输入范围（起始时间，起始帧）是否超过时长"), )
                 self.current_failed = True
                 return
             elif "json" in now_text:
@@ -627,11 +628,13 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 return
             elif "cuda out of memory" in now_text:
                 self.function_send_msg("CUDA Failed",
-                                       _translate('', "你的显存不够啦！请清理后台占用显存的程序，关闭杀毒软件和超频软件，或者前往'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型"), )
+                                       _translate('',
+                                                  "你的显存不够啦！请清理后台占用显存的程序，关闭杀毒软件和超频软件，或者前往'高级设置'降低视频分辨率/使用半精度模式/更换补帧模型"), )
                 self.current_failed = True
                 return
             elif "cudnn" in now_text and "fail" in now_text:
-                self.function_send_msg("CUDA Failed", _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx，并关闭后台杀毒程序和超频程序"), )
+                self.function_send_msg("CUDA Failed",
+                                       _translate('', "请前往官网更新驱动www.nvidia.cn/Download/index.aspx，并关闭后台杀毒程序和超频程序"), )
                 self.current_failed = True
                 return
             elif 'error: unable to allocate' in now_text or 'buy new ram' in now_text:
@@ -665,6 +668,52 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                 return
             if 'torchvision' not in now_text:
                 self.function_update_task_bar_state(TASKBAR_STATE.TBPF_ERROR)
+
+        def update_mission_status(status_line):
+            def str2float(param_str: str):
+                try:
+                    if not len(param_str):
+                        return ""
+                    return float(param_str)
+                except:
+                    return 0.
+
+            def strs2floats(param_tuple: tuple):
+                converted = list()
+                for param in param_tuple:
+                    converted.append(str2float(param))
+                return converted
+
+            current_status_format = """<span style="font-family:'微软雅黑','sans-serif';font-size:10pt; font-weight:600; color:{1};">{0}</span>"""
+            current_status = ("", "")
+            basic_status = re.findall("R=(\d+).*?C=(\d+).*?RPT=(\d+\.?\d+?)s.*?WPT=(\d+\.?\d+?)s", status_line)
+            inference_status = re.findall("S=(\d+).*?SC=(\d+).*?TAT=(\d+\.?\d+?)s.*?PT=(\d+\.?\d+?)s.*?QL=(\d+)",
+                                          status_line)
+            sr_status = re.findall("SR=(\d+), SRTAT=(\d+\.?\d+?)s, SRPT=(\d+\.?\d+?)s, SRL=(\d+)", status_line)
+
+            if len(basic_status):
+                basic_status = basic_status[0]  # use the first item for status probing
+                current_status = ("Normal", "#00aa00")
+                R, C, RPT, WPT = strs2floats(basic_status)
+                S, SC, TAT, PT, QL = 0, 0, 0, 0, 0
+                SR, SRTAT, SRPT, SRL = 0, 0, 0, 0
+                if len(sr_status):
+                    sr_status = sr_status[0]
+                    SR, SRTAT, SRPT, SRL = strs2floats(sr_status)
+                if len(inference_status):
+                    inference_status = inference_status[0]
+                    S, SC, TAT, PT, QL = strs2floats(inference_status)
+                # priority: basic > sr > inference, compare param: speed
+                if R and (C - R) / R > 0.2:  # Render < Current
+                    current_status = ("Encode too slow, Check your CPU and encode settings", "#ffaa00")
+                if len(inference_status) and C and (QL == 0 or TAT):  # inference > others
+                    current_status = ("CPU Bottleneck detected, your cpu makes vfi slow down!", "#ffaa00")
+                if PT and (RPT - PT) / PT > 0.4:  # Read < VFI, more specific case compared above
+                    current_status = (
+                    "Frames Extraction Process is Slower than VFI, Consider upgrade your cpu or lower your settings!",
+                    "#ffaa00")
+            self.MissionStatusLabel.setText(current_status_format.format(*current_status))
+            pass
 
         dup_keys_list = ["Process at", "0frames", "frame=", "0%|", f"{ArgumentManager.app_id}", "Steam ID",
                          "AppID", "SteamInternal", "torchvision"]
@@ -725,6 +774,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             #     add_line = f'<p><span style=" font-weight:600; color:#550000;">{line}</span></p>'
             else:
                 add_line = f'<p><span>{line}</span></p>'
+            update_mission_status(line)
             self.OptionCheck.append(add_line)
 
         if data["finished"]:

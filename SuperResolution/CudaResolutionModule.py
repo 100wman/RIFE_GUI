@@ -1,11 +1,32 @@
+import io
 import math
+import os
 
 import cv2
 import numpy as np
 import torch
 from torch.nn import functional as F
 
+from Utils.LicenseModule import AESCipher
 from Utils.StaticParameters import RGB_TYPE
+
+
+class LicenseCudaModel(AESCipher):
+    def __init__(self):
+        super().__init__()
+
+    def load_decrypted_model(self, path):
+        content = open(path, 'rb').read()
+        decrpyted_stream = io.BytesIO(self._decrypt(content))
+        return decrpyted_stream
+
+    def encrypt_model(self, path):
+        with open(path, 'rb') as f1:
+            encrypted = self._encrypt(f1.read())
+            model_name, model_ext = os.path.splitext(path)
+            encrpted_model_path = model_name+'_svfi'+model_ext
+            with open(encrpted_model_path, 'wb') as f2:
+                f2.write(encrypted)
 
 
 class CudaSuperResolutionBase:

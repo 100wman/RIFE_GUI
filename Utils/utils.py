@@ -78,19 +78,19 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.6"
+    gui_version = "3.10.7"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.12"
+    ols_version = "7.4.13"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix some minor bugs on UI
-    - Update HDR10/HDR10+ Metadata
-    - Disable IFNET HDv4 auto scale downgrade to avoid oscillation
-    - Add AVX512 for CPU-ffmpeg-HEVC Encoder
+    - Fix skvideo module "Unable to find file" error occured by os.devnull
+    - Encrypt WaifuCuda Model 
+    - Add Pop-up Check before quitting GUI
+    - Add Mission Status Hint Bar
     """
 
     path_len_limit = 230

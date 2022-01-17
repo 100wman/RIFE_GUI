@@ -1,11 +1,11 @@
 # import win32.win32gui
-import win32gui
 import win32con
-import PyQt5.Qt, PyQt5.QtCore, PyQt5.QtWidgets
+import win32gui
 from PyQt5.Qt import QSizePolicy
 from PyQt5.QtCore import QEvent, QSize, pyqtSlot
 from PyQt5.QtWidgets import QLabel, QPushButton, QHBoxLayout, QApplication, QWidget
 
+from Utils.StaticParameters import appDir
 from .resourse_cfg import *
 
 
@@ -150,8 +150,27 @@ class Titlebar(QWidget):
                     pWindow.showMaximized()
                     self.m_pMaximizeButton.setStyleSheet(self.__getButtonImgQss(IMAGE_ROOT + Titlebar.THEME_IMG_DIR + "/", IMG_RESIZE_NORM, IMG_RESIZE_HOVER, IMG_RESIZE_PRESS, IMG_RESIZE_PRESS))
             elif pButton.objectName() == Titlebar.CLOSE_BUTT_NAME:
-                pWindow.close()
-                os._exit(0)
+                if self.__handle_close_click():
+                    pWindow.close()
+                    os._exit(0)
+
+    def __handle_close_click(self):
+        """
+
+        :return:
+        """
+        from PyQt5.QtWidgets import QMessageBox
+        from PyQt5.QtGui import QIcon
+        ico_path = os.path.join(appDir, "svfi.ico")
+        QMessageBox.setWindowIcon(self, QIcon(ico_path))
+        reply = QMessageBox.information(self,
+                                        f"Quit",
+                                        f"Quit SVFI?",
+                                        QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            return True
+        else:
+            return False
 
     def __updateMaxmize(self):
         pWindow = self.window()
