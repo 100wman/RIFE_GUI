@@ -78,19 +78,20 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.7"
+    gui_version = "3.10.8"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.13"
+    ols_version = "7.4.14"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix skvideo module "Unable to find file" error occured by os.devnull
-    - Encrypt WaifuCuda Model 
-    - Add Pop-up Check before quitting GUI
-    - Add Mission Status Hint Bar
+    - Fix Auto Transfer Ratio Failed when assigning output resolution.
+    - Fix Auto Scale Failure in 16bit Workflow
+    - Optimize Encode Params
+    - Optimize Status Bar logic
+    - Add Zero-Latency-Decode Encode Preset
     """
 
     path_len_limit = 230
@@ -172,6 +173,7 @@ class ArgumentManager:
         self.render_encoder = args.get("render_hwaccel_mode", "")
         self.render_encoder_preset = args.get("render_encoder_preset", "slow")
         self.use_render_avx512 = args.get("use_render_avx512", False)
+        self.use_render_zld = args.get("use_render_zld", False)  # enables zero latency decode
         self.render_nvenc_preset = args.get("render_hwaccel_preset", "")
         self.use_hwaccel_decode = args.get("use_hwaccel_decode", True)
         self.use_manual_encode_thread = args.get("use_manual_encode_thread", False)
@@ -861,7 +863,8 @@ class VideoFrameInterpolationBase:
                         int(x * xstep):int(xstep * (x + 1)) - 1].mean()
                     bgr_map[y, x] = [B, G, R]
             return bgr_map.astype(np.uint8)
-
+        img1 = Tools.get_u1_from_u2_img(img1)
+        img2 = Tools.get_u1_from_u2_img(img2)
         i0 = mean_scale(img1, 8, 8)
         i1 = mean_scale(img2, 8, 8)
         scale_list = [1.0, 0.5, 0.25]

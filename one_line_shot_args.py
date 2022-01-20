@@ -1124,12 +1124,13 @@ class RenderFlow(IOFlow):
                 self.ARGS.render_encode_format = "H265, 10bit"
             elif "H264" in self.ARGS.render_encode_format:
                 self.ARGS.render_encode_format = "H264, 10bit"
-            self.ARGS.render_encoder_preset = "medium"
+            # do not change encoder preset
+            # self.ARGS.render_encoder_preset = "medium"
         elif self.ARGS.hdr_mode == HDR_STATE.HLG:
             """HLG"""
             self.ARGS.render_encode_format = "H265, 10bit"
             self.ARGS.render_encoder = "CPU"
-            self.ARGS.render_encoder_preset = "medium"
+            # self.ARGS.render_encoder_preset = "medium"
 
     def __generate_frame_writer(self, start_frame: int, output_path: str, _assign_last_n_frames=0):
         """
@@ -1140,48 +1141,21 @@ class RenderFlow(IOFlow):
         """
         hdr10plus_metadata_path = self.__hdr10_metadata_processer.get_hdr10plus_metadata_path_at_point(start_frame)
         params_libx265s = {
-            "fast": "ref=2:rd=2:ctu=32:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:me=1:subme=3:"
-                    "merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:rc-lookahead=15:"
-                    "b-adapt=1:bframes=4:aq-mode=3:aq-strength=0.9:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:"
-                    "info=0",
-            "8bit": "ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:"
-                    "subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:"
-                    "keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:cbqpoffs=-2:"
-                    "crqpoffs=-2:qcomp=0.65:sao=0:info=0",
-            "10bit": "ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:"
-                     "subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:"
-                     "keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:"
-                     "cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:info=0",
-            "hdr10": 'ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:'
-                     'subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:'
-                     'keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
-                     'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:'
-                     'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                     'hdr10-opt=1:repeat-headers=1:info=0',
-            "hdr10+": 'ref=3:rd=3:ctu=32:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:limit-tu=4:me=3:'
-                      'subme=4:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2.0:psy-rdoq=1.0:open-gop=0:'
-                      'keyint=250:min-keyint=1:rc-lookahead=40:bframes=6:aq-mode=1:aq-strength=0.8:qg-size=8:'
-                      'cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:sao=0:'
-                      'range=limited:colorprim=9:transfer=16:colormatrix=9:'
-                      'master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):'
-                      'hdr10-opt=1:repeat-headers=1:info=0',
+            "fast": "asm=avx512:ref=2:rd=2:ctu=32:min-cu-size=16:limit-refs=3:limit-modes=1:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=1:rdoq-level=0:tu-intra-depth=1:tu-inter-depth=1:limit-tu=0:max-merge=2:me=1:subme=3:merange=25:weightb=1:strong-intra-smoothing=0:open-gop=0:keyint=250:min-keyint=1:rc-lookahead=15:lookahead-slices=8:b-adapt=1:bframes=4:aq-mode=2:aq-strength=1:qg-size=16:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:info=0",
+            "fast_FD+ZL": "asm=avx512:ref=2:rd=2:ctu=32:min-cu-size=16:limit-refs=3:limit-modes=1:rect=0:amp=0:early-skip=1:fast-intra=1:b-intra=0:rdoq-level=0:tu-intra-depth=1:tu-inter-depth=1:limit-tu=0:max-merge=2:me=1:subme=3:merange=25:weightp=0:strong-intra-smoothing=0:open-gop=0:keyint=50:min-keyint=1:rc-lookahead=25:lookahead-slices=8:b-adapt=0:bframes=0:aq-mode=2:aq-strength=1:qg-size=16:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=false:sao=0:info=0",
+            "slow": "asm=avx512:pmode=1:ref=4:rd=4:ctu=32:min-cu-size=8:limit-refs=1:limit-modes=1:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:tu-intra-depth=1:tu-inter-depth=1:limit-tu=0:max-merge=4:me=3:subme=5:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2:psy-rdoq=1:open-gop=0:keyint=250:min-keyint=1:rc-lookahead=35:lookahead-slices=4:b-adapt=2:bframes=6:aq-mode=2:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:info=0",
+            "slow_FD+ZL": "asm=avx512:pmode=1:ref=4:rd=4:ctu=32:min-cu-size=8:limit-refs=1:limit-modes=1:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=0:rdoq-level=2:tu-intra-depth=1:tu-inter-depth=1:limit-tu=0:max-merge=4:me=3:subme=5:merange=25:weightp=0:strong-intra-smoothing=0:psy-rd=2:psy-rdoq=1:open-gop=0:keyint=50:min-keyint=1:rc-lookahead=25:lookahead-slices=4:b-adapt=0:bframes=0:aq-mode=2:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=false:sao=0:info=0",
+            "hdr10": 'asm=avx512:pmode=1:ref=4:rd=4:ctu=32:min-cu-size=8:limit-refs=1:limit-modes=1:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:tu-intra-depth=1:tu-inter-depth=1:limit-tu=0:max-merge=4:me=3:subme=5:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2:psy-rdoq=1:open-gop=0:keyint=250:min-keyint=1:rc-lookahead=35:lookahead-slices=4:b-adapt=2:bframes=6:aq-mode=2:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:range=limited:colorprim=9:transfer=16:colormatrix=9:hdr10-opt=1:repeat-headers=1:info=0',
+            "hdr10+": 'asm=avx512:pmode=1:ref=4:rd=4:ctu=32:min-cu-size=8:limit-refs=1:limit-modes=1:rect=0:amp=0:early-skip=0:fast-intra=0:b-intra=1:rdoq-level=2:tu-intra-depth=1:tu-inter-depth=1:limit-tu=0:max-merge=4:me=3:subme=5:merange=25:weightb=1:strong-intra-smoothing=0:psy-rd=2:psy-rdoq=1:open-gop=0:keyint=250:min-keyint=1:rc-lookahead=35:lookahead-slices=4:b-adapt=2:bframes=6:aq-mode=2:aq-strength=0.8:qg-size=8:cbqpoffs=-2:crqpoffs=-2:qcomp=0.65:deblock=-1:sao=0:range=limited:colorprim=9:transfer=16:colormatrix=9:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):hdr10-opt=1:repeat-headers=1:info=0',
         }
 
         params_libx264s = {
-            "fast": "keyint=250:min-keyint=1:bframes=3:b-adapt=1:open-gop=0:ref=4:rc-lookahead=30:chroma-qp-offset=-1:"
-                    "aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:me=hex:merange=16:subme=7:psy-rd='0.85:0.0':"
-                    "mixed-refs=0:trellis=1",
-            "8bit": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
-                    "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
-                    "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "10bit": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
-                     "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
-                     "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0",
-            "hdr10": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=60:chroma-qp-offset=0:"
-                     "aq-mode=1:aq-strength=0.9:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:"
-                     "psy-rd='0.85:0.1':mixed-refs=1:trellis=2:fast-pskip=0:"
-                     "mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)':"
-                     "cll='1000,100'"
+            "fast": "asm=avx512:keyint=250:min-keyint=1:bframes=3:b-adapt=1:open-gop=0:ref=2:rc-lookahead=20:chroma-qp-offset=-1:aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:weightp=1:me=hex:merange=16:subme=7:psy-rd='1.0:0.0':mixed-refs=0:trellis=1:deblock='-1:-1'",
+            "fast_FD+ZL": "asm=avx512:keyint=50:min-keyint=1:bframes=0:b-adapt=0:open-gop=0:ref=2:rc-lookahead=25:chroma-qp-offset=-1:aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:weightp=0:me=hex:merange=16:subme=7:psy-rd='1.0:0.0':mixed-refs=0:trellis=1:deblock=false:cabac=0:weightb=0",
+            "slow": "asm=avx512:keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:weightp=2:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1'",
+            "slow_FD+ZL": "asm=avx512:keyint=50:min-keyint=1:bframes=0:b-adapt=0:open-gop=0:ref=8:rc-lookahead=25:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:weightp=0:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock=false:cabac=0:weightb=0",
+            "hdr10": "asm=avx512:keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1'",
+            "hdr10+": "asm=avx512:keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1':mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)'"
         }
         if self.ARGS.use_crf:
             for k in params_libx264s:
@@ -1193,10 +1167,6 @@ class RenderFlow(IOFlow):
                 params_libx264s[k] = f"bitrate={self.ARGS.render_bitrate * 1024:.0f}:" + params_libx264s[k]
             for k in params_libx265s:
                 params_libx265s[k] = f"bitrate={self.ARGS.render_bitrate * 1024:.0f}:" + params_libx265s[k]
-
-        if self.ARGS.use_render_avx512:
-            for k in params_libx265s:
-                params_libx265s[k] = f"asm=avx512:" + params_libx265s[k]
 
         """If output is sequence of frames"""
         if self.ARGS.is_img_output:
@@ -1248,39 +1218,59 @@ class RenderFlow(IOFlow):
             if "H264" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "libx264", "-preset:v": self.ARGS.render_encoder_preset})
                 if "8bit" in self.ARGS.render_encode_format:
-                    output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "high",
-                                        "-x264-params": params_libx264s["8bit"]})
+                    output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "high"})
                 else:
                     """10bit"""
-                    output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "high10",
-                                        "-x264-params": params_libx264s["10bit"]})
-                if 'fast' in self.ARGS.render_encoder_preset:
-                    output_dict.update({"-x264-params": params_libx264s["fast"]})
+                    output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "high10"})
                 if self.ARGS.hdr_mode == HDR_STATE.HDR10:
                     """HDR10"""
                     output_dict.update({"-x264-params": params_libx264s["hdr10"]})
+                elif self.ARGS.hdr_mode == HDR_STATE.HDR10_PLUS:
+                    """HDR10"""
+                    output_dict.update({"-x264-params": params_libx264s["hdr10+"]})
+                elif self.ARGS.use_render_zld:
+                    if 'fast' in self.ARGS.render_encoder_preset:
+                        output_dict.update({"-x264-params": params_libx264s["fast_FD+ZL"]})
+                    if 'slow' in self.ARGS.render_encoder_preset:
+                        output_dict.update({"-x264-params": params_libx264s["slow_FD+ZL"]})
+                else:
+                    if 'fast' in self.ARGS.render_encoder_preset:
+                        output_dict.update({"-x264-params": params_libx264s["fast"]})
+                    if 'slow' in self.ARGS.render_encoder_preset:
+                        output_dict.update({"-x264-params": params_libx264s["slow"]})
 
                 if self.ARGS.use_render_encoder_default_preset:
                     output_dict.pop('-x264-params')
+
             elif "H265" in self.ARGS.render_encode_format:
                 output_dict.update({"-c:v": "libx265", "-preset:v": self.ARGS.render_encoder_preset})
+
                 if "8bit" in self.ARGS.render_encode_format:
-                    output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main",
-                                        "-x265-params": params_libx265s["8bit"]})
+                    output_dict.update({"-pix_fmt": "yuv420p", "-profile:v": "main"})
                 else:
                     """10bit"""
-                    output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "main10",
-                                        "-x265-params": params_libx265s["10bit"]})
-                if 'fast' in self.ARGS.render_encoder_preset:
-                    output_dict.update({"-x265-params": params_libx265s["fast"]})
+                    output_dict.update({"-pix_fmt": "yuv420p10le", "-profile:v": "main10"})
+
                 if self.ARGS.hdr_mode == HDR_STATE.HDR10:
                     """HDR10"""
                     output_dict.update({"-x265-params": params_libx265s["hdr10"]})
                 elif self.ARGS.hdr_mode == HDR_STATE.HDR10_PLUS:
+                    """HDR10+"""
                     hdr_param = params_libx265s["hdr10+"]
                     if os.path.isfile(hdr10plus_metadata_path):
                         hdr_param += f":dhdr10-info='{hdr10plus_metadata_path}'"
                     output_dict.update({"-x265-params": hdr_param})
+                elif self.ARGS.use_render_zld:
+                    if 'fast' in self.ARGS.render_encoder_preset:
+                        output_dict.update({"-x265-params": params_libx265s["fast_FD+ZL"]})
+                    if 'slow' in self.ARGS.render_encoder_preset:
+                        output_dict.update({"-x265-params": params_libx265s["slow_FD+ZL"]})
+                else:
+                    if 'fast' in self.ARGS.render_encoder_preset:
+                        output_dict.update({"-x265-params": params_libx265s["fast"]})
+                    if 'slow' in self.ARGS.render_encoder_preset:
+                        output_dict.update({"-x265-params": params_libx265s["slow"]})
+
                 if self.ARGS.use_render_encoder_default_preset:
                     output_dict.pop('-x265-params')
             elif "AV1" in self.ARGS.render_encode_format:
@@ -1917,7 +1907,7 @@ class SuperResolutionFlow(IOFlow):
         if all(self.ARGS.resize_param) and all(self.ARGS.frame_size):
             resize_resolution = self.ARGS.resize_param[0] * self.ARGS.resize_param[1]
             original_resolution = self.ARGS.frame_size[0] * self.ARGS.frame_size[1]
-            sr_scale = resize_resolution / original_resolution
+            sr_scale = int(math.ceil(math.sqrt(resize_resolution / original_resolution)))
         elif self.ARGS.resize_exp:
             sr_scale = self.ARGS.resize_exp
         if sr_module_exp:
@@ -1963,8 +1953,7 @@ class SuperResolutionFlow(IOFlow):
                                                                                tile=self.ARGS.sr_tilesize,
                                                                                half=self.ARGS.use_realesr_fp16,
                                                                                resize=frame_size)
-            if self.ARGS.transfer_ratio == RT_RATIO.AUTO:
-                self.ARGS.transfer_ratio = RT_RATIO.get_auto_transfer_ratio(sr_scale)
+
             self.logger.info(
                 f"Load Super Resolution Module at {self.ARGS.use_sr_algo}, "
                 f"Model at {self.ARGS.use_sr_model}, "

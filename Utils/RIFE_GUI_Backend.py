@@ -705,13 +705,22 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                     S, SC, TAT, PT, QL = strs2floats(inference_status)
                 # priority: basic > sr > inference, compare param: speed
                 if R and (C - R) / R > 0.2:  # Render < Current
-                    current_status = ("Encode too slow, Check your CPU and encode settings", "#ffaa00")
-                if len(inference_status) and C and (QL == 0 or TAT):  # inference > others
-                    current_status = ("CPU Bottleneck detected, your cpu makes vfi slow down!", "#ffaa00")
-                if PT and (RPT - PT) / PT > 0.4:  # Read < VFI, more specific case compared above
-                    current_status = (
-                    "Frames Extraction Process is Slower than VFI, Consider upgrade your cpu or lower your settings!",
-                    "#ffaa00")
+                    current_status = ("Encode is too slow, Check your encode settings or upgrade your CPU", "#ffaa00")
+                if not len(sr_status):  # not using Super Resolution
+                    if len(inference_status) and C and (QL == 0 or TAT):  # inference > others
+                        current_status = ("CPU Bottleneck detected, your cpu makes vfi slow down!", "#ffaa00")
+                    if PT and (RPT - PT) / PT > 0.4:  # Read < VFI, more specific case compared above
+                        current_status = (
+                        "Frames Extraction Process is Slower than VFI, "
+                        "Consider upgrading your cpu or lowering your settings!",
+                        "#ffaa00")
+                else:
+                    if not SRL or (SRPT and (RPT - SRPT) / SRPT > 0.4):
+                        current_status = (
+                            "Frames Extraction Process is EVEN Slower than Super Resolution, "
+                            "Consider upgrading your cpu or lowering your settings!",
+                            "#ffaa00")
+
             self.MissionStatusLabel.setText(current_status_format.format(*current_status))
             pass
 
@@ -841,6 +850,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.EvictFlickerChecker.setVisible(False)
         self.KeepHeadFrameChecker.setVisible(False)
         self.UseMultiCardsChecker.setVisible(False)
+        self.UseAVX512Checker.setVisible(False)
 
     def settings_free_hide(self):
         """
@@ -906,6 +916,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.HwaccelPresetLabel.setVisible(False)
         self.HwaccelPresetSelector.setVisible(False)
         self.Bit16WorkflowChecker.setEnabled(False)
+        self.Bit16WorkflowChecker.setChecked(False)
         self.OneClickHDRField.setEnabled(False)
 
         self.GifBox.setEnabled(False)
@@ -1018,6 +1029,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SaveAudioChecker.setChecked(appData.value("is_save_audio", True, type=bool))
         self.FastDenoiseChecker.setChecked(appData.value("use_fast_denoise", False, type=bool))
         self.UseAVX512Checker.setChecked(appData.value("use_render_avx512", False, type=bool))
+        self.UseZLDChecker.setChecked(appData.value("use_render_zld", False, type=bool))
         self.HDRModeSelector.setCurrentIndex(appData.value("hdr_mode", 0, type=int))
         self.OneClickHDRModeSelector.setCurrentIndex(appData.value("hdr_cube_index", 0, type=int))
         self.Bit16WorkflowChecker.setChecked(appData.value("is_16bit_workflow", True, type=bool))
@@ -1146,6 +1158,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         appData.setValue("no_concat", False)  # always concat
         appData.setValue("use_fast_denoise", self.FastDenoiseChecker.isChecked())
         appData.setValue("use_render_avx512", self.UseAVX512Checker.isChecked())
+        appData.setValue("use_render_zld", self.UseZLDChecker.isChecked())
 
         """Special Render Effect"""
         appData.setValue("gif_loop", self.GifLoopChecker.isChecked())
@@ -2394,10 +2407,11 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         presets = EncodePresetAssemply.encoder[currentHwaccel][currentEncoder]
         for preset in presets:
             self.PresetSelector.addItem(preset)
-        if 'H265' in self.EncoderSelector.currentText() and 'CPU' in self.HwaccelSelector.currentText():
-            self.UseAVX512Checker.setVisible(True)
+        if ('H265' in self.EncoderSelector.currentText() or 'H264' in self.EncoderSelector.currentText())\
+                and 'CPU' in self.HwaccelSelector.currentText():
+            self.UseZLDChecker.setVisible(True)
         else:
-            self.UseAVX512Checker.setVisible(False)
+            self.UseZLDChecker.setVisible(False)
 
     @pyqtSlot(bool)
     def on_Bit16WorkflowChecker_toggled(self):
@@ -2553,6 +2567,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.DeinterlaceChecker.setVisible(expert_mode)
         self.FastDenoiseChecker.setVisible(expert_mode)
         self.UseAVX512Checker.setVisible(expert_mode)
+        self.UseZLDChecker.setVisible(expert_mode)
         self.EncodeThreadField.setVisible(expert_mode)
 
         self.settings_free_hide()
@@ -2647,18 +2662,12 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         if not self.Validation.CheckValidateStart():
             event.ignore()
             return
-        reply = self.function_send_msg("Quit", _translate('', "是否保存当前设置？"), 3)
-        if reply == QMessageBox.Yes:
-            self.function_load_tasks_rows(load_all=True)
-            self.settings_load_config(appRootConfigPath)
-            self.settings_load_current()
-            if appPref.value("is_rude_exit", False, type=bool):
-                Tools.kill_svfi_related()
-                pass
-            event.accept()
-        else:
-            event.ignore()
-        pass
+        self.function_load_tasks_rows(load_all=True)
+        self.settings_load_config(appRootConfigPath)
+        self.settings_load_current()
+        if appPref.value("is_rude_exit", False, type=bool):
+            Tools.kill_svfi_related()
+            pass
 
 
 if __name__ == "__main__":
