@@ -356,6 +356,8 @@ class MyListWidget(QListWidget):
         try:
             for model in item_models:
                 new_item_model, new_item_widget = self.addFileItem(model.get_input_path(), silent=True)  # do not use previous task id
+                if new_item_widget is None or new_item_widget is None:
+                    continue
                 new_item_model.mock(model)
         except RuntimeError:
             pass
@@ -426,6 +428,8 @@ class MyListWidget(QListWidget):
     def duplicateItem(self, _InputItemModel: InputItemModel):
         input_path = _InputItemModel.get_input_path()
         new_item_model, new_item_widget = self.addFileItem(input_path)
+        if new_item_widget is None or new_item_widget is None:
+            return
         new_item_model.mock(_InputItemModel)
         self.setCurrentItem(new_item_widget)
         return

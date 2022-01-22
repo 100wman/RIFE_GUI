@@ -54,11 +54,11 @@ class RT_RATIO(enum.Enum):
         if ratio == RT_RATIO.WHOLE:
             return scale
         elif ratio == RT_RATIO.THREE_QUARTERS:
-            return scale * (4 / 3) ** 2
+            return scale * (4 / 3)
         elif ratio == RT_RATIO.HALF:
-            return scale * 2 ** 2
+            return scale * 2
         elif ratio == RT_RATIO.QUARTER:
-            return scale * 4 ** 2
+            return scale * 4
         else:
             return scale
 

@@ -126,9 +126,9 @@ class UiPreferenceDialog(QDialog, SVFI_preference.Ui_Dialog):
     def settings_free_hide(self):
         if not self.is_free:
             return
-        self.PreviewVfiChecker.setChecked(False)
-        self.PreviewVfiChecker.setEnabled(False)
-        appPref.setValue("is_preview_imgs", self.PreviewVfiChecker.isChecked())
+        # self.PreviewVfiChecker.setChecked(False)
+        # self.PreviewVfiChecker.setEnabled(False)
+        # appPref.setValue("is_preview_imgs", self.PreviewVfiChecker.isChecked())
 
     def closeEvent(self, event):
         self.request_preference()
@@ -704,9 +704,10 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                     inference_status = inference_status[0]
                     S, SC, TAT, PT, QL = strs2floats(inference_status)
                 # priority: basic > sr > inference, compare param: speed
-                if R and (C - R) / R > 0.2:  # Render < Current
-                    current_status = ("Encode is too slow, Check your encode settings or upgrade your CPU", "#ffaa00")
                 if not len(sr_status):  # not using Super Resolution
+                    if R and (C - R) / R > 0.2:  # Render < Current
+                        current_status = (
+                        "Encode is too slow, Check your encode settings or upgrade your CPU", "#ffaa00")
                     if len(inference_status) and C and (QL == 0 or TAT):  # inference > others
                         current_status = ("CPU Bottleneck detected, your cpu makes vfi slow down!", "#ffaa00")
                     if PT and (RPT - PT) / PT > 0.4:  # Read < VFI, more specific case compared above
@@ -715,6 +716,9 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
                         "Consider upgrading your cpu or lowering your settings!",
                         "#ffaa00")
                 else:
+                    if R and (SR - R) / R > 0.2:  # Render < Current SR
+                        current_status = (
+                        "Encode is too slow, Check your encode settings or upgrade your CPU", "#ffaa00")
                     if not SRL or (SRPT and (RPT - SRPT) / SRPT > 0.4):
                         current_status = (
                             "Frames Extraction Process is EVEN Slower than Super Resolution, "
@@ -816,6 +820,7 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
             self.StartRenderButton.setEnabled(True)
             self.AllInOne.setEnabled(True)
             self.InputFileName.setEnabled(True)
+            self.settings_free_hide()
             self.current_failed = False
 
             if appPref.value("use_clear_inputs", False, type=bool):
@@ -901,22 +906,28 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         self.SrField.setVisible(False)
 
         self.RenderSettingsGroup.setEnabled(False)
+        self.UseMultiCardsChecker.setChecked(False)
         self.UseMultiCardsChecker.setEnabled(False)
         # self.InterlaceInferenceChecker.setEnabled(False)
+        self.TtaModeSelector.setCurrentIndex(0)  # None
         self.TtaModeSelector.setEnabled(False)
         self.TtaIterTimesSelector.setEnabled(False)
         self.TtaModeLabel.setEnabled(False)
         self.EvictFlickerChecker.setEnabled(False)
+        self.AutoInterpScaleChecker.setChecked(False)
         self.AutoInterpScaleChecker.setEnabled(False)
+        self.ReverseChecker.setChecked(False)
         self.ReverseChecker.setEnabled(False)
 
+        self.DeinterlaceChecker.setChecked(False)
         self.DeinterlaceChecker.setEnabled(False)
+        self.FastDenoiseChecker.setChecked(False)
         self.FastDenoiseChecker.setEnabled(False)
         self.EncodeThreadField.setEnabled(False)
         self.HwaccelPresetLabel.setVisible(False)
         self.HwaccelPresetSelector.setVisible(False)
-        self.Bit16WorkflowChecker.setEnabled(False)
         self.Bit16WorkflowChecker.setChecked(False)
+        self.Bit16WorkflowChecker.setEnabled(False)
         self.OneClickHDRField.setEnabled(False)
 
         self.GifBox.setEnabled(False)
@@ -1414,7 +1425,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
 
     def settings_maintain_item_settings(self, item_model: InputItemModel):
         global appData
-        use_global_settings = appPref.value("use_global_settings", False, type=bool)
+        use_global_settings = appPref.value("use_global_settings", False, type=bool) or self.InputFileName.count() == 1
+        # only one mission equals to using global settings
         if use_global_settings:
             """First detect using use global settings"""
             self.settings_load_config(appRootConfigPath)  # change to root settings
@@ -1946,7 +1958,8 @@ class UiBackend(QMainWindow, SVFI_UI.Ui_MainWindow):
         _msg5 = _translate('', '请确保上述三者皆不为空(-1为自动)，任务计数不为0。\n是否执行补帧？')
         _msg4 = ""
         try:
-            current_path = self.InputFileName.itemWidget(self.InputFileName.currentItem()).get_input_path()
+            current_model = self.InputFileName.itemWidget(self.InputFileName.currentItem()).get_task_model()
+            current_path = current_model.get_input_path()
             current_ext = os.path.splitext(current_path)[1]
             selected_ext = "." + self.ExtSelector.currentText()
             if current_ext != selected_ext:

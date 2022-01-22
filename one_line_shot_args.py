@@ -1150,12 +1150,12 @@ class RenderFlow(IOFlow):
         }
 
         params_libx264s = {
-            "fast": "asm=avx512:keyint=250:min-keyint=1:bframes=3:b-adapt=1:open-gop=0:ref=2:rc-lookahead=20:chroma-qp-offset=-1:aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:weightp=1:me=hex:merange=16:subme=7:psy-rd='1.0:0.0':mixed-refs=0:trellis=1:deblock='-1:-1'",
-            "fast_FD+ZL": "asm=avx512:keyint=50:min-keyint=1:bframes=0:b-adapt=0:open-gop=0:ref=2:rc-lookahead=25:chroma-qp-offset=-1:aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:weightp=0:me=hex:merange=16:subme=7:psy-rd='1.0:0.0':mixed-refs=0:trellis=1:deblock=false:cabac=0:weightb=0",
-            "slow": "asm=avx512:keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:weightp=2:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1'",
-            "slow_FD+ZL": "asm=avx512:keyint=50:min-keyint=1:bframes=0:b-adapt=0:open-gop=0:ref=8:rc-lookahead=25:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:weightp=0:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock=false:cabac=0:weightb=0",
-            "hdr10": "asm=avx512:keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1'",
-            "hdr10+": "asm=avx512:keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1':mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)'"
+            "fast": "keyint=250:min-keyint=1:bframes=3:b-adapt=1:open-gop=0:ref=2:rc-lookahead=20:chroma-qp-offset=-1:aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:weightp=1:me=hex:merange=16:subme=7:psy-rd='1.0:0.0':mixed-refs=0:trellis=1:deblock='-1:-1'",
+            "fast_FD+ZL": "keyint=50:min-keyint=1:bframes=0:b-adapt=0:open-gop=0:ref=2:rc-lookahead=25:chroma-qp-offset=-1:aq-mode=1:aq-strength=0.9:mbtree=0:qcomp=0.60:weightp=0:me=hex:merange=16:subme=7:psy-rd='1.0:0.0':mixed-refs=0:trellis=1:deblock=false:cabac=0:weightb=0",
+            "slow": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:weightp=2:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1'",
+            "slow_FD+ZL": "keyint=50:min-keyint=1:bframes=0:b-adapt=0:open-gop=0:ref=8:rc-lookahead=25:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:weightp=0:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock=false:cabac=0:weightb=0",
+            "hdr10": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1'",
+            "hdr10+": "keyint=250:min-keyint=1:bframes=6:b-adapt=2:open-gop=0:ref=8:rc-lookahead=35:chroma-qp-offset=0:aq-mode=1:aq-strength=0.9:mbtree=1:qcomp=0.75:partitions=all:direct=auto:me=umh:merange=24:subme=10:psy-rd='1.0:0.1':mixed-refs=1:trellis=2:deblock='-1:-1':mastering-display='G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)'"
         }
         if self.ARGS.use_crf:
             for k in params_libx264s:
@@ -1915,11 +1915,11 @@ class SuperResolutionFlow(IOFlow):
             ref_ratio = RT_RATIO.get_auto_transfer_ratio(sr_times)
             if self.ARGS.transfer_ratio == RT_RATIO.AUTO:
                 self.ARGS.transfer_ratio = ref_ratio
-            elif sr_times < 1:
+            if sr_times <= 1:
                 sr_scale = RT_RATIO.get_surplus_sr_scale(sr_scale, self.ARGS.transfer_ratio)
 
         frame_size = self.ARGS.resize_param  # it's useless as redundant input parameters for api compatibility
-        sr_scale = int(math.ceil(math.sqrt(sr_scale)))
+        # sr_scale = int(math.ceil(math.sqrt(sr_scale)))
 
         if any(self.ARGS.crop_param):
             self.ARGS.crop_param = RT_RATIO.get_modified_resolution(self.ARGS.crop_param, self.ARGS.transfer_ratio,
@@ -2037,21 +2037,17 @@ class SuperResolutionFlow(IOFlow):
                     self.ARGS.put_overtime_task(_over_time_reminder_task)
 
                     sr_process_time = time.time()
-                    ori_img0 = None
+                    is_img01_equals = False
+                    if img0 is not None and img1 is not None and Tools.get_norm_img_diff(img0, img1) == 0:
+                        is_img01_equals = True
                     if img0 is not None:
-                        ori_img0 = img0.copy()
                         img0 = self.sr_module.svfi_process(img0)
+                    if img1 is not None:
+                        if not is_img01_equals:
+                            img1 = self.sr_module.svfi_process(img1)
+                        else:
+                            img1 = img0
                     sr_process_time = time.time() - sr_process_time
-
-                    if img1 is not None and ori_img0 is not None:
-                        try:
-                            if not bool((ori_img0 == img1).all()):
-                                img1 = self.sr_module.svfi_process(img1)
-                            else:
-                                img1 = img0
-                        except Exception:
-                            print(traceback.format_exc())
-                            pass
                     task['img0'] = img0
                     task['img1'] = img1
                     self.ARGS.update_task_info({'sr_now_frame': now_frame,

@@ -721,7 +721,7 @@
                 <widget class="QScrollArea" name="AdvanceSettingsArea">
                  <property name="minimumSize">
                   <size>
-                   <width>400</width>
+                   <width>450</width>
                    <height>0</height>
                   </size>
                  </property>
@@ -742,12 +742,12 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>400</width>
+                    <width>448</width>
                     <height>728</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_10">
-                   <item row="4" column="0">
+                   <item row="5" column="0">
                     <layout class="QVBoxLayout" name="verticalLayout_8">
                      <item>
                       <widget class="QPushButton" name="SaveCurrentSettings">
@@ -804,14 +804,14 @@
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>3</number>
+                      <number>6</number>
                      </property>
                      <widget class="QWidget" name="ResumeSettings">
                       <property name="geometry">
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
+                        <width>480</width>
                         <height>399</height>
                        </rect>
                       </property>
@@ -840,14 +840,8 @@
                           </item>
                           <item row="0" column="0">
                            <layout class="QGridLayout" name="gridLayout_2">
-                            <item row="3" column="2">
-                             <widget class="QTimeEdit" name="EndPoint">
-                              <property name="sizePolicy">
-                               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                               </sizepolicy>
-                              </property>
+                            <item row="1" column="0">
+                             <widget class="QLabel" name="AutoSetReminder">
                               <property name="minimumSize">
                                <size>
                                 <width>100</width>
@@ -860,11 +854,27 @@
                                 <height>16777215</height>
                                </size>
                               </property>
-                              <property name="currentSection">
-                               <enum>QDateTimeEdit::HourSection</enum>
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;根据已经生成的视频块信息进行推算，可能存在重复补帧的情况，但不影响最终结果。&lt;/p&gt;&lt;p&gt;对于队列输入（输入数&amp;gt;1），请确保每个任务条目正确设置工作恢复参数（分别点击&lt;span style=&quot; font-weight:600;&quot;&gt;自动寻找进度&lt;/span&gt;的按钮），否则软件将自动识别工作进度并进行补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;图片序列输入需要手动输入恢复进度参数&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                               </property>
-                              <property name="displayFormat">
-                               <string>HH:mm:ss</string>
+                              <property name="text">
+                               <string>自动设置 (?)</string>
+                              </property>
+                              <property name="alignment">
+                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="7" column="2">
+                             <widget class="QCheckBox" name="ResumeRiskChecker">
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅针对视频素材，不推荐开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;开启此项，将能够较快地恢复工作进度，但并不保证精确，也不保证输出结果音画同步；&lt;/p&gt;&lt;p&gt;精确度视具体视频素材的压缩率而定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>风险模式 (?)</string>
+                              </property>
+                              <property name="checked">
+                               <bool>false</bool>
                               </property>
                              </widget>
                             </item>
@@ -899,6 +909,98 @@
                               </property>
                              </widget>
                             </item>
+                            <item row="7" column="0">
+                             <widget class="QPushButton" name="RefreshStartInfo">
+                              <property name="text">
+                               <string>复原至起点</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="2" column="0">
+                             <widget class="QLabel" name="StartPointLabel">
+                              <property name="minimumSize">
+                               <size>
+                                <width>100</width>
+                                <height>0</height>
+                               </size>
+                              </property>
+                              <property name="maximumSize">
+                               <size>
+                                <width>200</width>
+                                <height>16777215</height>
+                               </size>
+                              </property>
+                              <property name="toolTip">
+                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;时：分：秒&lt;/span&gt;&lt;/p&gt;&lt;p&gt;对输入进行指定时间范围内的补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;不支持工作进度恢复&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              </property>
+                              <property name="text">
+                               <string>起始补帧时刻：(?)</string>
+                              </property>
+                              <property name="alignment">
+                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="3" column="2">
+                             <widget class="QTimeEdit" name="EndPoint">
+                              <property name="sizePolicy">
+                               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                               </sizepolicy>
+                              </property>
+                              <property name="minimumSize">
+                               <size>
+                                <width>100</width>
+                                <height>0</height>
+                               </size>
+                              </property>
+                              <property name="maximumSize">
+                               <size>
+                                <width>150</width>
+                                <height>16777215</height>
+                               </size>
+                              </property>
+                              <property name="currentSection">
+                               <enum>QDateTimeEdit::HourSection</enum>
+                              </property>
+                              <property name="displayFormat">
+                               <string>HH:mm:ss</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="3" column="0">
+                             <widget class="QLabel" name="EndPointLabel">
+                              <property name="minimumSize">
+                               <size>
+                                <width>100</width>
+                                <height>0</height>
+                               </size>
+                              </property>
+                              <property name="maximumSize">
+                               <size>
+                                <width>200</width>
+                                <height>16777215</height>
+                               </size>
+                              </property>
+                              <property name="text">
+                               <string>结束补帧时刻：</string>
+                              </property>
+                              <property name="alignment">
+                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="5" column="2">
+                             <widget class="MySpinBox" name="StartChunk">
+                              <property name="minimum">
+                               <number>-1</number>
+                              </property>
+                              <property name="maximum">
+                               <number>999999999</number>
+                              </property>
+                             </widget>
+                            </item>
                             <item row="6" column="0">
                              <widget class="QLabel" name="label_21">
                               <property name="sizePolicy">
@@ -930,25 +1032,13 @@
                               </property>
                              </widget>
                             </item>
-                            <item row="3" column="0">
-                             <widget class="QLabel" name="EndPointLabel">
-                              <property name="minimumSize">
-                               <size>
-                                <width>100</width>
-                                <height>0</height>
-                               </size>
+                            <item row="6" column="2">
+                             <widget class="MySpinBox" name="StartFrame">
+                              <property name="minimum">
+                               <number>-1</number>
                               </property>
-                              <property name="maximumSize">
-                               <size>
-                                <width>200</width>
-                                <height>16777215</height>
-                               </size>
-                              </property>
-                              <property name="text">
-                               <string>结束补帧时刻：</string>
-                              </property>
-                              <property name="alignment">
-                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                              <property name="maximum">
+                               <number>999999999</number>
                               </property>
                              </widget>
                             </item>
@@ -987,96 +1077,6 @@
                               </property>
                              </widget>
                             </item>
-                            <item row="1" column="0">
-                             <widget class="QLabel" name="AutoSetReminder">
-                              <property name="minimumSize">
-                               <size>
-                                <width>100</width>
-                                <height>0</height>
-                               </size>
-                              </property>
-                              <property name="maximumSize">
-                               <size>
-                                <width>150</width>
-                                <height>16777215</height>
-                               </size>
-                              </property>
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;根据已经生成的视频块信息进行推算，可能存在重复补帧的情况，但不影响最终结果。&lt;/p&gt;&lt;p&gt;对于队列输入（输入数&amp;gt;1），请确保每个任务条目正确设置工作恢复参数（分别点击&lt;span style=&quot; font-weight:600;&quot;&gt;自动寻找进度&lt;/span&gt;的按钮），否则软件将自动识别工作进度并进行补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;图片序列输入需要手动输入恢复进度参数&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>自动设置 (?)</string>
-                              </property>
-                              <property name="alignment">
-                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="2" column="0">
-                             <widget class="QLabel" name="StartPointLabel">
-                              <property name="minimumSize">
-                               <size>
-                                <width>100</width>
-                                <height>0</height>
-                               </size>
-                              </property>
-                              <property name="maximumSize">
-                               <size>
-                                <width>200</width>
-                                <height>16777215</height>
-                               </size>
-                              </property>
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;时：分：秒&lt;/span&gt;&lt;/p&gt;&lt;p&gt;对输入进行指定时间范围内的补帧&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;不支持工作进度恢复&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>起始补帧时刻：(?)</string>
-                              </property>
-                              <property name="alignment">
-                               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="6" column="2">
-                             <widget class="MySpinBox" name="StartFrame">
-                              <property name="minimum">
-                               <number>-1</number>
-                              </property>
-                              <property name="maximum">
-                               <number>999999999</number>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="5" column="2">
-                             <widget class="MySpinBox" name="StartChunk">
-                              <property name="minimum">
-                               <number>-1</number>
-                              </property>
-                              <property name="maximum">
-                               <number>999999999</number>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="7" column="0">
-                             <widget class="QPushButton" name="RefreshStartInfo">
-                              <property name="text">
-                               <string>复原至起点</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="7" column="2">
-                             <widget class="QCheckBox" name="ResumeRiskChecker">
-                              <property name="toolTip">
-                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;仅针对视频素材，不推荐开启&lt;/span&gt;&lt;/p&gt;&lt;p&gt;开启此项，将能够较快地恢复工作进度，但并不保证精确，也不保证输出结果音画同步；&lt;/p&gt;&lt;p&gt;精确度视具体视频素材的压缩率而定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>风险模式 (?)</string>
-                              </property>
-                              <property name="checked">
-                               <bool>false</bool>
-                              </property>
-                             </widget>
-                            </item>
                            </layout>
                           </item>
                          </layout>
@@ -1089,7 +1089,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
+                        <width>480</width>
                         <height>399</height>
                        </rect>
                       </property>
@@ -1361,8 +1361,8 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
-                        <width>368</width>
+                        <y>-94</y>
+                        <width>466</width>
                         <height>493</height>
                        </rect>
                       </property>
@@ -1874,8 +1874,8 @@
                       <property name="geometry">
                        <rect>
                         <x>0</x>
-                        <y>0</y>
-                        <width>368</width>
+                        <y>-407</y>
+                        <width>466</width>
                         <height>806</height>
                        </rect>
                       </property>
@@ -2578,7 +2578,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>368</width>
+                        <width>466</width>
                         <height>514</height>
                        </rect>
                       </property>
@@ -3009,7 +3009,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
+                        <width>480</width>
                         <height>399</height>
                        </rect>
                       </property>
@@ -3098,7 +3098,7 @@
                        <rect>
                         <x>0</x>
                         <y>0</y>
-                        <width>382</width>
+                        <width>430</width>
                         <height>399</height>
                        </rect>
                       </property>

@@ -78,20 +78,20 @@ class ArgumentManager:
     is_free = False
     is_release = False
     traceback_limit = 0 if is_release else None
-    gui_version = "3.10.8"
+    gui_version = "3.10.9"
     version_tag = f"{gui_version}-alpha " \
                   f"{'Professional' if not is_free else 'Community'} - {'Steam' if is_steam else 'Retail'}"
-    ols_version = "7.4.14"
+    ols_version = "7.4.15"
     """ 发布前改动以上参数即可 """
 
     update_log = f"""
     {version_tag}
     Update Log
-    - Fix Auto Transfer Ratio Failed when assigning output resolution.
-    - Fix Auto Scale Failure in 16bit Workflow
-    - Optimize Encode Params
-    - Optimize Status Bar logic
-    - Add Zero-Latency-Decode Encode Preset
+    - Initial Check before Release 3.8.0-steam default branch
+    - Fix UI Settings on Task Change
+    - Optimize Free Hide
+    - Optimize Super Resolution Scale Selection
+    - Remove H264 avx512
     """
 
     path_len_limit = 230
